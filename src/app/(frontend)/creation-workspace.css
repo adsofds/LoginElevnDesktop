@@ -67,7 +67,7 @@
 }
 
 .elevn-club-searchbox input {
-  width: 240px;
+  width: 200px;
   height: 33px;
   padding: 0 13px;
   border: 1px solid color-mix(in srgb, var(--gold-70) 22%, transparent);
@@ -135,17 +135,13 @@
 .elevn-compact-ad-hero {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(120deg, var(--sand-95) 0%, var(--gold-90) 58%, var(--gold-79) 100%);
-  color: var(--ink-08);
-  border-bottom: 1px solid var(--gold-70);
+  background: var(--night-12);
+  color: #fff;
 }
 
 .elevn-compact-ad-integrated-art {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 56%;
+  inset: 0;
   pointer-events: none;
   z-index: 0;
 }
@@ -154,19 +150,14 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.42;
   display: block;
 }
 
+/* Fixed dark scrim: the copy stays legible on any photo */
 .elevn-compact-ad-gradient {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    var(--sand-93) 0%,
-    rgba(245, 241, 230, 0.85) 32%,
-    rgba(245, 241, 230, 0.25) 100%
-  );
+  background: linear-gradient(90deg, rgb(0 0 0 / 0.72) 0%, rgb(0 0 0 / 0.5) 45%, rgb(0 0 0 / 0.08) 100%);
 }
 
 /* MODO SÓ A FOTO (ARTE OCUPA 100% DO ESPAÇO DA PUBLICIDADE SEM TEXTO) */
@@ -225,19 +216,20 @@
 }
 
 .elevn-ad-pill {
-  padding: 4px 12px;
+  padding: 3px 10px;
   border-radius: 999px;
-  background: var(--elevn-accent);
-  color: var(--sand-95);
+  background: rgb(255 255 255 / 0.14);
+  color: var(--gold-90);
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(6px);
 }
 
 .elevn-compact-tag-wrap small {
-  color: var(--gold-29);
+  color: rgb(255 255 255 / 0.65);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .elevn-compact-admin-btns {
@@ -246,15 +238,20 @@
 }
 
 .elevn-compact-admin-btns button {
-  height: 25px;
+  height: 28px;
   padding: 0 10px;
-  border: 1px solid var(--night-12);
-  border-radius: 6px;
-  background: var(--night-12);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 700;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 8px;
+  background: rgb(0 0 0 / 0.35);
+  color: rgb(255 255 255 / 0.9);
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.elevn-compact-admin-btns button:hover {
+  background: rgb(0 0 0 / 0.55);
 }
 
 .elevn-compact-ad-mainrow {
@@ -263,23 +260,22 @@
 
 .elevn-compact-ad-text h2 {
   margin: 0;
-  font-size: 20px;
-  line-height: 1.2;
-  font-weight: 800;
-  color: var(--ink-08);
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #fff;
 }
 
 .elevn-compact-ad-text h2 strong {
-  color: var(--elevn-accent);
-  font-weight: 800;
+  color: var(--gold-90);
+  font-weight: 600;
 }
 
 .elevn-compact-presenter {
-  margin: 4px 0 10px;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-style: italic;
-  font-size: 14px;
-  color: var(--gold-21);
+  margin: 6px 0 12px;
+  font-size: 13px;
+  color: rgb(255 255 255 / 0.72);
 }
 
 .elevn-compact-cta-row {
@@ -291,61 +287,21 @@
 
 .elevn-compact-cta-row .cta-main {
   padding: 7px 14px;
-  border-radius: 7px;
-  background: var(--night-12);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-
-.elevn-compact-cta-row .cta-date {
-  padding: 6px 12px;
-  border: 1.5px solid var(--elevn-accent);
-  border-radius: 999px;
-  background: var(--sand-100);
+  border-radius: 8px;
+  background: var(--gold-88);
   color: var(--ink-08);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 600;
 }
 
+.elevn-compact-cta-row .cta-date,
 .elevn-compact-cta-row .cta-secondary {
-  padding: 6px 13px;
+  padding: 6px 12px;
+  border: 1px solid rgb(255 255 255 / 0.25);
   border-radius: 999px;
-  background: var(--elevn-accent);
-  color: var(--sand-100);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.elevn-compact-ad-side-thumb {
-  position: relative;
-  width: 156px;
-  aspect-ratio: 4 / 3;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 2px solid var(--elevn-accent);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--elevn-sidebar-bg) 16%, transparent);
-  background: var(--night-12);
-}
-
-.elevn-compact-ad-side-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.elevn-compact-ad-side-thumb span {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--elevn-sidebar-bg) 88%, transparent);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 800;
+  color: rgb(255 255 255 / 0.85);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .elevn-compact-ad-nav {
@@ -509,7 +465,7 @@
   padding: 13px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-end;
   cursor: pointer;
   transition:
     transform 0.15s ease,
@@ -543,39 +499,17 @@
   z-index: 1;
 }
 
-.elevn-poster-top,
 .elevn-poster-bottom {
   position: relative;
   z-index: 2;
 }
 
-.elevn-poster-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.elevn-poster-top span {
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--elevn-sidebar-bg) 78%, transparent);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.elevn-poster-top i {
-  font-style: normal;
-  color: var(--gold-88);
-  font-size: 12px;
-}
-
 .elevn-poster-bottom strong {
   display: block;
   color: var(--sand-100);
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1.15;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 .elevn-poster-bottom small {
@@ -589,6 +523,35 @@
   margin-top: 8px;
   display: flex;
   gap: 6px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 160ms, transform 160ms;
+}
+
+.elevn-poster-card:hover .elevn-poster-actions,
+.elevn-poster-card:focus-within .elevn-poster-actions {
+  opacity: 1;
+  transform: none;
+}
+
+@media (hover: none) {
+  .elevn-poster-actions {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.elevn-track-empty {
+  padding: 18px 0;
+  color: rgb(255 255 255 / 0.5);
+  font-size: 13px;
+}
+
+.elevn-club-admin-actions button.elevn-club-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
 }
 
 .elevn-poster-actions button {
@@ -606,41 +569,6 @@
 .elevn-poster-actions button.gold {
   background: var(--gold-88);
   color: var(--ink-08);
-}
-
-.elevn-add-poster-card {
-  aspect-ratio: 4 / 3;
-  border: 1.5px dashed color-mix(in srgb, var(--gold-70) 35%, transparent);
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--gold-88);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  cursor: pointer;
-}
-
-.elevn-add-poster-card span {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--gold-88) 14%, transparent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-}
-
-.elevn-add-poster-card strong {
-  font-size: 12px;
-  color: var(--sand-100);
-}
-
-.elevn-add-poster-card small {
-  font-size: 11px;
-  color: var(--slate-66-2);
 }
 
 /* VISÃO INTERNA DA PLAYLIST (DESKTOP) */
@@ -1156,6 +1084,7 @@
 .elevn-all-videos-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
   gap: 14px;
 }
 
@@ -1171,10 +1100,14 @@
 
 .elevn-all-video-thumb {
   position: relative;
+  flex: none;
   aspect-ratio: 4 / 3;
+  overflow: hidden;
 }
 
 .elevn-all-video-thumb img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1336,34 +1269,6 @@
   color: var(--ink-08);
 }
 
-.elevn-challenge-banner {
-  display: grid;
-  grid-template-columns: minmax(0, 1.55fr) 240px;
-  gap: 20px;
-  align-items: center;
-  padding: 18px 22px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--night-15) 0%, var(--night-12) 100%);
-  border: 1px solid var(--elevn-accent);
-}
-
-.challenge-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.club-tag {
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--elevn-accent);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 800;
-}
-
 .visibility-pill {
   padding: 3px 9px;
   border-radius: 999px;
@@ -1381,337 +1286,9 @@
   color: var(--gold-88);
 }
 
-.toggle-public-btn {
-  height: 24px;
-  padding: 0 9px;
-  border: 1px solid color-mix(in srgb, var(--gold-70) 35%, transparent);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.challenge-banner-main h2 {
-  margin: 0 0 6px;
-  color: var(--gold-88);
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.challenge-banner-main p {
-  margin: 0 0 12px;
-  color: var(--slate-79);
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.challenge-quick-stats {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-}
-
-.challenge-quick-stats span {
-  display: block;
-  color: var(--gold-50);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.challenge-quick-stats strong {
-  color: var(--sand-100);
-  font-size: 13px;
-}
-
-.challenge-cta-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.register-activity-btn {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 8px;
-  background: var(--gold-88);
-  color: var(--ink-08);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.edit-challenge-btn {
-  height: 36px;
-  padding: 0 14px;
-  border: 1px solid color-mix(in srgb, var(--gold-70) 38%, transparent);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--gold-88);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.challenge-banner-thumb {
-  position: relative;
-  width: 240px;
-  aspect-ratio: 4 / 3;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 2px solid var(--gold-70);
-}
-
-.challenge-banner-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.challenge-banner-thumb span {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  padding: 2px 7px;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--elevn-sidebar-bg) 88%, transparent);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 800;
-}
-
 /* PREMIAÇÕES 1º/2º/3º + TABELA DE PONTOS + REGRAS */
-.elevn-challenge-details-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.elevn-prizes-card,
-.elevn-scoring-card,
-.elevn-rules-card {
-  padding: 16px;
-  border-radius: 12px;
-  background: var(--night-12);
-  border: 1px solid color-mix(in srgb, var(--gold-70) 20%, transparent);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.elevn-prizes-card > header,
-.elevn-scoring-card > header,
-.elevn-rules-card > header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.elevn-prizes-card > header span,
-.elevn-scoring-card > header span,
-.elevn-rules-card > header span {
-  display: block;
-  color: var(--gold-50);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-
-.elevn-prizes-card > header h3,
-.elevn-scoring-card > header h3,
-.elevn-rules-card > header h3 {
-  margin: 2px 0 0;
-  color: var(--sand-100);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.elevn-prizes-card > header button,
-.elevn-scoring-card > header button,
-.elevn-rules-card > header button {
-  height: 24px;
-  padding: 0 8px;
-  border: 1px solid color-mix(in srgb, var(--gold-70) 30%, transparent);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.prizes-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.prize-item {
-  padding: 9px 11px;
-  border-radius: 9px;
-  background: var(--elevn-sidebar-bg);
-  border: 1px solid color-mix(in srgb, var(--gold-70) 18%, transparent);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.prize-item.gold {
-  border-color: var(--gold-50);
-  background: color-mix(in srgb, var(--elevn-accent) 22%, transparent);
-}
-
-.prize-item .medal {
-  color: var(--gold-70);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-
-.prize-item strong {
-  color: var(--sand-100);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.scoring-items-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.score-pill-box {
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--elevn-sidebar-bg);
-  border: 1px solid color-mix(in srgb, var(--gold-70) 16%, transparent);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.score-pill-box.highlight {
-  border-color: var(--green-33);
-  background: rgba(47, 94, 72, 0.22);
-}
-
-.score-pill-box span {
-  color: var(--slate-75);
-  font-size: 11px;
-}
-
-.score-pill-box strong {
-  color: var(--gold-88);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.rules-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rules-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 7px 9px;
-  border-radius: 8px;
-  background: var(--elevn-sidebar-bg);
-}
-
-.rules-list li span {
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--elevn-accent);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.rules-list li p {
-  margin: 0;
-  color: var(--slate-85);
-  font-size: 12px;
-  line-height: 1.35;
-}
 
 /* RANKING + FEED DE CHECK-INS */
-.elevn-gymrats-bottom-split {
-  display: grid;
-  grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.45fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.elevn-leaderboard-card,
-.elevn-community-feed-card {
-  padding: 16px;
-  border-radius: 12px;
-  background: var(--night-12);
-  border: 1px solid color-mix(in srgb, var(--gold-70) 20%, transparent);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.elevn-leaderboard-card > header span,
-.elevn-community-feed-card > header span {
-  display: block;
-  color: var(--gold-50);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-
-.elevn-leaderboard-card > header h3,
-.elevn-community-feed-card > header h3 {
-  margin: 2px 0 0;
-  color: var(--sand-100);
-  font-size: 14px;
-}
-
-.elevn-community-feed-card > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.elevn-community-feed-card > header button {
-  height: 28px;
-  padding: 0 11px;
-  border-radius: 7px;
-  background: var(--gold-88);
-  color: var(--ink-08);
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.leaderboard-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.leaderboard-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 11px;
-  border-radius: 9px;
-  background: var(--elevn-sidebar-bg);
-  border: 1px solid color-mix(in srgb, var(--gold-70) 16%, transparent);
-}
 
 .pos-badge {
   width: 26px;
@@ -1730,174 +1307,6 @@
 .pos-badge.pos-1 {
   background: var(--gold-50);
   color: var(--ink-08);
-}
-
-.leaderboard-row img {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.member-copy {
-  flex: 1;
-  min-width: 0;
-}
-
-.member-copy strong {
-  display: block;
-  color: var(--sand-100);
-  font-size: 12px;
-}
-
-.member-copy small {
-  color: var(--slate-66-2);
-  font-size: 11px;
-}
-
-.member-points {
-  text-align: right;
-}
-
-.member-points strong {
-  display: block;
-  color: var(--gold-88);
-  font-size: 13px;
-}
-
-.member-points span {
-  color: var(--green-61);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.community-feed-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.community-post-card {
-  border-radius: 10px;
-  background: var(--elevn-sidebar-bg);
-  border: 1px solid color-mix(in srgb, var(--gold-70) 18%, transparent);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.post-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 10px;
-}
-
-.post-top img {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.post-top > div {
-  flex: 1;
-  min-width: 0;
-}
-
-.post-top strong {
-  display: block;
-  color: var(--sand-100);
-  font-size: 12px;
-}
-
-.post-top small {
-  color: var(--slate-66-2);
-  font-size: 11px;
-}
-
-.points-earned-pill {
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--green-28);
-  color: var(--sand-100);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.post-photo-4x3 {
-  position: relative;
-  aspect-ratio: 4 / 3;
-}
-
-.post-photo-4x3 img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.post-photo-4x3 .kind-chip {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--elevn-sidebar-bg) 86%, transparent);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.post-photo-4x3 .tag-chip {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--elevn-accent) 92%, transparent);
-  color: var(--sand-100);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.post-body {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.post-body h4 {
-  margin: 0;
-  color: var(--gold-88);
-  font-size: 12px;
-}
-
-.post-body p {
-  margin: 0;
-  color: var(--slate-74);
-  font-size: 11px;
-  line-height: 1.35;
-}
-
-.post-body button {
-  align-self: flex-start;
-  margin-top: 3px;
-  height: 24px;
-  padding: 0 9px;
-  border: 1px solid color-mix(in srgb, var(--gold-70) 30%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--gold-88) 8%, transparent);
-  color: var(--gold-88);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.post-body button.active {
-  background: var(--elevn-accent);
-  color: var(--sand-100);
 }
 
 /* MODAIS NAS CORES DA ELEVN */
@@ -2210,15 +1619,11 @@
 @media (max-width: 1100px) {
   .elevn-continue-grid,
   .elevn-recent-grid,
-  .elevn-all-videos-grid,
-  .elevn-challenge-details-grid,
-  .elevn-gymrats-bottom-split,
-  .community-feed-grid {
+  .elevn-all-videos-grid {
     grid-template-columns: 1fr;
   }
 
   .elevn-compact-ad-mainrow,
-  .elevn-challenge-banner,
   .elevn-pl-detail-hero,
   .elevn-pl-split-grid,
   .elevn-modal-split,
@@ -2248,4 +1653,31 @@
   color: var(--slate-26);
   font-size: 11px;
   line-height: 1.35;
+}
+
+/* "Modo Club": while /club is open the whole page (header and canvas) goes dark,
+   so the change of environment says this is a different space. */
+.admin-shell[data-mode='club'] {
+  --elevn-canvas-bg: var(--elevn-sidebar-bg) !important;
+  --text-primary: #f3efe4;
+  --text-secondary: rgb(243 239 228 / 0.74);
+  --text-tertiary: rgb(243 239 228 / 0.56);
+  --bg-surface: #1a1733;
+  --bg-subtle: #221e3d;
+  --border-default: rgb(255 255 255 / 0.12);
+  --border-subtle: rgb(255 255 255 / 0.07);
+  --accent-soft: color-mix(in srgb, var(--elevn-accent-light) 18%, #1a1733);
+}
+
+.admin-shell[data-mode='club'] .elevn-club-canvas {
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (max-width: 1500px) {
+  .elevn-club-logo small {
+    display: none;
+  }
 }
