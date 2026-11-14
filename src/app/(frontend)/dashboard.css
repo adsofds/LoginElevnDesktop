@@ -138,14 +138,15 @@
 
 .widget-header > div:first-child {
   min-width: 0;
+  flex: 1;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 7px;
 }
 
 .widget-header h2 {
-  width: 100%;
+  min-width: 0;
+  flex: 1;
   color: var(--text-primary);
   font-size: 15px;
   font-weight: 600;
@@ -220,221 +221,6 @@
   outline-offset: 2px;
 }
 
-.widget-controls {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.widget-controls > button {
-  min-height: 24px;
-  padding: 0 7px;
-  border: 1px solid var(--sand-85);
-  border-radius: 5px;
-  color: var(--slate-43);
-  background: var(--sand-100);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.widget-controls > button:hover:not(:disabled) {
-  border-color: var(--gold-44);
-  color: var(--gold-29);
-}
-
-.widget-controls > button:disabled {
-  opacity: 0.3;
-}
-
-.widget-controls > button.remove-widget {
-  color: var(--red-43-2);
-}
-
-.metric-content {
-  min-height: 115px;
-  display: flex;
-  flex: 1;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 19px 20px;
-}
-
-.metric-content > div:first-child {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.metric-content strong {
-  font-size: 32px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.metric-content span {
-  color: var(--slate-55);
-  font-size: 12px;
-}
-
-.metric-content > small {
-  padding: 6px 8px;
-  border-radius: 5px;
-  color: var(--sand-29);
-  background: var(--gold-90);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.metric-trend {
-  width: 95px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-}
-
-.metric-trend svg {
-  width: 90px;
-  height: 34px;
-}
-
-.metric-trend path {
-  fill: none;
-  stroke: var(--gold-38);
-  stroke-linecap: round;
-  stroke-width: 2;
-}
-
-.metric-trend small {
-  color: var(--sand-29);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.alert-bars {
-  height: 46px;
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.alert-bars > i {
-  width: 8px;
-  border-radius: 3px 3px 1px 1px;
-  background: var(--red-73);
-}
-
-.alert-bars > i:nth-child(1) {
-  height: 45%;
-}
-
-.alert-bars > i:nth-child(2) {
-  height: 75%;
-}
-
-.alert-bars > i:nth-child(3) {
-  height: 100%;
-  background: var(--red-49);
-}
-
-.alert-bars > i:nth-child(4) {
-  height: 62%;
-}
-
-.alert-metric > small {
-  color: var(--red-39);
-  background: var(--sand-93-2);
-}
-
-.mini-avatars {
-  display: flex;
-  flex-direction: row !important;
-  margin-bottom: 2px;
-}
-
-.mini-avatars > i {
-  width: 25px;
-  height: 25px;
-  display: grid;
-  place-items: center;
-  margin-left: -6px;
-  border: 2px solid var(--sand-100);
-  border-radius: 50%;
-  color: var(--gold-32);
-  background: var(--gold-87);
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 700;
-}
-
-.adherence-content {
-  display: grid;
-  flex: 1;
-  grid-template-columns: minmax(130px, 0.75fr) minmax(160px, 1.25fr);
-  align-items: center;
-  gap: 28px;
-  padding: 10px 22px 24px;
-}
-
-.adherence-score {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.score-ring {
-  --score: 0deg;
-  width: 92px;
-  height: 92px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at center, var(--sand-100) 62%, transparent 64%),
-    conic-gradient(var(--elevn-accent) var(--score), var(--sand-90) 0);
-}
-
-.score-ring strong {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.adherence-score > span {
-  max-width: 130px;
-  color: var(--slate-59);
-  font-size: 11px;
-  line-height: 1.35;
-  text-align: center;
-}
-
-.adherence-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.adherence-list > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--sand-90);
-}
-
-.adherence-list span {
-  color: var(--slate-47);
-  font-size: 11px;
-}
-
-.adherence-list strong {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.activity-list,
 .appointment-list {
   display: flex;
   flex: 1;
@@ -442,7 +228,6 @@
   padding: 3px 19px 18px;
 }
 
-.activity-list > div,
 .appointment-list > div {
   display: flex;
   align-items: center;
@@ -451,26 +236,10 @@
   border-bottom: 1px solid var(--sand-90);
 }
 
-.activity-list > div:last-child,
 .appointment-list > div:last-child {
   border-bottom: 0;
 }
 
-.activity-list i {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--gold-31);
-  background: var(--gold-90);
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 700;
-}
-
-.activity-list span,
 .appointment-list span {
   min-width: 0;
   display: flex;
@@ -481,7 +250,6 @@
   font-size: 11px;
 }
 
-.activity-list span strong,
 .appointment-list span strong {
   overflow: hidden;
   color: var(--slate-26);
@@ -491,55 +259,12 @@
   white-space: nowrap;
 }
 
-.activity-list small {
-  flex: 0 0 auto;
-  color: var(--slate-66);
-  font-size: 11px;
-}
-
-.progress-widget {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  padding: 6px 20px 15px;
-}
-
-.progress-widget > div {
-  display: flex;
-  flex-direction: column;
-}
-
-.progress-widget strong {
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.progress-widget span {
-  color: var(--slate-55);
-  font-size: 11px;
-}
-
-.progress-widget svg {
-  width: 100%;
-  min-height: 90px;
-  flex: 1;
-  margin-top: 10px;
-}
-
 .appointment-list time {
   width: 42px;
   flex: 0 0 auto;
   color: var(--elevn-accent);
   font-size: 11px;
   font-weight: 700;
-}
-
-@media (max-width: 1120px) {
-  .adherence-content {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
 }
 
 @media (max-width: 760px) {
@@ -553,19 +278,9 @@
     grid-column: 1 / -1;
   }
 
-  .widget-controls {
-    width: 100%;
-    justify-content: flex-start;
-    padding-top: 6px;
-  }
-
   .widget-header {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .adherence-content {
-    grid-template-columns: 1fr;
   }
 
 }

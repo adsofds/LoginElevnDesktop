@@ -27,13 +27,18 @@ import {
   ActiveStudentsChart,
   AdherenceChart,
   AttentionQueue,
+  Avatar,
   GoalsChart,
   KpiOverview,
   LeadsFunnel,
   TodayAgenda,
+  WidgetFooterLink,
 } from './dashboard/DashboardWidgets'
 import { TemperaturePicker } from './interno/LeadsSpreadsheet'
+import { Badge, type BadgeTone } from './ui/Badge'
 import { Button } from './ui/Button'
+import { cx } from './ui/cx'
+import { Segmented } from './ui/Segmented'
 import { Icon } from './ui/icons'
 import { Menu } from './ui/Menu'
 import { Sheet } from './ui/Sheet'
@@ -355,6 +360,12 @@ const students: Student[] = [
   },
 ]
 
+const statusTone: Record<StudentStatus, BadgeTone> = {
+  'Em dia': 'success',
+  Atenção: 'warning',
+  'Em risco': 'danger',
+}
+
 function StudentsTable() {
   const [status, setStatus] = useState<'Todos' | StudentStatus>('Todos')
   const [goal, setGoal] = useState('Todos')
@@ -369,28 +380,28 @@ function StudentsTable() {
   const totalPages = Math.max(1, Math.ceil(filteredStudents.length / pageSize))
   const safePage = Math.min(page, totalPages)
   const visibleStudents = filteredStudents.slice((safePage - 1) * pageSize, safePage * pageSize)
-
-  const selectStatus = (nextStatus: 'Todos' | StudentStatus) => {
-    setStatus(nextStatus)
-    setPage(1)
-  }
+  const count = (value: StudentStatus) =>
+    students.filter((student) => student.status === value).length
 
   return (
-    <div className="students-table-content">
-      <div className="students-filters">
-        <div>
-          {(['Todos', 'Em dia', 'Atenção', 'Em risco'] as const).map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              className={status === filter ? 'active' : ''}
-              onClick={() => selectStatus(filter)}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
-        <label>
+    <div className="flex min-h-full flex-col px-5 pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Segmented
+          size="sm"
+          label="Filtrar por status"
+          value={status}
+          onChange={(next) => {
+            setStatus(next)
+            setPage(1)
+          }}
+          items={[
+            { id: 'Todos', label: 'Todos', count: students.length },
+            { id: 'Em dia', label: 'Em dia', count: count('Em dia') },
+            { id: 'Atenção', label: 'Atenção', count: count('Atenção') },
+            { id: 'Em risco', label: 'Em risco', count: count('Em risco') },
+          ]}
+        />
+        <label className="relative">
           <span className="sr-only">Filtrar por objetivo</span>
           <select
             value={goal}
@@ -398,77 +409,104 @@ function StudentsTable() {
               setGoal(event.target.value)
               setPage(1)
             }}
+            className="h-8 rounded-control border border-line bg-surface pr-8 pl-3 text-[13px] text-ink-2 focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none"
           >
-            <option>Todos</option>
+            <option value="Todos">Todos os objetivos</option>
             <option>Emagrecimento</option>
             <option>Hipertrofia</option>
             <option>Performance</option>
           </select>
         </label>
       </div>
-      <div className="students-table-scroll">
-        <table>
+      <div className="mt-3 -mx-5 flex-[1_0_auto] overflow-x-auto">
+        <table className="w-full min-w-[720px] border-collapse text-left text-sm text-ink">
           <thead>
-            <tr>
-              <th>Aluno</th>
-              <th>Objetivo</th>
-              <th>Fase</th>
-              <th>Origem / Formulário</th>
-              <th>Última atividade</th>
-              <th>Vencimento</th>
-              <th>Status</th>
+            <tr className="border-y border-line bg-subtle/60 text-xs text-ink-3">
+              {[
+                'Aluno',
+                'Objetivo',
+                'Fase',
+                'Origem',
+                'Última atividade',
+                'Vencimento',
+                'Status',
+              ].map((label, index) => (
+                <th
+                  key={label}
+                  scope="col"
+                  className={cx('h-9 px-3 font-semibold whitespace-nowrap', index === 0 && 'pl-5')}
+                >
+                  {label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {visibleStudents.map((student) => (
-              <tr key={student.name}>
-                <td>
-                  <img src={student.avatar} alt="" width="32" height="32" loading="lazy" />
-                  <strong>{student.name}</strong>
+            {visibleStudents.length === 0 && (
+              <tr>
+                <td colSpan={7} className="py-8 text-center text-sm text-ink-3">
+                  Nenhum aluno com esses filtros.
                 </td>
-                <td>{student.goal}</td>
-                <td>{student.phase}</td>
-                <td>{student.leadSource}</td>
-                <td>{student.activity}</td>
-                <td>{student.expiration}</td>
-                <td>
-                  <span
-                    className={`status-badge status-${student.status.replace(' ', '-').toLowerCase()}`}
-                  >
-                    <i />
-                    {student.status}
+              </tr>
+            )}
+            {visibleStudents.map((student) => (
+              <tr
+                key={student.name}
+                className="border-b border-line-subtle last:border-0 hover:bg-subtle"
+              >
+                <td className="h-11 pr-3 pl-5">
+                  <span className="flex items-center gap-2.5">
+                    <Avatar src={student.avatar} name={student.name} size={28} />
+                    <span className="font-medium whitespace-nowrap">{student.name}</span>
                   </span>
+                </td>
+                <td className="px-3 whitespace-nowrap text-ink-2">{student.goal}</td>
+                <td className="px-3 whitespace-nowrap text-ink-2">{student.phase}</td>
+                <td className="max-w-[180px] truncate px-3 text-ink-3" title={student.leadSource}>
+                  {student.leadSource}
+                </td>
+                <td className="px-3 whitespace-nowrap text-ink-2">{student.activity}</td>
+                <td className="px-3 whitespace-nowrap text-ink-2 tabular-nums">
+                  {student.expiration}
+                </td>
+                <td className="px-3">
+                  <Badge tone={statusTone[student.status]} dot>
+                    {student.status}
+                  </Badge>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <footer className="table-pagination">
-        <span>
+      <footer className="mt-3 flex items-center justify-between gap-3 text-xs text-ink-3">
+        <span className="tabular-nums">
           {filteredStudents.length === 0
             ? 'Nenhum aluno'
-            : `${(safePage - 1) * pageSize + 1}–${Math.min(
-                safePage * pageSize,
-                filteredStudents.length,
-              )} de ${filteredStudents.length} alunos`}
+            : `${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filteredStudents.length)} de ${filteredStudents.length}`}
         </span>
-        <div>
-          <button
-            type="button"
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
+        <div className="flex items-center gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Página anterior"
             disabled={safePage === 1}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
           >
-            Anterior
-          </button>
-          <strong>{safePage}</strong>
-          <button
-            type="button"
-            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            <Icon name="arrowLeft" className="size-4" />
+          </Button>
+          <span className="min-w-8 text-center font-medium text-ink-2 tabular-nums">
+            {safePage}/{totalPages}
+          </span>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Próxima página"
             disabled={safePage === totalPages}
+            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
           >
-            Próxima
-          </button>
+            <Icon name="arrowRight" className="size-4" />
+          </Button>
         </div>
       </footer>
     </div>
@@ -484,33 +522,55 @@ function InternalUpdates({
   onToggleUpdate: (updateId: string) => void
   onOpen: () => void
 }) {
+  const visible = updates.slice(0, 6)
   return (
-    <div className="internal-updates">
-      {updates.slice(0, 6).map((update) => (
-        <article key={update.id} className={update.completed ? 'completed' : ''}>
-          <img className="update-avatar" src={update.avatar} alt={`Foto de ${update.author}`} />
-          <div>
-            <header>
-              <strong>{update.author}</strong>
-              <small>{update.time}</small>
-            </header>
-            <span className="update-role">{update.role}</span>
-            <p>
-              <strong>{update.subject || update.type}</strong> — {update.message}
-            </p>
-            <footer>
-              <span>{update.type}</span>
-              <strong>Para: {update.audience}</strong>
-              <button type="button" onClick={() => onToggleUpdate(update.id)}>
-                {update.completed ? 'Reabrir' : 'Concluir'}
-              </button>
-            </footer>
-          </div>
-        </article>
-      ))}
-      <button type="button" className="widget-footer-link" onClick={onOpen}>
-        Abrir Atualizações no Interno →
-      </button>
+    <div className="flex min-h-full flex-col px-5 pb-4">
+      {visible.length === 0 ? (
+        <p className="py-8 text-center text-sm text-ink-3">Nenhuma atualização da equipe.</p>
+      ) : (
+        <ul className="divide-y divide-line-subtle">
+          {visible.map((update) => (
+            <li key={update.id} className={cx('flex gap-3 py-3', update.completed && 'opacity-60')}>
+              <Avatar src={update.avatar} name={update.author} size={32} />
+              <div className="min-w-0 flex-1">
+                <p className="flex items-baseline gap-2 text-sm">
+                  <span className="truncate font-medium text-ink">{update.author}</span>
+                  <span className="truncate text-xs text-ink-3">{update.role}</span>
+                  <span className="ml-auto shrink-0 text-xs text-ink-3">{update.time}</span>
+                </p>
+                <p
+                  className={cx(
+                    'mt-0.5 line-clamp-2 text-[13px] leading-5 text-ink-2',
+                    update.completed && 'line-through',
+                  )}
+                >
+                  <span className="font-medium text-ink">{update.subject || update.type}</span> —{' '}
+                  {update.message}
+                </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <Badge tone="neutral">{update.type}</Badge>
+                  <span className="text-xs text-ink-3">Para {update.audience}</span>
+                  <button
+                    type="button"
+                    onClick={() => onToggleUpdate(update.id)}
+                    aria-pressed={!!update.completed}
+                    className="ml-auto inline-flex h-7 items-center gap-1 rounded-control px-2 text-xs font-medium text-ink-2 hover:bg-subtle hover:text-ink"
+                  >
+                    {update.completed ? (
+                      'Reabrir'
+                    ) : (
+                      <>
+                        <Icon name="check" className="size-3.5" /> Concluir
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <WidgetFooterLink onClick={onOpen}>Abrir atualizações no Interno</WidgetFooterLink>
     </div>
   )
 }
@@ -571,6 +631,12 @@ const initialRenewalRecords: RenewalRecord[] = [
   },
 ]
 
+const renewalTone: Record<RenewalRecord['status'], BadgeTone> = {
+  Recuperado: 'success',
+  'Em conversa': 'warning',
+  'Não renovou': 'danger',
+}
+
 function RenewalsOverview() {
   const [records, setRecords] = useState<RenewalRecord[]>(initialRenewalRecords)
   const [editingReasonId, setEditingReasonId] = useState<string | null>(null)
@@ -611,114 +677,139 @@ function RenewalsOverview() {
     }
   }
 
+  const stats = [
+    { label: 'Para vencer', value: expiringTotal, hint: 'neste ciclo', tone: 'text-ink' },
+    {
+      label: 'Recuperados',
+      value: recoveredCount,
+      hint: `${recoveryRate}% retidos`,
+      tone: 'text-success',
+    },
+    { label: 'Em conversa', value: inNegotiation, hint: 'prioridade', tone: 'text-warning' },
+    { label: 'Não renovaram', value: lostCount, hint: 'com motivo', tone: 'text-danger' },
+  ]
+
   return (
-    <div className="renewals-widget">
-      <div className="renewals-kpi-strip four-cols">
-        <div>
-          <span>Para vencer</span>
-          <strong>{expiringTotal}</strong>
-          <small>neste ciclo</small>
+    <div className="flex min-h-full flex-col px-5 pb-4">
+      <dl className="grid shrink-0 grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-4">
+        {stats.map((stat) => (
+          <div key={stat.label} className="bg-surface px-3 py-2.5">
+            <dt className="text-xs text-ink-3">{stat.label}</dt>
+            <dd className={cx('mt-0.5 text-xl font-semibold tabular-nums', stat.tone)}>
+              {stat.value}
+            </dd>
+            <dd className="text-[11px] text-ink-3">{stat.hint}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="mt-3">
+        <div className="flex justify-between text-xs text-ink-3">
+          <span>Recuperação de vencimentos</span>
+          <span className="font-medium text-ink-2 tabular-nums">{recoveryRate}%</span>
         </div>
-        <div className="highlight">
-          <span>Recuperados</span>
-          <strong>{recoveredCount}</strong>
-          <small>{recoveryRate}% retidos</small>
-        </div>
-        <div>
-          <span>Em conversa</span>
-          <strong>{String(inNegotiation).padStart(2, '0')}</strong>
-          <small>prioridade</small>
-        </div>
-        <div className="lost">
-          <span>Não renovaram</span>
-          <strong>{String(lostCount).padStart(2, '0')}</strong>
-          <small>com motivo</small>
+        <div
+          className="mt-1 h-1.5 overflow-hidden rounded-full bg-subtle"
+          role="progressbar"
+          aria-label="Taxa de recuperação"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={recoveryRate}
+        >
+          <div
+            className="h-full rounded-full bg-success transition-[width] duration-500 ease-out-soft"
+            style={{ width: `${recoveryRate}%` }}
+          />
         </div>
       </div>
 
-      <div className="renewals-progress-block">
-        <div>
-          <span>Taxa de recuperação de vencimentos</span>
-          <strong>
-            {recoveredCount} recuperados · {lostCount} não renovaram ({recoveryRate}%)
-          </strong>
-        </div>
-        <div className="renewals-progress-bar" aria-hidden="true">
-          <i style={{ width: `${recoveryRate}%` }} />
-        </div>
-      </div>
-
-      <div className="renewals-mini-list">
+      <ul className="mt-2 divide-y divide-line-subtle">
         {records.map((item) => (
-          <div key={item.id} className="renewal-row-card">
-            <div className="renewal-row-main">
-              <span>
-                <strong>{item.name}</strong>
-                <small>
-                  Plano {item.plan} · Venc. {item.due}
-                </small>
-              </span>
-              <div className="renewal-row-actions">
-                <em
-                  className={
-                    item.status === 'Recuperado'
-                      ? 'recovered'
-                      : item.status === 'Não renovou'
-                        ? 'lost'
-                        : 'pending'
-                  }
-                >
-                  {item.status}
-                </em>
-                {item.status !== 'Recuperado' && (
-                  <button
-                    type="button"
-                    className="renewal-mini-btn approve"
-                    onClick={() => markAsRecovered(item.id)}
-                    title="Marcar como renovado"
-                  >
-                    Renovou
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="renewal-mini-btn lost"
-                  onClick={() => openReasonEditor(item)}
-                >
-                  {item.status === 'Não renovou' ? 'Motivo' : 'Não renovou'}
-                </button>
+          <li key={item.id} className="py-2.5">
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">{item.name}</p>
+                <p className="text-xs text-ink-3">
+                  Plano {item.plan} · vence {item.due}
+                </p>
               </div>
+              <Badge tone={renewalTone[item.status]} dot>
+                {item.status}
+              </Badge>
+              <Menu
+                label={`Ações de ${item.name}`}
+                items={[
+                  ...(item.status !== 'Recuperado'
+                    ? [
+                        {
+                          id: 'renovou',
+                          label: 'Marcar como renovado',
+                          onSelect: () => markAsRecovered(item.id),
+                        },
+                      ]
+                    : []),
+                  {
+                    id: 'nao-renovou',
+                    label: item.status === 'Não renovou' ? 'Editar motivo' : 'Não renovou…',
+                    description: 'Registre o motivo para a gestão',
+                    onSelect: () => openReasonEditor(item),
+                  },
+                ]}
+                trigger={({ open, toggle, id }) => (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Ações de ${item.name}`}
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                    aria-controls={open ? id : undefined}
+                    onClick={toggle}
+                  >
+                    <Icon name="dots" className="size-4" />
+                  </Button>
+                )}
+              />
             </div>
 
             {item.status === 'Não renovou' && item.reason && editingReasonId !== item.id && (
-              <p className="renewal-lost-reason">
-                <strong>Motivo (Admin):</strong> {item.reason}
+              <p className="mt-1.5 rounded-md bg-subtle px-2.5 py-1.5 text-xs leading-5 text-ink-2">
+                <span className="font-medium text-ink">Motivo:</span> {item.reason}
               </p>
             )}
 
             {editingReasonId === item.id && (
-              <div className="renewal-reason-editor">
+              <form
+                className="mt-2 flex flex-wrap gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  saveNonRenewalReason(item.id)
+                }}
+              >
                 <input
                   type="text"
                   value={reasonDraft}
                   onChange={(event) => setReasonDraft(event.target.value)}
-                  placeholder="Escreva o motivo da não renovação (ex.: financeiro, rotina)..."
+                  placeholder="Motivo (ex.: financeiro, rotina, mudou de cidade)"
                   aria-label={`Motivo da não renovação de ${item.name}`}
                   autoFocus
+                  className="h-8 min-w-0 flex-1 rounded-control border border-line bg-surface px-3 text-[13px] text-ink placeholder:text-ink-3 focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none"
                 />
-                <div>
-                  <button type="button" onClick={() => saveNonRenewalReason(item.id)}>
-                    Salvar motivo
-                  </button>
-                  <button type="button" className="cancel" onClick={() => setEditingReasonId(null)}>
-                    Cancelar
-                  </button>
-                </div>
-              </div>
+                <Button size="sm" variant="primary" type="submit">
+                  Salvar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setEditingReasonId(null)}
+                >
+                  Cancelar
+                </Button>
+              </form>
             )}
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }
@@ -732,44 +823,43 @@ function SiteFormsDashboardWidget({
   onUpdateFormTemperature: (formId: string, temperature: LeadTemperature) => void
   onOpenSiteForms: () => void
 }) {
-  const countFechado = siteForms.filter((f) => f.temperature === 'Fechado').length
-  const countQuente = siteForms.filter((f) => f.temperature === 'Quente').length
-  const countMorno = siteForms.filter((f) => f.temperature === 'Morno').length
-  const countFrio = siteForms.filter((f) => f.temperature === 'Frio').length
+  const summary: { label: string; value: LeadTemperature; tone: BadgeTone }[] = [
+    { label: 'Fechados', value: 'Fechado', tone: 'success' },
+    { label: 'Quentes', value: 'Quente', tone: 'danger' },
+    { label: 'Mornos', value: 'Morno', tone: 'warning' },
+    { label: 'Frios', value: 'Frio', tone: 'info' },
+  ]
 
   return (
-    <div className="dashboard-site-forms-widget">
-      <div className="dashboard-site-forms-summary">
-        <div className="summary-chip fechado">
-          <span>Fechados</span>
-          <strong>{countFechado}</strong>
-        </div>
-        <div className="summary-chip quente">
-          <span>Quentes</span>
-          <strong>{countQuente}</strong>
-        </div>
-        <div className="summary-chip morno">
-          <span>Mornos</span>
-          <strong>{countMorno}</strong>
-        </div>
-        <div className="summary-chip frio">
-          <span>Frios</span>
-          <strong>{countFrio}</strong>
-        </div>
-        <button type="button" className="open-internal-forms-btn" onClick={onOpenSiteForms}>
-          Abrir planilha em Interno →
-        </button>
+    <div className="flex min-h-full flex-col px-5 pb-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {summary.map((item) => (
+          <Badge key={item.value} tone={item.tone} dot>
+            {item.label}{' '}
+            <span className="tabular-nums">
+              {siteForms.filter((form) => form.temperature === item.value).length}
+            </span>
+          </Badge>
+        ))}
       </div>
-
-      <div className="dashboard-site-forms-table-wrap">
-        <table className="dashboard-site-forms-table">
+      <div className="mt-3 -mx-5 flex-[1_0_auto] overflow-x-auto">
+        <table className="w-full min-w-[680px] border-collapse text-left text-sm text-ink">
           <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Telefone & Instagram</th>
-              <th>Indicação</th>
-              <th>Data e Hora do Preenchimento</th>
-              <th>Temperatura</th>
+            <tr className="border-y border-line bg-subtle/60 text-xs text-ink-3">
+              {['Nome', 'Contato', 'Indicação', 'Preenchido em', 'Temperatura'].map(
+                (label, index) => (
+                  <th
+                    key={label}
+                    scope="col"
+                    className={cx(
+                      'h-9 px-3 font-semibold whitespace-nowrap',
+                      index === 0 && 'pl-5',
+                    )}
+                  >
+                    {label}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
@@ -780,24 +870,27 @@ function SiteFormsDashboardWidget({
                 const ts = formatFormTimestamp(item.submittedAtIso)
                 const { referral } = splitReferralOrBirth(item.referralOrBirth)
                 return (
-                  <tr key={item.id}>
-                    <td>
-                      <strong>{formatPersonName(item.name)}</strong>
+                  <tr
+                    key={item.id}
+                    className="border-b border-line-subtle last:border-0 hover:bg-subtle"
+                  >
+                    <td className="h-12 pr-3 pl-5 font-medium whitespace-nowrap">
+                      {formatPersonName(item.name)}
                     </td>
-                    <td>
-                      <div className="dash-form-contact">
-                        <span>{item.phone}</span>
-                        <small>{item.instagram}</small>
-                      </div>
+                    <td className="px-3 whitespace-nowrap">
+                      <span className="block text-ink-2 tabular-nums">{item.phone}</span>
+                      <span className="block text-xs text-ink-3">{item.instagram}</span>
                     </td>
-                    <td>{referral}</td>
-                    <td>
-                      <div className="dash-form-timestamp" title={item.submittedAtIso}>
-                        <strong>{ts.fullLabel}</strong>
-                        <small>{formatRelativeTime(item.submittedAtIso)}</small>
-                      </div>
+                    <td className="max-w-[160px] truncate px-3 text-ink-2" title={referral}>
+                      {referral}
                     </td>
-                    <td>
+                    <td className="px-3 whitespace-nowrap" title={item.submittedAtIso}>
+                      <span className="block text-ink-2">{ts.fullLabel}</span>
+                      <span className="block text-xs text-ink-3">
+                        {formatRelativeTime(item.submittedAtIso)}
+                      </span>
+                    </td>
+                    <td className="px-3">
                       <TemperaturePicker
                         value={item.temperature}
                         name={formatPersonName(item.name)}
@@ -810,6 +903,7 @@ function SiteFormsDashboardWidget({
           </tbody>
         </table>
       </div>
+      <WidgetFooterLink onClick={onOpenSiteForms}>Abrir planilha no Interno</WidgetFooterLink>
     </div>
   )
 }
@@ -836,19 +930,33 @@ function WidgetContent({
   onNavigate: (href: string) => void
 }) {
   if (id === 'kpi-overview') {
-    return <KpiOverview period={period} siteForms={siteForms} onNavigate={onNavigate} onOpenSiteForms={onOpenSiteForms} />
+    return (
+      <KpiOverview
+        period={period}
+        siteForms={siteForms}
+        onNavigate={onNavigate}
+        onOpenSiteForms={onOpenSiteForms}
+      />
+    )
   }
   if (id === 'attention-list') return <AttentionQueue onNavigate={onNavigate} />
   if (id === 'students-table') return <StudentsTable />
   if (id === 'weekly-agenda') return <TodayAgenda onNavigate={onNavigate} />
   if (id === 'team-overview') {
-    return <InternalUpdates updates={internalUpdates} onToggleUpdate={onToggleInternalUpdate} onOpen={onOpenInternal} />
+    return (
+      <InternalUpdates
+        updates={internalUpdates}
+        onToggleUpdate={onToggleInternalUpdate}
+        onOpen={onOpenInternal}
+      />
+    )
   }
   if (id === 'active-students-chart') return <ActiveStudentsChart period={period} />
   if (id === 'adherence-chart') return <AdherenceChart period={period} />
   if (id === 'renewals-overview') return <RenewalsOverview />
   if (id === 'goals-chart') return <GoalsChart />
-  if (id === 'leads-funnel') return <LeadsFunnel siteForms={siteForms} onOpenSiteForms={onOpenSiteForms} />
+  if (id === 'leads-funnel')
+    return <LeadsFunnel siteForms={siteForms} onOpenSiteForms={onOpenSiteForms} />
   if (id === 'site-forms') {
     return (
       <SiteFormsDashboardWidget
@@ -859,53 +967,36 @@ function WidgetContent({
     )
   }
 
-  if (id === 'students-summary') {
+  if (id === 'students-summary' || id === 'pending-checkins' || id === 'alerts') {
+    const metric = {
+      'students-summary': {
+        value: '48',
+        label: 'alunos ativos',
+        hint: '+6 neste mês',
+        tone: 'text-success',
+      },
+      'pending-checkins': {
+        value: '7',
+        label: 'check-ins aguardando análise',
+        hint: 'Lucas, Renata, Camila e +4',
+        tone: 'text-ink-3',
+      },
+      alerts: {
+        value: '3',
+        label: 'alunos precisam de atenção',
+        hint: 'sem treino há 4+ dias',
+        tone: 'text-danger',
+      },
+    }[id]
     return (
-      <div className="metric-content">
+      <div className="flex min-h-full flex-col justify-between gap-3 px-5 pb-4">
         <div>
-          <strong>48</strong>
-          <span>alunos ativos</span>
+          <strong className="block text-[32px] leading-none font-semibold tracking-[-0.02em] text-ink tabular-nums">
+            {metric.value}
+          </strong>
+          <span className="mt-1.5 block text-sm text-ink-2">{metric.label}</span>
         </div>
-        <div className="metric-trend">
-          <svg viewBox="0 0 90 34" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M2 28 C16 27 18 17 32 20 S51 12 62 15 S75 5 88 7" />
-          </svg>
-          <small>+6 neste mês</small>
-        </div>
-      </div>
-    )
-  }
-
-  if (id === 'pending-checkins') {
-    return (
-      <div className="metric-content">
-        <div>
-          <strong>07</strong>
-          <span>aguardando análise</span>
-        </div>
-        <div className="mini-avatars" aria-label="Alunos pendentes">
-          <i>LM</i>
-          <i>RS</i>
-          <i>CA</i>
-          <i>+4</i>
-        </div>
-      </div>
-    )
-  }
-
-  if (id === 'alerts') {
-    return (
-      <div className="metric-content alert-metric">
-        <div>
-          <strong>03</strong>
-          <span>precisam de atenção</span>
-        </div>
-        <div className="alert-bars" aria-label="Distribuição dos alertas">
-          <i />
-          <i />
-          <i />
-          <i />
-        </div>
+        <span className={cx('text-xs font-medium', metric.tone)}>{metric.hint}</span>
       </div>
     )
   }
@@ -913,81 +1004,111 @@ function WidgetContent({
   if (id === 'workout-adherence' || id === 'nutrition-adherence') {
     const workout = id === 'workout-adherence'
     const value = workout ? 87 : 78
-    const rows = workout
+    const rows: [string, number][] = workout
       ? [
-          ['Força e hipertrofia', '92%'],
-          ['Condicionamento', '84%'],
-          ['Mobilidade', '73%'],
+          ['Força e hipertrofia', 92],
+          ['Condicionamento', 84],
+          ['Mobilidade', 73],
         ]
       : [
-          ['Plano alimentar', '82%'],
-          ['Hidratação', '76%'],
-          ['Registro de refeições', '69%'],
+          ['Plano alimentar', 82],
+          ['Hidratação', 76],
+          ['Registro de refeições', 69],
         ]
+    const radius = 34
+    const circumference = 2 * Math.PI * radius
 
     return (
-      <div className="adherence-content">
-        <div className="adherence-score">
-          <div className="score-ring" style={{ '--score': `${value * 3.6}deg` } as CSSProperties}>
-            <strong>{value}%</strong>
+      <div className="flex min-h-full items-center gap-5 px-5 pb-4">
+        <div className="relative grid size-24 shrink-0 place-items-center">
+          <svg viewBox="0 0 80 80" className="absolute inset-0 -rotate-90" aria-hidden="true">
+            <circle
+              cx="40"
+              cy="40"
+              r={radius}
+              fill="none"
+              strokeWidth="7"
+              className="stroke-subtle"
+            />
+            <circle
+              cx="40"
+              cy="40"
+              r={radius}
+              fill="none"
+              strokeWidth="7"
+              strokeLinecap="round"
+              className="stroke-brand"
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference * (1 - value / 100)}
+            />
+          </svg>
+          <div className="text-center">
+            <strong className="block text-xl font-semibold text-ink tabular-nums">{value}%</strong>
+            <span className="text-[10px] text-ink-3">30 dias</span>
           </div>
-          <span>média nos últimos 30 dias</span>
         </div>
-        <div className="adherence-list">
+        <ul className="min-w-0 flex-1 space-y-2.5">
           {rows.map(([label, percentage]) => (
-            <div key={label}>
-              <span>{label}</span>
-              <strong>{percentage}</strong>
-            </div>
+            <li key={label}>
+              <div className="flex justify-between gap-2 text-[13px]">
+                <span className="truncate text-ink-2">{label}</span>
+                <span className="font-medium text-ink tabular-nums">{percentage}%</span>
+              </div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-subtle">
+                <div
+                  className="h-full rounded-full bg-brand/70"
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     )
   }
 
   if (id === 'recent-activity') {
+    const activity = [
+      { name: 'João Martins', action: 'concluiu o treino B', time: '12 min', icon: 'training' },
+      { name: 'Ana Lima', action: 'enviou um check-in', time: '34 min', icon: 'photo' },
+      { name: 'Rafael Freitas', action: 'registrou uma refeição', time: '1 h', icon: 'nutrition' },
+    ]
     return (
-      <div className="activity-list">
-        <div>
-          <i>JM</i>
-          <span>
-            <strong>João Martins</strong>
-            concluiu o treino B
-          </span>
-          <small>12 min</small>
-        </div>
-        <div>
-          <i>AL</i>
-          <span>
-            <strong>Ana Lima</strong>
-            enviou um check-in
-          </span>
-          <small>34 min</small>
-        </div>
-        <div>
-          <i>RF</i>
-          <span>
-            <strong>Rafael Freitas</strong>
-            registrou uma refeição
-          </span>
-          <small>1 h</small>
-        </div>
-      </div>
+      <ul className="divide-y divide-line-subtle px-5 pb-4">
+        {activity.map((item) => (
+          <li key={item.name} className="flex items-center gap-3 py-2.5">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-subtle text-ink-2">
+              <Icon name={item.icon} className="size-4" />
+            </span>
+            <p className="min-w-0 flex-1 truncate text-sm text-ink-2">
+              <span className="font-medium text-ink">{item.name}</span> {item.action}
+            </p>
+            <span className="shrink-0 text-xs text-ink-3">{item.time}</span>
+          </li>
+        ))}
+      </ul>
     )
   }
 
   if (id === 'progress') {
     return (
-      <div className="progress-widget">
-        <div>
-          <strong>+18%</strong>
-          <span>evolução média em 90 dias</span>
+      <div className="flex min-h-full flex-col px-5 pb-4">
+        <div className="flex items-baseline gap-2">
+          <strong className="text-[28px] leading-none font-semibold text-ink tabular-nums">
+            +18%
+          </strong>
+          <span className="text-sm text-ink-2">evolução média em 90 dias</span>
         </div>
-        <svg viewBox="0 0 500 120" preserveAspectRatio="none" aria-hidden="true">
+        <svg
+          viewBox="0 0 500 120"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          className="mt-3 min-h-20 w-full flex-1"
+        >
           <defs>
             <linearGradient id="progress-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" style={{ stopColor: 'var(--gold-42)' }} stopOpacity=".28" />
-              <stop offset="100%" style={{ stopColor: 'var(--gold-42)' }} stopOpacity="0" />
+              <stop offset="0%" style={{ stopColor: 'var(--elevn-accent)' }} stopOpacity=".2" />
+              <stop offset="100%" style={{ stopColor: 'var(--elevn-accent)' }} stopOpacity="0" />
             </linearGradient>
           </defs>
           <path
@@ -997,39 +1118,16 @@ function WidgetContent({
           <path
             d="M0 100 C70 92 85 68 145 76 S240 54 290 61 S385 20 500 28"
             fill="none"
-            style={{ stroke: 'var(--gold-42)' }}
+            style={{ stroke: 'var(--elevn-accent)' }}
             strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
           />
         </svg>
       </div>
     )
   }
 
-  return (
-    <div className="appointment-list">
-      <div>
-        <time>09:00</time>
-        <span>
-          <strong>Lucas Mendes</strong>
-          Avaliação mensal
-        </span>
-      </div>
-      <div>
-        <time>11:30</time>
-        <span>
-          <strong>Camila Rocha</strong>
-          Ajuste de treino
-        </span>
-      </div>
-      <div>
-        <time>15:00</time>
-        <span>
-          <strong>Bruno Alves</strong>
-          Check-in inicial
-        </span>
-      </div>
-    </div>
-  )
+  return <TodayAgenda onNavigate={onNavigate} />
 }
 
 function withFallback(items: DashboardLayoutItem[]): DashboardLayoutItem[] {
@@ -1090,7 +1188,10 @@ export default function CustomDashboard({
   const [storedLayouts, setStoredLayouts] = useState<SavedDashboardLayout[]>([])
   const [activeLayoutId, setActiveLayoutId] = useState('operacional')
   const [defaultLayoutId, setDefaultLayoutId] = useState('operacional')
-  const [nameDialog, setNameDialog] = useState<null | { mode: 'save-as' | 'rename'; value: string }>(null)
+  const [nameDialog, setNameDialog] = useState<null | {
+    mode: 'save-as' | 'rename'
+    value: string
+  }>(null)
   const allLayouts = mergeLayouts(storedLayouts)
   const activeLayout = allLayouts.find((item) => item.id === activeLayoutId) ?? allLayouts[0]
 
@@ -1118,7 +1219,9 @@ export default function CustomDashboard({
   useEffect(() => {
     const state = readLayoutState()
     const merged = mergeLayouts(state.layouts)
-    const defaultId = merged.some((item) => item.id === state.defaultId) ? state.defaultId! : 'operacional'
+    const defaultId = merged.some((item) => item.id === state.defaultId)
+      ? state.defaultId!
+      : 'operacional'
     const activeId = merged.some((item) => item.id === state.activeId) ? state.activeId! : defaultId
     setStoredLayouts(state.layouts)
     setDefaultLayoutId(defaultId)
@@ -1161,7 +1264,8 @@ export default function CustomDashboard({
     if (activeLayout.builtIn) return
     const remaining = storedLayouts.filter((item) => item.id !== activeLayout.id)
     const nextDefault = defaultLayoutId === activeLayout.id ? 'operacional' : defaultLayoutId
-    const target = mergeLayouts(remaining).find((item) => item.id === nextDefault) ?? builtInLayouts[0]
+    const target =
+      mergeLayouts(remaining).find((item) => item.id === nextDefault) ?? builtInLayouts[0]
     persist(remaining, target.id, nextDefault)
     applyLayout(target)
     setFeedback(`Layout “${activeLayout.name}” excluído.`)
@@ -1334,17 +1438,33 @@ export default function CustomDashboard({
           <div className="mr-auto min-w-0">
             <p className="text-sm font-semibold">Editando layout “{activeLayout.name}”</p>
             <p className="text-xs text-on-dark/65">
-              Arraste pelo puxador para mover e pelo canto inferior direito para redimensionar. Setas também funcionam.
+              Arraste pelo puxador para mover e pelo canto inferior direito para redimensionar.
+              Setas também funcionam.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="ghost" className="text-on-dark hover:bg-white/10 hover:text-on-dark" onClick={cancelEditing}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-on-dark hover:bg-white/10 hover:text-on-dark"
+              onClick={cancelEditing}
+            >
               Cancelar
             </Button>
-            <Button size="sm" variant="ghost" className="text-on-dark hover:bg-white/10 hover:text-on-dark" onClick={() => setCatalogOpen(true)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-on-dark hover:bg-white/10 hover:text-on-dark"
+              onClick={() => setCatalogOpen(true)}
+            >
               <Icon name="plus" className="size-4" /> Adicionar widget
             </Button>
-            <Button size="sm" variant="ghost" className="text-on-dark hover:bg-white/10 hover:text-on-dark" onClick={() => setNameDialog({ mode: 'save-as', value: '' })}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-on-dark hover:bg-white/10 hover:text-on-dark"
+              onClick={() => setNameDialog({ mode: 'save-as', value: '' })}
+            >
               Salvar como novo…
             </Button>
             <Button size="sm" variant="accent" onClick={saveLayout}>
@@ -1368,72 +1488,81 @@ export default function CustomDashboard({
               </span>
             )}
             <>
-                <Menu
-                  label="Opções do layout"
-                  header={
-                    <p className="mb-1 border-b border-line px-2.5 pt-1.5 pb-2 text-xs text-ink-3">
-                      {activeLayout.description ?? 'Layout personalizado'}
-                      {activeLayout.id === defaultLayoutId && ' · padrão ao abrir'}
-                    </p>
-                  }
-                  items={[
-                    {
-                      id: 'save-as',
-                      label: 'Salvar como novo layout…',
-                      onSelect: () => setNameDialog({ mode: 'save-as', value: '' }),
-                    },
-                    {
-                      id: 'rename',
-                      label: 'Renomear',
-                      onSelect: () => setNameDialog({ mode: 'rename', value: activeLayout.name }),
-                    },
-                    ...(activeLayout.id !== defaultLayoutId
-                      ? [
-                          {
-                            id: 'default',
-                            label: 'Abrir sempre neste layout',
-                            onSelect: () => {
-                              persist(storedLayouts, activeLayout.id, activeLayout.id)
-                              setFeedback(`“${activeLayout.name}” agora abre por padrão.`)
-                            },
+              <Menu
+                label="Opções do layout"
+                header={
+                  <p className="mb-1 border-b border-line px-2.5 pt-1.5 pb-2 text-xs text-ink-3">
+                    {activeLayout.description ?? 'Layout personalizado'}
+                    {activeLayout.id === defaultLayoutId && ' · padrão ao abrir'}
+                  </p>
+                }
+                items={[
+                  {
+                    id: 'save-as',
+                    label: 'Salvar como novo layout…',
+                    onSelect: () => setNameDialog({ mode: 'save-as', value: '' }),
+                  },
+                  {
+                    id: 'rename',
+                    label: 'Renomear',
+                    onSelect: () => setNameDialog({ mode: 'rename', value: activeLayout.name }),
+                  },
+                  ...(activeLayout.id !== defaultLayoutId
+                    ? [
+                        {
+                          id: 'default',
+                          label: 'Abrir sempre neste layout',
+                          onSelect: () => {
+                            persist(storedLayouts, activeLayout.id, activeLayout.id)
+                            setFeedback(`“${activeLayout.name}” agora abre por padrão.`)
                           },
-                        ]
-                      : []),
-                    ...(isCustomizedBuiltIn(activeLayout.id, storedLayouts)
-                      ? [{ id: 'restore', label: 'Restaurar original', onSelect: restoreBuiltIn }]
-                      : []),
-                    ...(!activeLayout.builtIn
-                      ? [{ id: 'delete', label: 'Excluir layout', danger: true, onSelect: deleteLayout }]
-                      : []),
-                  ]}
-                  trigger={({ open, toggle, id }) => (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={toggle}
-                      aria-haspopup="menu"
-                      aria-expanded={open}
-                      aria-controls={open ? id : undefined}
-                      aria-label="Opções do layout"
-                      className="size-8"
-                    >
-                      <span aria-hidden="true" className="text-base leading-none">⋯</span>
-                    </Button>
-                  )}
-                />
-                <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
-                    <path
-                      d="M4 20h4l11-11-4-4L4 16v4ZM13.5 6.5l4 4"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Personalizar
-                </Button>
-              </>
+                        },
+                      ]
+                    : []),
+                  ...(isCustomizedBuiltIn(activeLayout.id, storedLayouts)
+                    ? [{ id: 'restore', label: 'Restaurar original', onSelect: restoreBuiltIn }]
+                    : []),
+                  ...(!activeLayout.builtIn
+                    ? [
+                        {
+                          id: 'delete',
+                          label: 'Excluir layout',
+                          danger: true,
+                          onSelect: deleteLayout,
+                        },
+                      ]
+                    : []),
+                ]}
+                trigger={({ open, toggle, id }) => (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={toggle}
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                    aria-controls={open ? id : undefined}
+                    aria-label="Opções do layout"
+                    className="size-8"
+                  >
+                    <span aria-hidden="true" className="text-base leading-none">
+                      ⋯
+                    </span>
+                  </Button>
+                )}
+              />
+              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+                  <path
+                    d="M4 20h4l11-11-4-4L4 16v4ZM13.5 6.5l4 4"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Personalizar
+              </Button>
+            </>
           </div>
         </div>
       )}
@@ -1445,7 +1574,9 @@ export default function CustomDashboard({
           label="Nome do layout"
           confirmLabel={nameDialog.mode === 'save-as' ? 'Criar layout' : 'Renomear'}
           initialValue={nameDialog.value}
-          takenNames={allLayouts.filter((item) => item.id !== (nameDialog.mode === 'rename' ? activeLayout.id : '')).map((item) => item.name)}
+          takenNames={allLayouts
+            .filter((item) => item.id !== (nameDialog.mode === 'rename' ? activeLayout.id : ''))
+            .map((item) => item.name)}
           onCancel={() => setNameDialog(null)}
           onConfirm={(name) => {
             if (nameDialog.mode === 'save-as') saveAsNewLayout(name)
@@ -1511,31 +1642,42 @@ export default function CustomDashboard({
                   <h2>{definition.title}</h2>
                 </div>
                 {editing && (
-                  <div className="widget-controls">
-                    <button
-                      type="button"
+                  <div
+                    className="flex items-center gap-0.5"
+                    role="group"
+                    aria-label={`Organizar ${definition.title}`}
+                  >
+                    <Button
+                      size="icon"
+                      variant="ghost"
                       onClick={() => moveWidget(item.widget, -1)}
                       disabled={index === 0}
-                      title="Mover para trás"
+                      title="Mover para antes"
+                      aria-label={`Mover ${definition.title} para antes`}
                     >
-                      Antes
-                    </button>
-                    <button
-                      type="button"
+                      <Icon name="arrowLeft" className="size-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
                       onClick={() => moveWidget(item.widget, 1)}
                       disabled={index === orderedLayout.length - 1}
-                      title="Mover para frente"
+                      title="Mover para depois"
+                      aria-label={`Mover ${definition.title} para depois`}
                     >
-                      Depois
-                    </button>
-                    <button
-                      className="remove-widget"
-                      type="button"
+                      <Icon name="arrowRight" className="size-4" />
+                    </Button>
+                    <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
+                    <Button
+                      size="icon"
+                      variant="ghost"
                       onClick={() => removeWidget(item.widget)}
+                      title="Remover do painel"
                       aria-label={`Remover ${definition.title}`}
+                      className="text-ink-3 hover:bg-danger-soft hover:text-danger"
                     >
-                      Remover
-                    </button>
+                      <Icon name="trash" className="size-4" />
+                    </Button>
                   </div>
                 )}
               </header>
@@ -1601,9 +1743,16 @@ export default function CustomDashboard({
         <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-5">
           <div>
             <h2 className="text-xl leading-7 font-semibold text-ink">Adicionar widget</h2>
-            <p className="mt-1 text-sm text-ink-2">Entra no fim do layout “{activeLayout.name}”, com 6 colunas.</p>
+            <p className="mt-1 text-sm text-ink-2">
+              Entra no fim do layout “{activeLayout.name}”, com 6 colunas.
+            </p>
           </div>
-          <Button size="icon" variant="ghost" aria-label="Fechar catálogo" onClick={() => setCatalogOpen(false)}>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Fechar catálogo"
+            onClick={() => setCatalogOpen(false)}
+          >
             <Icon name="close" className="size-4" />
           </Button>
         </header>
@@ -1617,8 +1766,20 @@ export default function CustomDashboard({
                     onClick={() => addWidget(widget.id)}
                     className="group flex w-full items-start gap-3 rounded-control border border-line bg-surface p-3 text-left transition-colors hover:border-brand/40 hover:bg-subtle"
                   >
-                    <span aria-hidden="true" className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand">
-                      <Icon name={widget.category === 'Treino' ? 'training' : widget.category === 'Nutrição' ? 'nutrition' : 'dashboard'} className="size-4" />
+                    <span
+                      aria-hidden="true"
+                      className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand"
+                    >
+                      <Icon
+                        name={
+                          widget.category === 'Treino'
+                            ? 'training'
+                            : widget.category === 'Nutrição'
+                              ? 'nutrition'
+                              : 'dashboard'
+                        }
+                        className="size-4"
+                      />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium text-ink">{widget.title}</span>
@@ -1633,11 +1794,12 @@ export default function CustomDashboard({
               ))}
             </ul>
           ) : (
-            <p className="px-2 py-8 text-center text-sm text-ink-3">Todos os widgets já estão neste layout.</p>
+            <p className="px-2 py-8 text-center text-sm text-ink-3">
+              Todos os widgets já estão neste layout.
+            </p>
           )}
         </div>
       </Sheet>
     </>
   )
 }
-

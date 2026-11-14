@@ -19,7 +19,7 @@ import {
   type LeadTemperature,
   type SiteFormSubmission,
 } from '@/lib/demo-internal'
-import { demoAgenda } from '@/lib/demo-agenda'
+import { agendaTypeColor, demoAgenda, type AgendaType } from '@/lib/demo-agenda'
 import LeadsSpreadsheet from './interno/LeadsSpreadsheet'
 import InternProgress from './interno/InternProgress'
 import WeekCalendar, { type CalendarAppointment } from './interno/WeekCalendar'
@@ -406,7 +406,8 @@ const mailField =
 /** Where a conversation came from, shown as a small icon in the list. */
 function mailOrigin(update: InternalUpdate): { icon: string; label: string } {
   if (/MFIT/.test(update.subject)) return { icon: 'training', label: 'Comentário do MFIT' }
-  if (update.role === 'Aluno' || update.recipientCategory === 'aluno') return { icon: 'students', label: 'Aluno pelo app' }
+  if (update.role === 'Aluno' || update.recipientCategory === 'aluno')
+    return { icon: 'students', label: 'Aluno pelo app' }
   return { icon: 'team', label: 'Equipe' }
 }
 
@@ -501,6 +502,7 @@ export default function InternalWorkspace({
   const [cardComposerListId, setCardComposerListId] = useState<string | null>(null)
   const [editingCard, setEditingCard] = useState<{ cardId: string; listId: string } | null>(null)
   const [draggedCard, setDraggedCard] = useState<{ cardId: string; listId: string } | null>(null)
+  const [dropListId, setDropListId] = useState<string | null>(null)
   const [labelManagerOpen, setLabelManagerOpen] = useState(false)
   const [localSection, setLocalSection] = useState<'board' | 'updates' | 'posts' | 'forms'>(
     initialSection,
@@ -532,6 +534,7 @@ export default function InternalWorkspace({
   })
   const [calendarView, setCalendarView] = useState<'semana' | 'mes'>('semana')
   const [todayIso, setTodayIso] = useState('')
+  const [showPastAppointments, setShowPastAppointments] = useState(false)
 
   // Today (Brasília) and this week's demo agenda are set after hydration so the
   // static page and the browser agree; the same events show on the Dashboard.
@@ -1169,12 +1172,21 @@ export default function InternalWorkspace({
   /** Inbox triage: J/K move, E concludes, U toggles unread, R jumps to the reply box. */
   const onInboxKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     const target = event.target as HTMLElement
-    if (target.closest('input, textarea, select, [contenteditable="true"]') || event.metaKey || event.ctrlKey || event.altKey) return
+    if (
+      target.closest('input, textarea, select, [contenteditable="true"]') ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.altKey
+    )
+      return
     const key = event.key.toLowerCase()
     const index = filteredMailUpdates.findIndex((update) => update.id === selectedMail?.id)
     if (key === 'j' || key === 'k') {
       event.preventDefault()
-      const next = filteredMailUpdates[Math.max(0, Math.min(filteredMailUpdates.length - 1, index + (key === 'j' ? 1 : -1)))]
+      const next =
+        filteredMailUpdates[
+          Math.max(0, Math.min(filteredMailUpdates.length - 1, index + (key === 'j' ? 1 : -1)))
+        ]
       if (next) {
         selectMail(next.id)
         document.querySelector<HTMLElement>(`[data-mail-id="${next.id}"]`)?.focus()
@@ -1304,7 +1316,9 @@ export default function InternalWorkspace({
 
   return (
     <section className="internal-workspace">
-      <h1 className="mb-4 text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-ink">Interno</h1>
+      <h1 className="mb-4 text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-ink">
+        Interno
+      </h1>
 
       <Tabs
         label="Seções de Interno"
@@ -1332,7 +1346,9 @@ export default function InternalWorkspace({
           forms={effectiveForms}
           onTemperatureChange={handleTemperatureChange}
           onCreate={(lead) =>
-            onCreateFormSubmission ? onCreateFormSubmission(lead) : setLocalForms((current) => [lead, ...current])
+            onCreateFormSubmission
+              ? onCreateFormSubmission(lead)
+              : setLocalForms((current) => [lead, ...current])
           }
           onConvert={(lead) => onConvertLead?.(lead)}
           search={formSearchQuery}
@@ -1352,8 +1368,16 @@ export default function InternalWorkspace({
             onKeyDown={onInboxKeyDown}
           >
             <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[200px_minmax(300px,380px)_1fr]">
-              <aside className="flex flex-col gap-1 border-b border-line bg-subtle p-3 lg:border-r lg:border-b-0" aria-label="Pastas de mensagens">
-                <Button variant="accent" size="sm" className="mb-2 w-full" onClick={() => setComposingMail(true)}>
+              <aside
+                className="flex flex-col gap-1 border-b border-line bg-subtle p-3 lg:border-r lg:border-b-0"
+                aria-label="Pastas de mensagens"
+              >
+                <Button
+                  variant="accent"
+                  size="sm"
+                  className="mb-2 w-full"
+                  onClick={() => setComposingMail(true)}
+                >
                   <Icon name="plus" className="size-4" /> Escrever
                 </Button>
                 <nav className="flex gap-1 overflow-x-auto lg:flex-col">
@@ -1379,24 +1403,39 @@ export default function InternalWorkspace({
                         }}
                         className={cx(
                           'flex shrink-0 items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-[13px] whitespace-nowrap transition-colors',
-                          active ? 'bg-surface font-medium text-ink shadow-[0_0_0_1px_var(--border-default)]' : 'text-ink-2 hover:bg-surface/70 hover:text-ink',
+                          active
+                            ? 'bg-surface font-medium text-ink shadow-[0_0_0_1px_var(--border-default)]'
+                            : 'text-ink-2 hover:bg-surface/70 hover:text-ink',
                         )}
                       >
                         {label}
-                        <span className={cx('text-xs tabular-nums', id === 'unread' && count > 0 ? 'font-semibold text-brand' : 'text-ink-3')}>{count}</span>
+                        <span
+                          className={cx(
+                            'text-xs tabular-nums',
+                            id === 'unread' && count > 0
+                              ? 'font-semibold text-brand'
+                              : 'text-ink-3',
+                          )}
+                        >
+                          {count}
+                        </span>
                       </button>
                     )
                   })}
                 </nav>
                 <p className="mt-auto hidden pt-4 text-[11px] leading-5 text-ink-3 lg:block">
-                  <Kbd>J</Kbd> <Kbd>K</Kbd> navegar · <Kbd>E</Kbd> concluir · <Kbd>U</Kbd> não lida · <Kbd>R</Kbd> responder
+                  <Kbd>J</Kbd> <Kbd>K</Kbd> navegar · <Kbd>E</Kbd> concluir · <Kbd>U</Kbd> não lida
+                  · <Kbd>R</Kbd> responder
                 </p>
               </aside>
 
               <div className="flex min-h-0 flex-col border-b border-line lg:border-r lg:border-b-0">
                 <label className="relative block border-b border-line p-2.5">
                   <span className="sr-only">Buscar mensagens</span>
-                  <Icon name="search" className="pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-1/2 text-ink-3" />
+                  <Icon
+                    name="search"
+                    className="pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-1/2 text-ink-3"
+                  />
                   <input
                     type="search"
                     value={mailSearch}
@@ -1405,9 +1444,15 @@ export default function InternalWorkspace({
                     className="h-9 w-full rounded-control border border-line bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-3 focus:border-brand focus:outline-none"
                   />
                 </label>
-                <div className="max-h-[420px] min-h-0 flex-1 overflow-y-auto lg:max-h-none" role="list" aria-label="Lista de mensagens">
+                <div
+                  className="max-h-[420px] min-h-0 flex-1 overflow-y-auto lg:max-h-none"
+                  role="list"
+                  aria-label="Lista de mensagens"
+                >
                   {filteredMailUpdates.length === 0 ? (
-                    <p className="px-4 py-10 text-center text-sm text-ink-3">Nenhuma conversa nesta pasta.</p>
+                    <p className="px-4 py-10 text-center text-sm text-ink-3">
+                      Nenhuma conversa nesta pasta.
+                    </p>
                   ) : (
                     filteredMailUpdates.map((update) => {
                       const isSelected = !composingMail && selectedMail?.id === update.id
@@ -1427,26 +1472,56 @@ export default function InternalWorkspace({
                           )}
                           onClick={() => selectMail(update.id)}
                         >
-                          {isSelected && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-brand" />}
-                          <img src={update.avatar} alt="" className="size-8 shrink-0 rounded-full object-cover" />
+                          {isSelected && (
+                            <span
+                              aria-hidden="true"
+                              className="absolute inset-y-0 left-0 w-0.5 bg-brand"
+                            />
+                          )}
+                          <img
+                            src={update.avatar}
+                            alt=""
+                            className="size-8 shrink-0 rounded-full object-cover"
+                          />
                           <div className="min-w-0 flex-1">
                             <p className="flex items-center gap-1.5">
-                              <span className={cx('truncate text-sm', update.unread ? 'font-semibold text-ink' : 'text-ink-2')}>{update.author}</span>
+                              <span
+                                className={cx(
+                                  'truncate text-sm',
+                                  update.unread ? 'font-semibold text-ink' : 'text-ink-2',
+                                )}
+                              >
+                                {update.author}
+                              </span>
                               <span title={origin.label} className="shrink-0 text-ink-3">
                                 <Icon name={origin.icon} className="size-3.5" />
                                 <span className="sr-only">{origin.label}</span>
                               </span>
-                              <time className="ml-auto shrink-0 text-[11px] text-ink-3">{update.time}</time>
+                              <time className="ml-auto shrink-0 text-[11px] text-ink-3">
+                                {update.time}
+                              </time>
                             </p>
-                            <p className={cx('truncate text-[13px]', update.unread ? 'font-medium text-ink' : 'text-ink-2')}>
+                            <p
+                              className={cx(
+                                'truncate text-[13px]',
+                                update.unread ? 'font-medium text-ink' : 'text-ink-2',
+                              )}
+                            >
                               {update.subject || `${update.type} · ${update.audience}`}
                             </p>
                             <p className="flex items-center gap-2 text-xs text-ink-3">
                               <span className="truncate">{update.message}</span>
-                              {replyCount > 0 && <span className="shrink-0 tabular-nums">· {replyCount}</span>}
+                              {replyCount > 0 && (
+                                <span className="shrink-0 tabular-nums">· {replyCount}</span>
+                              )}
                             </p>
                           </div>
-                          {update.unread && <span aria-label="Não lida" className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" />}
+                          {update.unread && (
+                            <span
+                              aria-label="Não lida"
+                              className="mt-1.5 size-2 shrink-0 rounded-full bg-brand"
+                            />
+                          )}
                         </button>
                       )
                     })
@@ -1458,7 +1533,9 @@ export default function InternalWorkspace({
                 {composingMail ? (
                   <form className="flex min-h-0 flex-1 flex-col" onSubmit={createInternalUpdate}>
                     <header className="flex items-center justify-between gap-3 border-b border-line px-6 py-4">
-                      <h3 className="text-[15px] font-semibold text-ink">Nova mensagem ou tarefa</h3>
+                      <h3 className="text-[15px] font-semibold text-ink">
+                        Nova mensagem ou tarefa
+                      </h3>
                       <Button size="sm" variant="ghost" onClick={() => setComposingMail(false)}>
                         Cancelar
                       </Button>
@@ -1469,7 +1546,9 @@ export default function InternalWorkspace({
                           Enviar para
                           <select
                             value={recipientCategory}
-                            onChange={(event) => setRecipientCategory(event.target.value as 'equipe' | 'aluno')}
+                            onChange={(event) =>
+                              setRecipientCategory(event.target.value as 'equipe' | 'aluno')
+                            }
                             className={mailField}
                           >
                             <option value="equipe">Equipe / colaboradores</option>
@@ -1479,7 +1558,11 @@ export default function InternalWorkspace({
                         <label className="block text-xs font-medium text-ink-2">
                           Destinatário
                           {recipientCategory === 'equipe' ? (
-                            <select name="update-audience" defaultValue="Toda a equipe" className={mailField}>
+                            <select
+                              name="update-audience"
+                              defaultValue="Toda a equipe"
+                              className={mailField}
+                            >
                               <option>Toda a equipe</option>
                               <option>Grupo Nutrição</option>
                               <option>Grupo Treino</option>
@@ -1492,7 +1575,11 @@ export default function InternalWorkspace({
                               <option>Felipe Santos (Estagiário)</option>
                             </select>
                           ) : (
-                            <select name="update-audience" defaultValue="Lucas Andrade (Aluno)" className={mailField}>
+                            <select
+                              name="update-audience"
+                              defaultValue="Lucas Andrade (Aluno)"
+                              className={mailField}
+                            >
                               <option>Lucas Andrade (Aluno)</option>
                               <option>Camila Rocha (Aluna)</option>
                               <option>Rafael Souza (Aluno)</option>
@@ -1515,7 +1602,12 @@ export default function InternalWorkspace({
                       </div>
                       <label className="block text-xs font-medium text-ink-2">
                         Assunto
-                        <input name="update-subject" required placeholder="Ex.: ajuste no plano alimentar" className={mailField} />
+                        <input
+                          name="update-subject"
+                          required
+                          placeholder="Ex.: ajuste no plano alimentar"
+                          className={mailField}
+                        />
                       </label>
                       <label className="block text-xs font-medium text-ink-2">
                         Mensagem
@@ -1543,7 +1635,8 @@ export default function InternalWorkspace({
                     <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-6 py-4">
                       <div className="min-w-0">
                         <h3 className="text-xl leading-7 font-semibold text-ink">
-                          {selectedMail.subject || `${selectedMail.type} · ${selectedMail.audience}`}
+                          {selectedMail.subject ||
+                            `${selectedMail.type} · ${selectedMail.audience}`}
                         </h3>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           <Badge>{selectedMail.type}</Badge>
@@ -1570,7 +1663,9 @@ export default function InternalWorkspace({
                           title="Atalho: E"
                           onClick={() => onToggleUpdate(selectedMail.id)}
                         >
-                          {selectedMail.completed ? 'Reabrir' : (
+                          {selectedMail.completed ? (
+                            'Reabrir'
+                          ) : (
                             <>
                               <Icon name="check" className="size-4" /> Concluir
                             </>
@@ -1582,40 +1677,75 @@ export default function InternalWorkspace({
                     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-5">
                       {/\(MFIT\)/.test(selectedMail.subject) && (
                         <div className="flex items-center gap-3 rounded-lg border border-line bg-subtle px-3 py-2">
-                          <span aria-hidden="true" className="grid size-8 place-items-center rounded-md bg-brand-soft text-brand">
+                          <span
+                            aria-hidden="true"
+                            className="grid size-8 place-items-center rounded-md bg-brand-soft text-brand"
+                          >
                             <Icon name="training" className="size-4" />
                           </span>
                           <div className="min-w-0 text-xs">
-                            <p className="font-semibold text-ink">{selectedMail.subject.split('·').slice(1).join('·').trim() || 'Treino'}</p>
-                            <p className="text-ink-3">{selectedMail.subject.split('·')[0].replace('Comentário no ', '').trim()}</p>
+                            <p className="font-semibold text-ink">
+                              {selectedMail.subject.split('·').slice(1).join('·').trim() ||
+                                'Treino'}
+                            </p>
+                            <p className="text-ink-3">
+                              {selectedMail.subject
+                                .split('·')[0]
+                                .replace('Comentário no ', '')
+                                .trim()}
+                            </p>
                           </div>
                         </div>
                       )}
                       {[
-                        { id: selectedMail.id, author: selectedMail.author, avatar: selectedMail.avatar, role: `Para: ${selectedMail.audience} · ${selectedMail.role}`, time: selectedMail.time, message: selectedMail.message, own: selectedMail.author === 'Breno Monteiro' },
-                        ...(selectedMail.replies ?? []).map((reply) => ({ ...reply, own: reply.author === 'Breno Monteiro' || selectedMail.role === 'Aluno' })),
+                        {
+                          id: selectedMail.id,
+                          author: selectedMail.author,
+                          avatar: selectedMail.avatar,
+                          role: `Para: ${selectedMail.audience} · ${selectedMail.role}`,
+                          time: selectedMail.time,
+                          message: selectedMail.message,
+                          own: selectedMail.author === 'Breno Monteiro',
+                        },
+                        ...(selectedMail.replies ?? []).map((reply) => ({
+                          ...reply,
+                          own: reply.author === 'Breno Monteiro' || selectedMail.role === 'Aluno',
+                        })),
                       ].map((message, index) => (
                         <section
                           key={message.id}
                           className={cx(
                             'max-w-[640px] rounded-xl border px-4 py-3',
-                            index > 0 && message.own ? 'ml-auto border-brand/15 bg-brand-soft/60' : 'border-line bg-surface',
+                            index > 0 && message.own
+                              ? 'ml-auto border-brand/15 bg-brand-soft/60'
+                              : 'border-line bg-surface',
                           )}
                         >
                           <header className="flex items-center gap-2.5">
-                            <img src={message.avatar} alt="" className="size-7 rounded-full object-cover" />
+                            <img
+                              src={message.avatar}
+                              alt=""
+                              className="size-7 rounded-full object-cover"
+                            />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-ink">{message.author}</p>
+                              <p className="truncate text-sm font-medium text-ink">
+                                {message.author}
+                              </p>
                               <p className="truncate text-[11px] text-ink-3">{message.role}</p>
                             </div>
                             <time className="shrink-0 text-[11px] text-ink-3">{message.time}</time>
                           </header>
-                          <p className="mt-2 text-sm leading-6 whitespace-pre-line text-ink">{message.message}</p>
+                          <p className="mt-2 text-sm leading-6 whitespace-pre-line text-ink">
+                            {message.message}
+                          </p>
                         </section>
                       ))}
                     </div>
 
-                    <form className="border-t border-line px-6 py-3" onSubmit={(event) => submitMailReply(event, selectedMail.id)}>
+                    <form
+                      className="border-t border-line px-6 py-3"
+                      onSubmit={(event) => submitMailReply(event, selectedMail.id)}
+                    >
                       <div className="mb-2 flex flex-wrap gap-1.5" aria-label="Respostas rápidas">
                         {quickReplies.map((text) => (
                           <button
@@ -1648,14 +1778,21 @@ export default function InternalWorkspace({
                         <span className="text-xs text-ink-3">
                           <Kbd>⌘</Kbd> <Kbd>Enter</Kbd> envia · fica registrada na conversa
                         </span>
-                        <Button size="sm" type="submit" variant="accent" disabled={!replyDraft.trim()}>
+                        <Button
+                          size="sm"
+                          type="submit"
+                          variant="accent"
+                          disabled={!replyDraft.trim()}
+                        >
                           Responder
                         </Button>
                       </div>
                     </form>
                   </article>
                 ) : (
-                  <p className="m-auto px-6 text-center text-sm text-ink-3">Selecione uma conversa ou escreva uma mensagem.</p>
+                  <p className="m-auto px-6 text-center text-sm text-ink-3">
+                    Selecione uma conversa ou escreva uma mensagem.
+                  </p>
                 )}
               </div>
             </div>
@@ -1666,7 +1803,8 @@ export default function InternalWorkspace({
               <h2 className="mr-auto text-xl leading-7 font-semibold text-ink">
                 Agenda da equipe{' '}
                 <span className="text-sm font-normal text-ink-3">
-                  · {appointments.length} {appointments.length === 1 ? 'compromisso' : 'compromissos'}
+                  · {appointments.length}{' '}
+                  {appointments.length === 1 ? 'compromisso' : 'compromissos'}
                 </span>
               </h2>
               <div className="flex items-center gap-1">
@@ -1674,18 +1812,26 @@ export default function InternalWorkspace({
                   size="icon"
                   variant="ghost"
                   aria-label={calendarView === 'semana' ? 'Semana anterior' : 'Mês anterior'}
-                  onClick={() => (calendarView === 'semana' ? shiftWeek(-7) : changeCalendarMonth(-1))}
+                  onClick={() =>
+                    calendarView === 'semana' ? shiftWeek(-7) : changeCalendarMonth(-1)
+                  }
                 >
                   <Icon name="chevronRight" className="size-4 rotate-180" />
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => todayIso && selectCalendarDay(parseISODate(todayIso))}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => todayIso && selectCalendarDay(parseISODate(todayIso))}
+                >
                   Hoje
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
                   aria-label={calendarView === 'semana' ? 'Próxima semana' : 'Próximo mês'}
-                  onClick={() => (calendarView === 'semana' ? shiftWeek(7) : changeCalendarMonth(1))}
+                  onClick={() =>
+                    calendarView === 'semana' ? shiftWeek(7) : changeCalendarMonth(1)
+                  }
                 >
                   <Icon name="chevronRight" className="size-4" />
                 </Button>
@@ -1730,68 +1876,68 @@ export default function InternalWorkspace({
                   }}
                 />
               ) : (
-              <div className="calendar-month">
-                <header>
-                  <button
-                    type="button"
-                    className="hidden"
-                    onClick={() => changeCalendarMonth(-1)}
-                    aria-label="Mês anterior"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="m15 18-6-6 6-6" />
-                    </svg>
-                  </button>
-                  <h3>{formatMonth(calendarCursor.year, calendarCursor.month)}</h3>
-                  <button
-                    type="button"
-                    className="hidden"
-                    onClick={() => changeCalendarMonth(1)}
-                    aria-label="Próximo mês"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="m9 18 6-6-6-6" />
-                    </svg>
-                  </button>
-                </header>
-                <div className="calendar-weekdays" aria-hidden="true">
-                  {['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'].map((day) => (
-                    <span key={day}>{day}</span>
-                  ))}
+                <div className="calendar-month">
+                  <header>
+                    <button
+                      type="button"
+                      className="hidden"
+                      onClick={() => changeCalendarMonth(-1)}
+                      aria-label="Mês anterior"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m15 18-6-6 6-6" />
+                      </svg>
+                    </button>
+                    <h3>{formatMonth(calendarCursor.year, calendarCursor.month)}</h3>
+                    <button
+                      type="button"
+                      className="hidden"
+                      onClick={() => changeCalendarMonth(1)}
+                      aria-label="Próximo mês"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m9 18 6-6-6-6" />
+                      </svg>
+                    </button>
+                  </header>
+                  <div className="calendar-weekdays" aria-hidden="true">
+                    {['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'].map((day) => (
+                      <span key={day}>{day}</span>
+                    ))}
+                  </div>
+                  <div className="calendar-grid">
+                    {calendarDays.map(({ date, value, isCurrentMonth }) => {
+                      const dayAppointments = appointments
+                        .filter((appointment) => appointment.date === value)
+                        .sort((first, second) => first.time.localeCompare(second.time))
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          className={`${isCurrentMonth ? '' : 'outside-month'} ${
+                            appointmentDraft.date === value ? 'selected' : ''
+                          }`}
+                          onClick={() => selectCalendarDay(date)}
+                          aria-label={`Selecionar ${date.toLocaleDateString('pt-BR')}`}
+                        >
+                          <span className="calendar-day-number">{date.getDate()}</span>
+                          <span className="calendar-day-events">
+                            {dayAppointments.slice(0, 2).map((appointment) => (
+                              <small key={appointment.id}>
+                                <b>{appointment.time}</b> {appointment.title}
+                              </small>
+                            ))}
+                            {dayAppointments.length > 2 && (
+                              <small className="calendar-more">
+                                +{dayAppointments.length - 2} compromisso
+                              </small>
+                            )}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
-                <div className="calendar-grid">
-                  {calendarDays.map(({ date, value, isCurrentMonth }) => {
-                    const dayAppointments = appointments
-                      .filter((appointment) => appointment.date === value)
-                      .sort((first, second) => first.time.localeCompare(second.time))
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        className={`${isCurrentMonth ? '' : 'outside-month'} ${
-                          appointmentDraft.date === value ? 'selected' : ''
-                        }`}
-                        onClick={() => selectCalendarDay(date)}
-                        aria-label={`Selecionar ${date.toLocaleDateString('pt-BR')}`}
-                      >
-                        <span className="calendar-day-number">{date.getDate()}</span>
-                        <span className="calendar-day-events">
-                          {dayAppointments.slice(0, 2).map((appointment) => (
-                            <small key={appointment.id}>
-                              <b>{appointment.time}</b> {appointment.title}
-                            </small>
-                          ))}
-                          {dayAppointments.length > 2 && (
-                            <small className="calendar-more">
-                              +{dayAppointments.length - 2} compromisso
-                            </small>
-                          )}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
               )}
 
               <aside className="calendar-sidebar">
@@ -2035,64 +2181,145 @@ export default function InternalWorkspace({
                     </div>
                   </form>
                 )}
-                <section className="appointment-list">
-                  <header>
-                    <div>
-                      <span>PRÓXIMOS COMPROMISSOS</span>
-                      <p>Agenda consolidada em ordem cronológica</p>
-                    </div>
-                    <strong>{sortedAppointments.length}</strong>
-                  </header>
-                  <div className="appointment-table">
-                    {sortedAppointments.length === 0 ? (
-                      <p className="appointment-empty">
-                        Nenhum compromisso marcado. Selecione uma data para começar.
-                      </p>
-                    ) : (
-                      sortedAppointments.map((appointment) => (
-                        <article key={appointment.id}>
-                          <time>
-                            <strong>{formatAppointmentDate(appointment.date)}</strong>
-                            <span>{appointment.time}</span>
-                          </time>
-                          <div>
-                            <strong>{appointment.title}</strong>
-                            <span>
-                              {appointment.person} · {appointment.type}
+                <section
+                  aria-labelledby="upcoming-title"
+                  className="mt-5 border-t border-line px-4 pt-4 pb-4"
+                >
+                  {(() => {
+                    const upcoming = sortedAppointments.filter(
+                      (item) => !todayIso || item.date >= todayIso,
+                    )
+                    const past = sortedAppointments.length - upcoming.length
+                    const list = showPastAppointments ? sortedAppointments : upcoming
+                    const groups = list.reduce<{ date: string; items: Appointment[] }[]>(
+                      (acc, item) => {
+                        const last = acc[acc.length - 1]
+                        if (last?.date === item.date) last.items.push(item)
+                        else acc.push({ date: item.date, items: [item] })
+                        return acc
+                      },
+                      [],
+                    )
+                    const dayLabel = (iso: string) => {
+                      if (iso === todayIso) return 'Hoje'
+                      if (todayIso) {
+                        const next = parseISODate(todayIso)
+                        next.setDate(next.getDate() + 1)
+                        if (toISODate(next) === iso) return 'Amanhã'
+                      }
+                      return formatAppointmentDate(iso)
+                    }
+                    return (
+                      <>
+                        <header className="flex items-baseline justify-between gap-3">
+                          <h3 id="upcoming-title" className="text-[15px] font-semibold text-ink">
+                            Próximos compromissos{' '}
+                            <span className="text-xs font-normal text-ink-3 tabular-nums">
+                              {upcoming.length}
                             </span>
-                          </div>
-                          <div className="appointment-actions">
-                            {appointment.source?.type === 'trello' ? (
-                              <>
-                                <span title="Sincronizado com o cartão de origem">Trello</span>
-                                <button type="button" onClick={() => editAppointment(appointment)}>
-                                  Editar
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeAppointment(appointment.id)}
+                          </h3>
+                          {past > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setShowPastAppointments((value) => !value)}
+                              className="text-xs font-medium text-brand hover:underline"
+                            >
+                              {showPastAppointments
+                                ? 'Ocultar anteriores'
+                                : `Ver anteriores (${past})`}
+                            </button>
+                          )}
+                        </header>
+                        {groups.length === 0 ? (
+                          <p className="py-6 text-center text-sm text-ink-3">
+                            Nada marcado daqui pra frente. Clique num horário da agenda para criar.
+                          </p>
+                        ) : (
+                          <div className="mt-2 space-y-3">
+                            {groups.map((group) => (
+                              <div key={group.date}>
+                                <p
+                                  className={cx(
+                                    'text-xs font-semibold first-letter:uppercase',
+                                    group.date === todayIso ? 'text-brand' : 'text-ink-3',
+                                  )}
                                 >
-                                  Excluir
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button type="button" onClick={() => editAppointment(appointment)}>
-                                  Editar
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeAppointment(appointment.id)}
-                                >
-                                  Excluir
-                                </button>
-                              </>
-                            )}
+                                  {dayLabel(group.date)}
+                                </p>
+                                <ul className="mt-1 divide-y divide-line-subtle">
+                                  {group.items.map((appointment) => (
+                                    <li
+                                      key={appointment.id}
+                                      className="group/appt flex items-center gap-3 py-2"
+                                    >
+                                      <span className="w-14 shrink-0 text-xs font-medium whitespace-nowrap text-ink-2 tabular-nums">
+                                        {appointment.time}
+                                      </span>
+                                      <span
+                                        aria-hidden="true"
+                                        className={cx(
+                                          'h-8 w-0.5 shrink-0 rounded-full',
+                                          agendaTypeColor[appointment.type as AgendaType] ??
+                                            'bg-ink-3',
+                                        )}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => editAppointment(appointment)}
+                                        className="min-w-0 flex-1 text-left"
+                                      >
+                                        <span className="block truncate text-sm font-medium text-ink group-hover/appt:text-brand">
+                                          {appointment.title}
+                                        </span>
+                                        <span className="block truncate text-xs text-ink-3">
+                                          {appointment.person} · {appointment.type}
+                                          {appointment.source?.type === 'trello' ? ' · Trello' : ''}
+                                        </span>
+                                      </button>
+                                      <Menu
+                                        label={`Ações de ${appointment.title}`}
+                                        items={[
+                                          {
+                                            id: 'editar',
+                                            label: 'Editar',
+                                            onSelect: () => editAppointment(appointment),
+                                          },
+                                          {
+                                            id: 'excluir',
+                                            label: 'Excluir',
+                                            description:
+                                              appointment.source?.type === 'trello'
+                                                ? 'Também remove a data do cartão no Trello'
+                                                : undefined,
+                                            danger: true,
+                                            onSelect: () => removeAppointment(appointment.id),
+                                          },
+                                        ]}
+                                        trigger={({ open, toggle, id }) => (
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            aria-label={`Ações de ${appointment.title}`}
+                                            aria-haspopup="menu"
+                                            aria-expanded={open}
+                                            aria-controls={open ? id : undefined}
+                                            onClick={toggle}
+                                            className="opacity-0 group-hover/appt:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
+                                          >
+                                            <Icon name="dots" className="size-4" />
+                                          </Button>
+                                        )}
+                                      />
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
                           </div>
-                        </article>
-                      ))
-                    )}
-                  </div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </section>
               </aside>
             </div>
@@ -2105,7 +2332,9 @@ export default function InternalWorkspace({
           <header className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-xl leading-7 font-semibold text-ink">Postagens</h2>
-              <p className="mt-0.5 text-sm text-ink-2">Metas da equipe de social media e o que já foi entregue na semana.</p>
+              <p className="mt-0.5 text-sm text-ink-2">
+                Metas da equipe de social media e o que já foi entregue na semana.
+              </p>
             </div>
             <Segmented
               label="Visões de postagens"
@@ -2113,7 +2342,11 @@ export default function InternalWorkspace({
                 { id: 'week' as const, label: 'Semana' },
                 { id: 'month' as const, label: 'Mês' },
                 { id: 'goals' as const, label: 'Metas' },
-                { id: 'notes' as const, label: 'Anotações', ...(unreadNotes > 0 ? { count: unreadNotes } : {}) },
+                {
+                  id: 'notes' as const,
+                  label: 'Anotações',
+                  ...(unreadNotes > 0 ? { count: unreadNotes } : {}),
+                },
               ]}
               value={postView}
               onChange={setPostView}
@@ -2648,7 +2881,11 @@ export default function InternalWorkspace({
                 <p>{activeWorkspace.description}</p>
               </div>
               <div>
-                <Button size="sm" variant="secondary" onClick={() => setLabelManagerOpen((current) => !current)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setLabelManagerOpen((current) => !current)}
+                >
                   Etiquetas
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => setListComposerOpen(true)}>
@@ -2719,12 +2956,21 @@ export default function InternalWorkspace({
               {activeWorkspace.lists.map((list, listIndex) => (
                 <section
                   key={list.id}
-                  className={`board-list ${draggedCard ? 'receiving' : ''}`}
+                  className={`board-list ${draggedCard ? 'receiving' : ''} ${dropListId === list.id && draggedCard?.listId !== list.id ? 'drop-target' : ''}`}
                   style={{ '--item-color': list.color } as ColorStyle}
-                  onDragOver={(event) => event.preventDefault()}
+                  onDragOver={(event) => {
+                    event.preventDefault()
+                    if (draggedCard && dropListId !== list.id) setDropListId(list.id)
+                  }}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                      setDropListId((current) => (current === list.id ? null : current))
+                    }
+                  }}
                   onDrop={() => {
                     if (draggedCard) moveCard(draggedCard.cardId, draggedCard.listId, list.id)
                     setDraggedCard(null)
+                    setDropListId(null)
                   }}
                 >
                   <header>
@@ -2752,15 +2998,35 @@ export default function InternalWorkspace({
                         return (
                           <article
                             key={card.id}
-                            className="board-card group/card"
+                            className={`board-card group/card ${draggedCard?.cardId === card.id ? 'is-dragging' : ''}`}
                             draggable={
                               !(editingCard?.cardId === card.id && editingCard.listId === list.id)
                             }
                             onDragStart={(event) => {
                               event.dataTransfer.effectAllowed = 'move'
-                              setDraggedCard({ cardId: card.id, listId: list.id })
+                              // Lifted ghost: a tilted copy with a deeper shadow follows the cursor.
+                              const source = event.currentTarget
+                              const rect = source.getBoundingClientRect()
+                              const ghost = source.cloneNode(true) as HTMLElement
+                              ghost.classList.add('board-card-ghost')
+                              ghost.style.width = `${rect.width}px`
+                              document.body.appendChild(ghost)
+                              event.dataTransfer.setDragImage(
+                                ghost,
+                                event.clientX - rect.left,
+                                event.clientY - rect.top,
+                              )
+                              window.setTimeout(() => ghost.remove(), 0)
+                              // Defer so the browser snapshots the card before it fades.
+                              window.setTimeout(
+                                () => setDraggedCard({ cardId: card.id, listId: list.id }),
+                                0,
+                              )
                             }}
-                            onDragEnd={() => setDraggedCard(null)}
+                            onDragEnd={() => {
+                              setDraggedCard(null)
+                              setDropListId(null)
+                            }}
                           >
                             <div className="board-card-top">
                               <span
@@ -2777,14 +3043,36 @@ export default function InternalWorkspace({
                               <Menu
                                 label={`Ações do cartão ${card.title}`}
                                 items={[
-                                  { id: 'edit', label: 'Editar', onSelect: () => setEditingCard({ cardId: card.id, listId: list.id }) },
+                                  {
+                                    id: 'edit',
+                                    label: 'Editar',
+                                    onSelect: () =>
+                                      setEditingCard({ cardId: card.id, listId: list.id }),
+                                  },
                                   ...(listIndex > 0
-                                    ? [{ id: 'prev', label: `Mover para ${activeWorkspace.lists[listIndex - 1].title}`, onSelect: () => moveCardByDirection(list.id, card.id, -1) }]
+                                    ? [
+                                        {
+                                          id: 'prev',
+                                          label: `Mover para ${activeWorkspace.lists[listIndex - 1].title}`,
+                                          onSelect: () => moveCardByDirection(list.id, card.id, -1),
+                                        },
+                                      ]
                                     : []),
                                   ...(listIndex < activeWorkspace.lists.length - 1
-                                    ? [{ id: 'next', label: `Mover para ${activeWorkspace.lists[listIndex + 1].title}`, onSelect: () => moveCardByDirection(list.id, card.id, 1) }]
+                                    ? [
+                                        {
+                                          id: 'next',
+                                          label: `Mover para ${activeWorkspace.lists[listIndex + 1].title}`,
+                                          onSelect: () => moveCardByDirection(list.id, card.id, 1),
+                                        },
+                                      ]
                                     : []),
-                                  { id: 'remove', label: 'Remover', danger: true, onSelect: () => removeCard(list.id, card.id) },
+                                  {
+                                    id: 'remove',
+                                    label: 'Remover',
+                                    danger: true,
+                                    onSelect: () => removeCard(list.id, card.id),
+                                  },
                                 ]}
                                 trigger={({ open, toggle, id }) => (
                                   <button
@@ -2843,24 +3131,44 @@ export default function InternalWorkspace({
                               </form>
                             ) : (
                               <div className="board-card-body">
-                                <h4 className="text-sm leading-5 font-medium text-ink">{card.title}</h4>
-                                {card.note && <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-ink-2">{card.note}</p>}
+                                <h4 className="text-sm leading-5 font-medium text-ink">
+                                  {card.title}
+                                </h4>
+                                {card.note && (
+                                  <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-ink-2">
+                                    {card.note}
+                                  </p>
+                                )}
                                 <footer className="mt-3 flex items-center gap-2">
-                                  {card.due && (() => {
-                                    const due = card.dueDate && todayIso ? (card.dueDate < todayIso ? 'overdue' : card.dueDate === todayIso ? 'today' : 'later') : 'later'
-                                    return (
-                                      <span
-                                        title={card.dueDate ? 'Aparece também na Agenda' : undefined}
-                                        className={cx(
-                                          'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium',
-                                          due === 'overdue' ? 'bg-danger-soft text-danger' : due === 'today' ? 'bg-warning-soft text-warning' : 'bg-subtle text-ink-2',
-                                        )}
-                                      >
-                                        <Icon name="calendar" className="size-3" />
-                                        {due === 'overdue' ? `Venceu · ${card.due}` : card.due}
-                                      </span>
-                                    )
-                                  })()}
+                                  {card.due &&
+                                    (() => {
+                                      const due =
+                                        card.dueDate && todayIso
+                                          ? card.dueDate < todayIso
+                                            ? 'overdue'
+                                            : card.dueDate === todayIso
+                                              ? 'today'
+                                              : 'later'
+                                          : 'later'
+                                      return (
+                                        <span
+                                          title={
+                                            card.dueDate ? 'Aparece também na Agenda' : undefined
+                                          }
+                                          className={cx(
+                                            'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium',
+                                            due === 'overdue'
+                                              ? 'bg-danger-soft text-danger'
+                                              : due === 'today'
+                                                ? 'bg-warning-soft text-warning'
+                                                : 'bg-subtle text-ink-2',
+                                          )}
+                                        >
+                                          <Icon name="calendar" className="size-3" />
+                                          {due === 'overdue' ? `Venceu · ${card.due}` : card.due}
+                                        </span>
+                                      )
+                                    })()}
                                   <span className="ml-auto flex gap-0.5 opacity-0 transition-opacity group-hover/card:opacity-100 group-focus-within/card:opacity-100">
                                     <button
                                       type="button"
@@ -2887,6 +3195,11 @@ export default function InternalWorkspace({
                           </article>
                         )
                       })(),
+                    )}
+                    {dropListId === list.id && draggedCard && draggedCard.listId !== list.id && (
+                      <div className="board-drop-placeholder" aria-hidden="true">
+                        Soltar aqui
+                      </div>
                     )}
                   </div>
 

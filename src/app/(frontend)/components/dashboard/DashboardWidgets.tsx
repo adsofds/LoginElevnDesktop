@@ -92,7 +92,7 @@ export function WidgetSkeleton({ rows = 4, chart = false }: { rows?: number; cha
   )
 }
 
-function WidgetFooterLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+export function WidgetFooterLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
     <button
       type="button"
@@ -105,7 +105,7 @@ function WidgetFooterLink({ onClick, children }: { onClick: () => void; children
   )
 }
 
-function Avatar({ src, name, size = 32 }: { src?: string; name: string; size?: number }) {
+export function Avatar({ src, name, size = 32 }: { src?: string; name: string; size?: number }) {
   const initials = name
     .split(' ')
     .slice(0, 2)
