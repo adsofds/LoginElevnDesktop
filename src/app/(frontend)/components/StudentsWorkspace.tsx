@@ -8,6 +8,7 @@ import {
   type FormEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
+import { Tabs } from './ui/Tabs'
 
 type CheckinState = 'Pendente' | 'Realizado' | 'Atrasado'
 
@@ -754,6 +755,16 @@ const initialStudents: StudentRecord[] = [
     ],
   },
 ]
+
+/** Lightweight list for the shell (command palette, nav counter). */
+export const studentDirectory = initialStudents.map((student) => ({
+  id: student.id,
+  name: student.name,
+  avatar: student.avatar,
+  goal: student.goal,
+  plan: student.plan,
+  checkinState: student.checkinState,
+}))
 
 type QuickFilter =
   | 'todos'
@@ -1615,7 +1626,16 @@ type StudentsWorkspaceProps = {
     adminReply: string
   }) => void
   onOpenInternalInbox?: () => void
+  /** Student file opened from the URL (?ficha=&aba=). null closes it. */
+  ficha?: { studentId: string; tab: FichaTab } | null
+  /** Called when the user opens, closes or changes tab in the student file. */
+  onFichaChange?: (next: { studentId: string; tab: FichaTab } | null) => void
+  /** Opens the "Cadastrar aluno" form once (from "+ Novo" or ⌘K). */
+  startNew?: boolean
+  onStartNewHandled?: () => void
 }
+
+export type FichaTab = 'checkin' | 'treino' | 'dieta' | 'fotos'
 
 function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
   if (student.appPhotos && student.appPhotos.length > 0) {
@@ -1783,6 +1803,10 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
 export default function StudentsWorkspace({
   onSendWorkoutReplyToInternal,
   onOpenInternalInbox,
+  ficha,
+  onFichaChange,
+  startNew,
+  onStartNewHandled,
 }: StudentsWorkspaceProps = {}) {
   const [students, setStudents] = useState<StudentRecord[]>(initialStudents)
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('todos')
@@ -1884,6 +1908,47 @@ export default function StudentsWorkspace({
       setCompareAfterId(latestFront?.id ?? '')
     }
   }
+
+  /* URL ⇄ student file sync (?ficha=&aba=). The URL wins when it changes (deep link,
+     back button); local opens/closes/tab switches are reported back with onFichaChange. */
+  const fichaStateKey = modalStudentId ? `${modalStudentId}:${modalTab}` : ''
+  const fichaStateKeyRef = useRef(fichaStateKey)
+  fichaStateKeyRef.current = fichaStateKey
+  const pendingFromUrl = useRef<string | null>(null)
+  const fichaPropKey = ficha ? `${ficha.studentId}:${ficha.tab}` : ''
+
+  useEffect(() => {
+    if (ficha === undefined) return
+    if (fichaPropKey === fichaStateKeyRef.current) return
+    pendingFromUrl.current = fichaPropKey
+    if (!ficha) {
+      setModalStudentId(null)
+    } else if (ficha.studentId !== modalStudentId) {
+      if (students.some((item) => item.id === ficha.studentId))
+        openStudentModal(ficha.studentId, ficha.tab)
+      else pendingFromUrl.current = null
+    } else {
+      setModalTab(ficha.tab)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fichaPropKey])
+
+  useEffect(() => {
+    if (pendingFromUrl.current !== null) {
+      if (pendingFromUrl.current === fichaStateKey) pendingFromUrl.current = null
+      return
+    }
+    if (fichaStateKey === fichaPropKey) return
+    onFichaChange?.(modalStudentId ? { studentId: modalStudentId, tab: modalTab } : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fichaStateKey])
+
+  useEffect(() => {
+    if (!startNew) return
+    setNewStudentOpen(true)
+    onStartNewHandled?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startNew])
 
   useEffect(() => {
     setStudents((current) =>
@@ -3225,52 +3290,18 @@ export default function StudentsWorkspace({
               </div>
             </section>
 
-            <nav className="modal-section-tabs" aria-label="Navegação da ficha do aluno">
-              <button
-                type="button"
-                className={modalTab === 'checkin' ? 'active' : ''}
-                onClick={() => setModalTab('checkin')}
-              >
-                <span>01</span>
-                <div>
-                  <strong>Check-in LiveClin & Conduta</strong>
-                  <small>14 respostas da semana + registros MFIT e WebDiet</small>
-                </div>
-              </button>
-              <button
-                type="button"
-                className={modalTab === 'treino' ? 'active' : ''}
-                onClick={() => setModalTab('treino')}
-              >
-                <span>02</span>
-                <div>
-                  <strong>Treino do Aluno (MFIT)</strong>
-                  <small>{modalWorkoutPlan.splitName}</small>
-                </div>
-              </button>
-              <button
-                type="button"
-                className={modalTab === 'dieta' ? 'active' : ''}
-                onClick={() => setModalTab('dieta')}
-              >
-                <span>03</span>
-                <div>
-                  <strong>Dieta do Aluno (WebDiet)</strong>
-                  <small>{modalDietPlan.dailyCalories}</small>
-                </div>
-              </button>
-              <button
-                type="button"
-                className={modalTab === 'fotos' ? 'active' : ''}
-                onClick={() => setModalTab('fotos')}
-              >
-                <span>04</span>
-                <div>
-                  <strong>Fotos do App & Comparador</strong>
-                  <small>{modalAppPhotos.length} fotos enviadas · Antes × Depois</small>
-                </div>
-              </button>
-            </nav>
+            <Tabs
+              label="Navegação da ficha do aluno"
+              className="mb-6"
+              value={modalTab}
+              onChange={setModalTab}
+              items={[
+                { id: 'checkin', label: 'Check-in LiveClin' },
+                { id: 'treino', label: 'Treino (MFIT)' },
+                { id: 'dieta', label: 'Dieta (WebDiet)' },
+                { id: 'fotos', label: 'Fotos e comparador', count: modalAppPhotos.length },
+              ]}
+            />
 
             {modalTab === 'fotos' && (
               <section
@@ -3366,11 +3397,7 @@ export default function StudentsWorkspace({
                       </label>
                       <label className="upload-file-label">
                         <span>Subir foto do dispositivo</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleNewPhotoFileUpload}
-                        />
+                        <input type="file" accept="image/*" onChange={handleNewPhotoFileUpload} />
                       </label>
                     </div>
 
@@ -3594,8 +3621,7 @@ export default function StudentsWorkspace({
                             style={{ left: `${sliderPosition}%` }}
                           >
                             <span className="slider-handle-circle">
-                              ↔
-                              <small>{sliderPosition}%</small>
+                              ↔<small>{sliderPosition}%</small>
                             </span>
                           </div>
 
@@ -3645,24 +3671,24 @@ export default function StudentsWorkspace({
                     <div>
                       <span>HISTÓRICO COMPLETO DE FOTOS NO APLICATIVO</span>
                       <h4>
-                        Todas as fotos enviadas por {modalStudent.name} ({filteredModalPhotos.length}
-                        )
+                        Todas as fotos enviadas por {modalStudent.name} (
+                        {filteredModalPhotos.length})
                       </h4>
                     </div>
 
                     <div className="all-photos-filter-pills">
-                      {(
-                        ['Todos', 'Frente', 'Costas', 'Perfil Direito', 'Pós-Treino'] as const
-                      ).map((angle) => (
-                        <button
-                          key={angle}
-                          type="button"
-                          className={photoAngleFilter === angle ? 'active' : ''}
-                          onClick={() => setPhotoAngleFilter(angle)}
-                        >
-                          {angle}
-                        </button>
-                      ))}
+                      {(['Todos', 'Frente', 'Costas', 'Perfil Direito', 'Pós-Treino'] as const).map(
+                        (angle) => (
+                          <button
+                            key={angle}
+                            type="button"
+                            className={photoAngleFilter === angle ? 'active' : ''}
+                            onClick={() => setPhotoAngleFilter(angle)}
+                          >
+                            {angle}
+                          </button>
+                        ),
+                      )}
                     </div>
                   </header>
 

@@ -17,6 +17,22 @@
   --text-tertiary: #6f6a76;  /* 4,8:1, minimum for small text */
   --text-on-dark: #f3ecce;
 
+  /* Semantic roles (Fase 2): use these in new code instead of the numbered palette */
+  --bg-surface: #ffffff;
+  --bg-subtle: var(--sand-98);
+  --border-default: var(--sand-85);
+  --border-subtle: var(--sand-90);
+  --accent-soft: color-mix(in srgb, var(--elevn-accent-light) 24%, #fff);
+  --accent-hover: color-mix(in srgb, var(--elevn-accent) 86%, #000);
+  --success-fg: #197343;
+  --success-bg: #e3f5eb;
+  --danger-fg: #b81d13;
+  --danger-bg: #fdeceb;
+  --warning-fg: #8a5a00;
+  --warning-bg: #fef6e6;
+  --info-fg: #1c4587;
+  --info-bg: #eaf1fd;
+
   /* Accent family (follows --elevn-accent / --elevn-accent-light) */
   --gold-17: color-mix(in srgb, var(--elevn-accent) 55%, #000);
   --gold-21: color-mix(in srgb, var(--elevn-accent) 69%, #000);

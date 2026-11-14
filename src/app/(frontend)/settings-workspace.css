@@ -23,7 +23,7 @@
 
 .settings-workspace-header h1 {
   margin: 6px 0;
-  font-size: clamp(28px, 2.8vw, 38px);
+  font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ink-08);
@@ -86,50 +86,6 @@
 }
 
 /* ABAS DE CONFIGURAÇÕES */
-.settings-tabs-nav {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  padding: 5px;
-  border: 1px solid var(--sand-85);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
-}
-
-.settings-tabs-nav > button {
-  min-height: 58px;
-  padding: 10px 16px;
-  border-radius: 9px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 3px;
-  text-align: left;
-  color: var(--slate-36);
-  cursor: pointer;
-  transition: all 0.16s ease;
-}
-
-.settings-tabs-nav > button strong {
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.settings-tabs-nav > button small {
-  font-size: 11px;
-  color: var(--slate-59);
-}
-
-.settings-tabs-nav > button.active {
-  background: var(--elevn-sidebar-bg);
-  color: var(--sand-100);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--elevn-sidebar-bg) 14%, transparent);
-}
-
-.settings-tabs-nav > button.active small {
-  color: rgba(255, 255, 255, 0.68);
-}
 
 /* BOTÕES PADRÃO */
 .settings-primary-btn {
@@ -1130,7 +1086,7 @@
 }
 
 @media (max-width: 680px) {
-  .settings-tabs-nav,
+  
   .settings-new-emp-fields,
   .settings-new-emp-perms-grid,
   .theme-presets-grid,

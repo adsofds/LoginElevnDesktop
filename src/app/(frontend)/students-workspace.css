@@ -21,7 +21,7 @@
 .students-workspace-header h1 {
   margin: 6px 0 5px;
   color: var(--ink-08);
-  font-size: clamp(28px, 2.8vw, 38px);
+  font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -1760,78 +1760,6 @@
   background: var(--gold-90);
 }
 
-.modal-section-tabs {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.modal-section-tabs > button {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 12px 14px;
-  border: 1px solid var(--sand-85);
-  border-radius: 11px;
-  color: var(--ink-22);
-  background: var(--sand-100);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 140ms,
-    background 140ms,
-    box-shadow 140ms;
-}
-
-.modal-section-tabs > button:hover {
-  border-color: var(--gold-54);
-}
-
-.modal-section-tabs > button.active {
-  border-color: var(--elevn-accent);
-  background: var(--gold-90);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--elevn-accent) 12%, transparent);
-}
-
-.modal-section-tabs > button > span {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 7px;
-  color: var(--elevn-accent);
-  background: var(--gold-92);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.modal-section-tabs > button.active > span {
-  color: var(--sand-100);
-  background: var(--elevn-sidebar-bg);
-}
-
-.modal-section-tabs > button > div {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.modal-section-tabs > button strong {
-  color: var(--ink-12);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.modal-section-tabs > button small {
-  overflow: hidden;
-  color: var(--slate-47);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .modal-quick-plans-card {
   padding: 15px 16px;
   border: 1px solid var(--sand-83);
@@ -2270,7 +2198,6 @@
   .student-create-form,
   .student-modal-columns,
   .student-modal-highlights,
-  .modal-section-tabs,
   .modal-quick-plans-grid,
   .modal-plan-kpis,
   .diet-macros-strip,

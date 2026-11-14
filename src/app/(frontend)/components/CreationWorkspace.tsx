@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { Menu } from './ui/Menu'
+import { Tabs } from './ui/Tabs'
 
 export type ClubTab = 'inicio' | 'explorar' | 'comunidade'
 
@@ -527,8 +529,20 @@ const initialGymRatsFeed: GymRatsCheckinPost[] = [
 
 type ModalKind = 'none' | 'video' | 'playlist' | 'ad' | 'challenge' | 'gymrats-checkin'
 
-export default function CreationWorkspace() {
-  const [clubTab, setClubTab] = useState<ClubTab>('inicio')
+export default function CreationWorkspace({
+  tab,
+  onTabChange,
+}: {
+  /** Controlled tab (from the URL). Falls back to local state when omitted. */
+  tab?: ClubTab
+  onTabChange?: (tab: ClubTab) => void
+} = {}) {
+  const [localClubTab, setLocalClubTab] = useState<ClubTab>('inicio')
+  const clubTab = tab ?? localClubTab
+  const setClubTab = (next: ClubTab) => {
+    setLocalClubTab(next)
+    onTabChange?.(next)
+  }
   const [heroAds, setHeroAds] = useState<HeroAdSlide[]>(initialHeroAds)
   const [activeAdIndex, setActiveAdIndex] = useState(0)
   const [playlists, setPlaylists] = useState<StudentPlaylist[]>(initialPlaylists)
@@ -1047,38 +1061,21 @@ export default function CreationWorkspace() {
               </div>
             </div>
 
-            <nav className="elevn-club-main-tabs" aria-label="Navegação do Elevn Club">
-              <button
-                type="button"
-                className={clubTab === 'inicio' ? 'active' : ''}
-                onClick={() => {
-                  setClubTab('inicio')
-                  setSelectedPlaylistId(null)
-                }}
-              >
-                Início
-              </button>
-              <button
-                type="button"
-                className={clubTab === 'explorar' ? 'active' : ''}
-                onClick={() => {
-                  setClubTab('explorar')
-                  setSelectedPlaylistId(null)
-                }}
-              >
-                Explorar Playlists
-              </button>
-              <button
-                type="button"
-                className={clubTab === 'comunidade' ? 'active' : ''}
-                onClick={() => {
-                  setClubTab('comunidade')
-                  setSelectedPlaylistId(null)
-                }}
-              >
-                Comunidade (GymRats)
-              </button>
-            </nav>
+            <Tabs
+              label="Navegação do Elevn Club"
+              tone="dark"
+              className="border-b-0"
+              value={clubTab}
+              onChange={(next) => {
+                setClubTab(next)
+                setSelectedPlaylistId(null)
+              }}
+              items={[
+                { id: 'inicio', label: 'Início' },
+                { id: 'explorar', label: 'Explorar playlists' },
+                { id: 'comunidade', label: 'Comunidade (GymRats)' },
+              ]}
+            />
           </div>
 
           <div className="elevn-club-nav-right">
@@ -1093,20 +1090,47 @@ export default function CreationWorkspace() {
             </div>
 
             <div className="elevn-club-admin-actions">
-              <button type="button" className="gold-solid" onClick={() => openUploadVideoModal()}>
-                + Subir Vídeo (4:3)
-              </button>
-              <button type="button" onClick={() => openNewPlaylistModal()}>
-                + Nova Playlist
-              </button>
-              <button type="button" onClick={() => openAdModal()}>
-                + Anúncio
-              </button>
-              {clubTab === 'comunidade' && (
-                <button type="button" className="sage-solid" onClick={() => openChallengeModal()}>
-                  + Novo Desafio
-                </button>
-              )}
+              <Menu
+                label="Publicar no Elevn Club"
+                items={[
+                  {
+                    id: 'video',
+                    label: 'Vídeo (4:3)',
+                    description: '1440 × 1080 px, para o celular do aluno',
+                    onSelect: () => openUploadVideoModal(),
+                  },
+                  {
+                    id: 'playlist',
+                    label: 'Playlist',
+                    description: 'Nova trilha de aulas',
+                    onSelect: () => openNewPlaylistModal(),
+                  },
+                  {
+                    id: 'anuncio',
+                    label: 'Anúncio',
+                    description: 'Banner do topo do Início',
+                    onSelect: () => openAdModal(),
+                  },
+                  {
+                    id: 'desafio',
+                    label: 'Desafio',
+                    description: 'Comunidade GymRats',
+                    onSelect: () => openChallengeModal(),
+                  },
+                ]}
+                trigger={({ open, toggle, id }) => (
+                  <button
+                    type="button"
+                    className="gold-solid"
+                    onClick={toggle}
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                    aria-controls={open ? id : undefined}
+                  >
+                    + Publicar
+                  </button>
+                )}
+              />
             </div>
           </div>
         </header>

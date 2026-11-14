@@ -10,49 +10,6 @@
   margin-bottom: 28px;
 }
 
-.internal-section-tabs {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 24px;
-  padding: 5px;
-  border: 1px solid var(--sand-85);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.62);
-}
-
-.internal-section-tabs > button {
-  min-height: 52px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  flex-direction: column;
-  gap: 3px;
-  padding: 0 14px;
-  border-radius: 8px;
-  color: var(--slate-43);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-}
-
-.internal-section-tabs > button small {
-  color: var(--slate-66);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.internal-section-tabs > button.active {
-  color: var(--sand-100);
-  background: var(--elevn-sidebar-bg);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--elevn-sidebar-bg) 12%, transparent);
-}
-
-.internal-section-tabs > button.active small {
-  color: rgba(255, 255, 255, 0.58);
-}
-
 .workspace-area-header {
   display: flex;
   align-items: flex-end;
@@ -104,7 +61,7 @@
 
 .internal-workspace-heading h1 {
   margin: 7px 0 6px;
-  font-size: clamp(28px, 2.8vw, 40px);
+  font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -4014,15 +3971,6 @@
 
   .internal-workspace-heading > button {
     width: 100%;
-  }
-
-  .internal-section-tabs {
-    display: flex;
-    overflow-x: auto;
-  }
-
-  .internal-section-tabs > button {
-    min-width: 190px;
   }
 
   .internal-agenda-panel > div {

@@ -12,6 +12,7 @@ import {
   type LeadTemperature,
   type SiteFormSubmission,
 } from '@/lib/demo-internal'
+import { Tabs } from './ui/Tabs'
 
 /** Today's year/month/day in Brasília, independent of the viewer's machine time zone. */
 function getBusinessToday() {
@@ -26,8 +27,18 @@ function getBusinessToday() {
 }
 
 const monthNames = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
 ]
 
 const currentMonthLabel = (() => {
@@ -412,6 +423,12 @@ export default function InternalWorkspace({
   onUpdateFormTemperature,
   onCreateFormSubmission,
   initialSection = 'board',
+  section,
+  onSectionChange,
+  intent,
+  onIntentHandled,
+  focusUpdateId,
+  formSearch,
 }: {
   updates: InternalUpdate[]
   onCreateUpdate: (update: InternalUpdate) => void
@@ -422,6 +439,16 @@ export default function InternalWorkspace({
   onUpdateFormTemperature?: (formId: string, temperature: LeadTemperature) => void
   onCreateFormSubmission?: (submission: SiteFormSubmission) => void
   initialSection?: 'board' | 'updates' | 'posts' | 'forms'
+  /** Controlled tab (from the URL). Falls back to local state when omitted. */
+  section?: 'board' | 'updates' | 'posts' | 'forms'
+  onSectionChange?: (section: 'board' | 'updates' | 'posts' | 'forms') => void
+  /** Opens a create flow once ("+ Novo" / ⌘K): lead, mensagem, compromisso or cartao. */
+  intent?: string | null
+  onIntentHandled?: () => void
+  /** Selects a conversation in the inbox (deep link from notifications). */
+  focusUpdateId?: string | null
+  /** Pre-fills the leads search (deep link from ⌘K). */
+  formSearch?: string | null
 }) {
   const [workspaces, setWorkspaces] = useState(starterWorkspaces)
   const [activeWorkspaceId, setActiveWorkspaceId] = useState(starterWorkspaces[0].id)
@@ -431,9 +458,14 @@ export default function InternalWorkspace({
   const [editingCard, setEditingCard] = useState<{ cardId: string; listId: string } | null>(null)
   const [draggedCard, setDraggedCard] = useState<{ cardId: string; listId: string } | null>(null)
   const [labelManagerOpen, setLabelManagerOpen] = useState(false)
-  const [activeSection, setActiveSection] = useState<'board' | 'updates' | 'posts' | 'forms'>(
+  const [localSection, setLocalSection] = useState<'board' | 'updates' | 'posts' | 'forms'>(
     initialSection,
   )
+  const activeSection = section ?? localSection
+  const setActiveSection = (next: 'board' | 'updates' | 'posts' | 'forms') => {
+    setLocalSection(next)
+    onSectionChange?.(next)
+  }
   const [localForms, setLocalForms] = useState<SiteFormSubmission[]>(siteForms)
   const [formTempFilter, setFormTempFilter] = useState<'Todos' | LeadTemperature>('Todos')
   const [formSearchQuery, setFormSearchQuery] = useState('')
@@ -514,6 +546,42 @@ export default function InternalWorkspace({
 
   const activeWorkspace =
     workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? workspaces[0]
+
+  // Deep links from the shell ("+ Novo", ⌘K, notifications): run once, then let the URL forget them
+  useEffect(() => {
+    if (!intent) return
+    if (intent === 'lead') setNewFormModalOpen(true)
+    else if (intent === 'mensagem') setComposingMail(true)
+    else if (intent === 'compromisso') {
+      setEditingAppointmentId(null)
+      setAppointmentComposerOpen(true)
+      // The agenda sits below the inbox: bring the new form into view
+      window.setTimeout(() => {
+        const form = document.querySelector<HTMLElement>('.appointment-form')
+        form?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        form?.querySelector<HTMLElement>('input, select, textarea')?.focus({ preventScroll: true })
+      }, 120)
+    } else if (intent === 'cartao') {
+      const firstList = activeWorkspace.lists[0]
+      if (firstList) setCardComposerListId(firstList.id)
+    }
+    onIntentHandled?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intent])
+
+  useEffect(() => {
+    if (focusUpdateId) {
+      setSelectedUpdateId(focusUpdateId)
+      setComposingMail(false)
+    }
+  }, [focusUpdateId])
+
+  useEffect(() => {
+    if (formSearch) {
+      setFormSearchQuery(formSearch)
+      setFormTempFilter('Todos')
+    }
+  }, [formSearch])
 
   const updateActiveWorkspace = (update: (workspace: Workspace) => Workspace) => {
     setWorkspaces((current) =>
@@ -1181,40 +1249,26 @@ export default function InternalWorkspace({
         </div>
       </header>
 
-      <nav className="internal-section-tabs" aria-label="Seções de Interno">
-        <button
-          type="button"
-          className={activeSection === 'board' ? 'active' : ''}
-          onClick={() => setActiveSection('board')}
-        >
-          Trello
-          <small>Quadros pessoais</small>
-        </button>
-        <button
-          type="button"
-          className={activeSection === 'updates' ? 'active' : ''}
-          onClick={() => setActiveSection('updates')}
-        >
-          Atualizações e Agenda
-          <small>Mensagens e compromissos</small>
-        </button>
-        <button
-          type="button"
-          className={activeSection === 'posts' ? 'active' : ''}
-          onClick={() => setActiveSection('posts')}
-        >
-          Postagens
-          <small>Conteúdo da equipe</small>
-        </button>
-        <button
-          type="button"
-          className={activeSection === 'forms' ? 'active' : ''}
-          onClick={() => setActiveSection('forms')}
-        >
-          Formulário
-          <small>Leads vindos do site</small>
-        </button>
-      </nav>
+      <Tabs
+        label="Seções de Interno"
+        className="mb-7"
+        value={activeSection}
+        onChange={setActiveSection}
+        items={[
+          { id: 'board', label: 'Trello' },
+          {
+            id: 'updates',
+            label: 'Atualizações e Agenda',
+            count: updates.filter((u) => u.unread).length,
+          },
+          { id: 'posts', label: 'Postagens' },
+          {
+            id: 'forms',
+            label: 'Formulário',
+            count: effectiveForms.filter((f) => f.temperature === 'Quente').length,
+          },
+        ]}
+      />
 
       {activeSection === 'forms' && (
         <section className="site-forms-section" aria-label="Formulários preenchidos no site">
@@ -1403,10 +1457,7 @@ export default function InternalWorkspace({
                             aria-label={`Temperatura de ${item.name}`}
                             value={item.temperature}
                             onChange={(e) =>
-                              handleTemperatureChange(
-                                item.id,
-                                e.target.value as LeadTemperature,
-                              )
+                              handleTemperatureChange(item.id, e.target.value as LeadTemperature)
                             }
                           >
                             <option value="Fechado">Fechado</option>
@@ -2273,11 +2324,7 @@ export default function InternalWorkspace({
 
                 <nav className="month-selector" aria-label="Selecionar mês">
                   {monthSelectorLabels.map((month, index) => (
-                    <button
-                      key={month}
-                      type="button"
-                      className={index === 1 ? 'active' : ''}
-                    >
+                    <button key={month} type="button" className={index === 1 ? 'active' : ''}>
                       {month}
                     </button>
                   ))}

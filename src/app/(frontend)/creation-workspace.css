@@ -59,31 +59,6 @@
   letter-spacing: 0.06em;
 }
 
-.elevn-club-main-tabs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.elevn-club-main-tabs button {
-  height: 33px;
-  padding: 0 14px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--slate-74);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.14s ease;
-}
-
-.elevn-club-main-tabs button.active {
-  border-color: var(--gold-70);
-  background: var(--elevn-accent);
-  color: var(--sand-95);
-}
-
 .elevn-club-nav-right {
   display: flex;
   align-items: center;
