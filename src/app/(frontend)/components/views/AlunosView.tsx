@@ -29,7 +29,8 @@ export default function AlunosView() {
       initialView={query.get('visao')}
       onInitialViewHandled={() => query.set({ visao: null }, { replace: true })}
       startNew={query.get('novo') === 'aluno'}
-      onStartNewHandled={() => query.set({ novo: null }, { replace: true })}
+      newStudentPrefill={{ name: query.get('nome'), whatsapp: query.get('whatsapp') }}
+      onStartNewHandled={() => query.set({ novo: null, nome: null, whatsapp: null }, { replace: true })}
       onSendWorkoutReplyToInternal={sendWorkoutReplyToInternal}
       onOpenInternalInbox={() => router.push(panelHref('/interno', { aba: 'atualizacoes' }))}
     />

@@ -65,17 +65,19 @@ export function KpiStrip({
   items,
   label,
   className,
+  columns = 6,
 }: {
   items: KpiItem[]
   label: string
   className?: string
+  columns?: 4 | 6
 }) {
   return (
     <section
       aria-label={label}
       className={cx(
         'grid overflow-hidden rounded-card border border-line bg-surface',
-        'grid-cols-2 md:grid-cols-3 xl:grid-cols-6',
+        columns === 6 ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-6' : 'grid-cols-2 lg:grid-cols-4',
         '[&>*]:border-line-subtle [&>*]:border-b md:[&>*]:border-r',
         className,
       )}

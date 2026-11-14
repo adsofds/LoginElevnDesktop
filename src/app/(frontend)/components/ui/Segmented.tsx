@@ -45,7 +45,7 @@ export function Segmented<T extends string>({
       role="radiogroup"
       aria-label={label}
       className={cx(
-        'inline-flex items-center gap-0.5 rounded-control border border-line bg-surface p-0.5',
+        'inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-control border border-line bg-surface p-0.5',
         className,
       )}
     >

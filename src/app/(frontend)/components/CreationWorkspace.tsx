@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, type ChangeEvent, type FormEvent } from 'react'
+import AppPreview, { playlistMeta } from './club/AppPreview'
+import CommunityChallenge from './club/CommunityChallenge'
+import { Icon } from './ui/icons'
 import { Menu } from './ui/Menu'
 import { Tabs } from './ui/Tabs'
 
@@ -621,6 +624,7 @@ export default function CreationWorkspace({
     : null
 
   const currentHeroAd = heroAds[activeAdIndex] ?? heroAds[0]
+  const [previewOpen, setPreviewOpen] = useState(false)
   const activeChallenge = challenges.find((item) => item.id === activeChallengeId) ?? challenges[0]
 
   const handleImageFileUpload = (
@@ -1090,6 +1094,9 @@ export default function CreationWorkspace({
             </div>
 
             <div className="elevn-club-admin-actions">
+              <button type="button" className="elevn-club-preview-btn" onClick={() => setPreviewOpen(true)}>
+                <Icon name="eye" className="size-4" /> Prévia no app
+              </button>
               <Menu
                 label="Publicar no Elevn Club"
                 items={[
@@ -1134,6 +1141,14 @@ export default function CreationWorkspace({
             </div>
           </div>
         </header>
+
+        <AppPreview
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          ad={currentHeroAd}
+          playlists={playlists}
+          tracks={['Treino & Biomecânica', 'Nutrição & Rotina que Funciona', 'Mentalidade & Performance']}
+        />
 
         {toastMessage && (
           <div className="elevn-club-toast" role="status">
@@ -1479,6 +1494,9 @@ export default function CreationWorkspace({
                     </header>
 
                     <div className="elevn-posters-row">
+                      {list.length === 0 && (
+                        <p className="elevn-track-empty">Nenhuma playlist nesta trilha ainda.</p>
+                      )}
                       {list.map((playlist) => (
                         <article
                           key={playlist.id}
@@ -1489,14 +1507,12 @@ export default function CreationWorkspace({
                           <img src={playlist.coverUrl} alt={playlist.title} />
                           <div className="elevn-poster-overlay" />
 
-                          <div className="elevn-poster-top">
-                            <span>{playlist.lessons.length} aulas · 4:3</span>
-                            <i>◆</i>
-                          </div>
-
                           <div className="elevn-poster-bottom">
-                            <strong>{playlist.shortUpperTitle}</strong>
-                            <small>{playlist.title}</small>
+                            <strong>{playlist.title}</strong>
+                            <small>
+                              {playlistMeta(playlist)} · {playlist.studentsWatching} assistindo ·{' '}
+                              {playlist.completionRate}% concluem
+                            </small>
                             <div className="elevn-poster-actions">
                               <button
                                 type="button"
@@ -1522,15 +1538,6 @@ export default function CreationWorkspace({
                         </article>
                       ))}
 
-                      <button
-                        type="button"
-                        className="elevn-add-poster-card"
-                        onClick={() => openNewPlaylistModal(trackName)}
-                      >
-                        <span>+</span>
-                        <strong>Nova Playlist</strong>
-                        <small>Adicionar em {trackName}</small>
-                      </button>
                     </div>
                   </section>
                 )
@@ -1543,8 +1550,8 @@ export default function CreationWorkspace({
             <section className="elevn-explore-block">
               <header className="elevn-explore-block-head">
                 <div>
-                  <span>ONDE VOCÊ PAROU</span>
-                  <h2>Continuar de onde parou</h2>
+                  <span>ONDE OS ALUNOS PARAM</span>
+                  <h2>Aulas abandonadas no meio</h2>
                 </div>
                 <small>{continueWatchingVideos.length} vídeos em andamento</small>
               </header>
@@ -1665,7 +1672,7 @@ export default function CreationWorkspace({
             {/* SELETOR DE DESAFIOS CRIADOS PELO ADMIN + BOTÃO DE CRIAR OUTRO DESAFIO */}
             <section className="elevn-challenges-strip">
               <div className="challenges-strip-left">
-                <span>DESAFIOS DA COMUNIDADE ELEVN CLUB:</span>
+                <span>Desafios</span>
                 <div className="challenge-pills-row">
                   {challenges.map((ch) => (
                     <button
@@ -1687,232 +1694,23 @@ export default function CreationWorkspace({
                   className="outline"
                   onClick={() => activeChallenge && openChallengeModal(activeChallenge)}
                 >
-                  ✎ Editar Desafio, Prêmios & Pontos
+                  Editar desafio
                 </button>
                 <button type="button" className="gold" onClick={() => openChallengeModal()}>
-                  + Criar Novo Desafio
+                  + Novo desafio
                 </button>
               </div>
             </section>
 
             {activeChallenge && (
-              <>
-                {/* CABEÇALHO DO DESAFIO ATIVO (ABERTO A TODOS OS ALUNOS DO APP) */}
-                <section className="elevn-challenge-banner">
-                  <div className="challenge-banner-main">
-                    <div className="challenge-meta-row">
-                      <span className="club-tag">GYMRATS ELEVN CLUB</span>
-                      <span className="visibility-pill public">
-                        ● ABERTO A TODOS OS ALUNOS DO APLICATIVO
-                      </span>
-                    </div>
-
-                    <h2>{activeChallenge.title}</h2>
-                    <p>{activeChallenge.description}</p>
-
-                    <div className="challenge-quick-stats">
-                      <div>
-                        <span>PERÍODO DO DESAFIO</span>
-                        <strong>{activeChallenge.periodLabel}</strong>
-                      </div>
-                      <div>
-                        <span>PARTICIPANTES ATIVOS</span>
-                        <strong>{activeChallenge.participantsCount} alunos no ranking</strong>
-                      </div>
-                    </div>
-
-                    <div className="challenge-cta-row">
-                      <button
-                        type="button"
-                        className="register-activity-btn"
-                        onClick={() => setActiveModal('gymrats-checkin')}
-                      >
-                        + REGISTRAR TREINO, CARDIO, REFEIÇÃO OU ÁGUA (FOTO 4:3)
-                      </button>
-                      <button
-                        type="button"
-                        className="edit-challenge-btn"
-                        onClick={() => openChallengeModal(activeChallenge)}
-                      >
-                        Configurar Premiações, Regras e Pontos
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="challenge-banner-thumb">
-                    <img src={activeChallenge.coverUrl} alt={activeChallenge.title} />
-                    <span>CAPA 4:3 DO DESAFIO</span>
-                  </div>
-                </section>
-
-                {/* BLOCO DE PREMIAÇÕES (1º, 2º E 3º COLOCADO) + SISTEMA DE PONTOS + REGRAS */}
-                <section className="elevn-challenge-details-grid">
-                  {/* PREMIAÇÕES DO PÓDIO */}
-                  <article className="elevn-prizes-card">
-                    <header>
-                      <div>
-                        <span>PREMIAÇÕES OFICIAIS DO DESAFIO</span>
-                        <h3>Recompensas para 1º, 2º e 3º Colocado</h3>
-                      </div>
-                      <button type="button" onClick={() => openChallengeModal(activeChallenge)}>
-                        ✎ Editar prêmios
-                      </button>
-                    </header>
-
-                    <div className="prizes-stack">
-                      <div className="prize-item gold">
-                        <span className="medal">1º LUGAR</span>
-                        <strong>{activeChallenge.prizeFirst}</strong>
-                      </div>
-                      <div className="prize-item silver">
-                        <span className="medal">2º LUGAR</span>
-                        <strong>{activeChallenge.prizeSecond}</strong>
-                      </div>
-                      <div className="prize-item bronze">
-                        <span className="medal">3º LUGAR</span>
-                        <strong>{activeChallenge.prizeThird}</strong>
-                      </div>
-                    </div>
-                  </article>
-
-                  {/* SISTEMA DE PONTOS: QUANTO VALE CADA COISA */}
-                  <article className="elevn-scoring-card">
-                    <header>
-                      <div>
-                        <span>SISTEMA DE PONTOS DO DESAFIO</span>
-                        <h3>Quanto vale cada atividade registrada</h3>
-                      </div>
-                      <button type="button" onClick={() => openChallengeModal(activeChallenge)}>
-                        ✎ Ajustar pontos
-                      </button>
-                    </header>
-
-                    <div className="scoring-items-grid">
-                      <div className="score-pill-box">
-                        <span>Treino Concluído (MFIT)</span>
-                        <strong>+{activeChallenge.scoring.treinoFeito} pts</strong>
-                      </div>
-                      <div className="score-pill-box">
-                        <span>Cardio Pago ( mín. 25 min)</span>
-                        <strong>+{activeChallenge.scoring.cardioPago} pts</strong>
-                      </div>
-                      <div className="score-pill-box">
-                        <span>Refeição do Plano Feita</span>
-                        <strong>+{activeChallenge.scoring.refeicaoFeita} pts</strong>
-                      </div>
-                      <div className="score-pill-box">
-                        <span>Meta de Água Batida no Dia</span>
-                        <strong>+{activeChallenge.scoring.aguaTomada} pts</strong>
-                      </div>
-                      <div className="score-pill-box">
-                        <span>Check-in LiveClin em Dia</span>
-                        <strong>+{activeChallenge.scoring.checkinLiveClin} pts</strong>
-                      </div>
-                      <div className="score-pill-box highlight">
-                        <span>Bônus Ofensiva (7 dias seguidos)</span>
-                        <strong>+{activeChallenge.scoring.bonusOfensiva7Dias} pts</strong>
-                      </div>
-                    </div>
-                  </article>
-
-                  {/* REGRAS DO DESAFIO */}
-                  <article className="elevn-rules-card">
-                    <header>
-                      <div>
-                        <span>REGULAMENTO DO DESAFIO</span>
-                        <h3>Regras de validação definidas pelo Admin</h3>
-                      </div>
-                      <button type="button" onClick={() => openChallengeModal(activeChallenge)}>
-                        ✎ Editar regras
-                      </button>
-                    </header>
-
-                    <ul className="rules-list">
-                      {activeChallenge.rules.map((rule, idx) => (
-                        <li key={idx}>
-                          <span>{String(idx + 1).padStart(2, '0')}</span>
-                          <p>{rule}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </article>
-                </section>
-
-                {/* RANKING GERAL + MURAL DE ATIVIDADES DA COMUNIDADE */}
-                <section className="elevn-gymrats-bottom-split">
-                  <div className="elevn-leaderboard-card">
-                    <header>
-                      <span>RANKING EM TEMPO REAL</span>
-                      <h3>Classificação dos Alunos (1º ao 4º)</h3>
-                    </header>
-
-                    <div className="leaderboard-rows">
-                      {leaderboard.map((member, index) => (
-                        <article key={member.id} className="leaderboard-row">
-                          <span className={`pos-badge pos-${index + 1}`}>{index + 1}º</span>
-                          <img src={member.avatar} alt={member.name} />
-                          <div className="member-copy">
-                            <strong>{member.name}</strong>
-                            <small>
-                              {member.workoutsPaid} treinos · {member.cardioDone} cardios ·{' '}
-                              {member.mealsLogged} refeições · {member.waterDays}d água
-                            </small>
-                          </div>
-                          <div className="member-points">
-                            <strong>{member.points} pts</strong>
-                            <span>{member.streakDays} dias seguidos</span>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="elevn-community-feed-card">
-                    <header>
-                      <div>
-                        <span>MURAL DE CHECK-INS 4:3</span>
-                        <h3>Treinos, Cardios, Refeições e Água Registrados</h3>
-                      </div>
-                      <button type="button" onClick={() => setActiveModal('gymrats-checkin')}>
-                        + Postar Registro
-                      </button>
-                    </header>
-
-                    <div className="community-feed-grid">
-                      {gymRatsFeed.map((post) => (
-                        <article key={post.id} className="community-post-card">
-                          <header className="post-top">
-                            <img src={post.studentAvatar} alt={post.studentName} />
-                            <div>
-                              <strong>{post.studentName}</strong>
-                              <small>{post.timeLabel}</small>
-                            </div>
-                            <span className="points-earned-pill">+{post.pointsEarned} pts</span>
-                          </header>
-
-                          <div className="post-photo-4x3">
-                            <img src={post.photoUrl4x3} alt={post.title} />
-                            <span className="kind-chip">{post.activityKind}</span>
-                            <span className="tag-chip">{post.workoutOrMealTag}</span>
-                          </div>
-
-                          <div className="post-body">
-                            <h4>{post.title}</h4>
-                            <p>{post.note}</p>
-                            <button
-                              type="button"
-                              className={post.cheeredByMe ? 'active' : ''}
-                              onClick={() => toggleCheerPost(post.id)}
-                            >
-                              ◆ Incentivar ({post.cheersCount})
-                            </button>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              </>
+              <CommunityChallenge
+                challenge={activeChallenge}
+                leaderboard={leaderboard}
+                feed={gymRatsFeed}
+                onEditChallenge={() => openChallengeModal(activeChallenge)}
+                onPost={() => setActiveModal('gymrats-checkin')}
+                onCheer={toggleCheerPost}
+              />
             )}
           </div>
         )}
