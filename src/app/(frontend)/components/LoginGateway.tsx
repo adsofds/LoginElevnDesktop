@@ -1,8 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { readDemoSession, writeDemoSession } from './panel/PanelState'
+import { PasswordStrength } from './ui/PasswordStrength'
 
 type LoginView = 'login' | 'forgot' | 'access'
 
@@ -68,21 +69,31 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   )
 }
 
-function PasswordRuleIcon({ met }: { met: boolean }) {
+function Spinner() {
   return (
-    <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.4" />
-      {met && (
-        <path
-          d="m5.7 9 2.1 2.1 4.5-4.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      )}
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="login-spinner">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2.5" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   )
+}
+
+function FieldError({ id, children }: { id: string; children: string }) {
+  return (
+    <p id={id} className="login-field-error" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M12 7.5v5.5M12 16.5v.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+      {children}
+    </p>
+  )
+}
+
+/** Access keys look like ELVN-4821-LA: uppercase, dashes inserted while typing or pasting. */
+function maskAccessKey(value: string) {
+  const clean = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)
+  return [clean.slice(0, 4), clean.slice(4, 8), clean.slice(8, 10)].filter(Boolean).join('-')
 }
 
 function FlowLines() {
@@ -129,6 +140,18 @@ export default function LoginGateway() {
   const [error, setError] = useState('')
   const [accessPassword, setAccessPassword] = useState('')
   const [accessPasswordConfirmation, setAccessPasswordConfirmation] = useState('')
+  const [accessKey, setAccessKey] = useState('ELVN-DEMO-01')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [capsLock, setCapsLock] = useState(false)
+  const [shake, setShake] = useState(false)
+
+  const fail = (errors: Record<string, string>) => {
+    setFieldErrors(errors)
+    setShake(true)
+    window.setTimeout(() => setShake(false), 220)
+  }
+
+  const trackCapsLock = (event: KeyboardEvent<HTMLInputElement>) => setCapsLock(event.getModifierState('CapsLock'))
 
   const specialCharacterPattern = /[!@#$%&*?_\-+=.]/
   const allowedPasswordPattern = /^[A-Za-z0-9!@#$%&*?_\-+=.]*$/
@@ -148,6 +171,8 @@ export default function LoginGateway() {
     setView(next)
     setFeedback('')
     setError('')
+    setFieldErrors({})
+    setCapsLock(false)
   }
 
   // Already signed in on this browser: go straight to the panel
@@ -168,10 +193,14 @@ export default function LoginGateway() {
     const email = String(form.get('email') || '').trim()
     const password = String(form.get('password') || '')
     setError('')
-    if (!email.includes('@') || password.length < 6) {
-      setError('Confira o e-mail e use uma senha com pelo menos 6 caracteres.')
+    const errors: Record<string, string> = {}
+    if (!email.includes('@')) errors.email = 'Digite um e-mail válido, como nome@elevn.com.br.'
+    if (password.length < 6) errors.password = 'A senha tem pelo menos 6 caracteres.'
+    if (Object.keys(errors).length) {
+      fail(errors)
       return
     }
+    setFieldErrors({})
     finishDemoAccess()
   }
 
@@ -181,9 +210,10 @@ export default function LoginGateway() {
     const email = String(form.get('recovery-email') || '').trim()
     setError('')
     if (!email.includes('@')) {
-      setError('Digite um e-mail válido para continuar.')
+      fail({ recovery: 'Digite um e-mail válido para continuar.' })
       return
     }
+    setFieldErrors({})
     setFeedback('Link demonstrativo enviado. Nenhum e-mail real será disparado.')
   }
 
@@ -191,24 +221,22 @@ export default function LoginGateway() {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const email = String(form.get('access-email') || '').trim()
-    const key = String(form.get('access-key') || '').trim()
+    const key = accessKey.trim()
     setError('')
-    if (!email.includes('@') || key.length < 4) {
-      setError('Preencha um e-mail válido e a chave de ativação.')
-      return
-    }
+    const errors: Record<string, string> = {}
+    if (!email.includes('@')) errors.accessEmail = 'Digite um e-mail válido.'
+    if (key.length < 4) errors.accessKey = 'Cole a chave que você recebeu da consultoria.'
     if (!allowedPasswordPattern.test(accessPassword)) {
-      setError('A senha contém um caractere especial que não está na lista permitida.')
+      errors.accessPassword = 'Use só os caracteres especiais permitidos: ! @ # $ % & * ? _ - + = .'
+    } else if (!passwordRules.every((rule) => rule.met)) {
+      errors.accessPassword = 'A senha ainda não atende a todos os requisitos.'
+    }
+    if (accessPassword !== accessPasswordConfirmation) errors.confirm = 'As senhas não coincidem.'
+    if (Object.keys(errors).length) {
+      fail(errors)
       return
     }
-    if (!passwordRules.every((rule) => rule.met)) {
-      setError('Sua senha ainda não atende a todos os requisitos.')
-      return
-    }
-    if (accessPassword !== accessPasswordConfirmation) {
-      setError('As senhas não coincidem. Confira e tente novamente.')
-      return
-    }
+    setFieldErrors({})
     finishDemoAccess()
   }
 
@@ -221,11 +249,11 @@ export default function LoginGateway() {
         </header>
         <FlowLines />
         <div className="login-brand-copy">
-          <p>SUA MELHOR VERSÃO, ALÉM</p>
+          <p>MÉTODO ELEVN</p>
           <h1>
-            Not just better,
+            Sua melhor versão,
             <br />
-            <em>beyond.</em>
+            <em>além.</em>
           </h1>
           <span>
             Consistência, acompanhamento e decisões melhores para transformar treino e nutrição em
@@ -254,12 +282,12 @@ export default function LoginGateway() {
           {view === 'login' && (
             <>
               <header className="login-card-header">
-                <p>BEM-VINDO DE VOLTA</p>
-                <h2>Acesse sua jornada</h2>
-                <span>Entre para acompanhar sua operação e continuar evoluindo.</span>
+                <p>CENTRO DE COMANDO</p>
+                <h2>Bem-vindo de volta, equipe Elevn</h2>
+                <span>Entre para acompanhar a operação da consultoria.</span>
               </header>
 
-              <form className="login-form" onSubmit={submitLogin} noValidate>
+              <form className={`login-form ${shake ? 'shake' : ''}`} onSubmit={submitLogin} noValidate>
                 <label>
                   <span>E-mail</span>
                   <input
@@ -268,17 +296,31 @@ export default function LoginGateway() {
                     defaultValue="breno@elevn.com.br"
                     placeholder="seuemail@exemplo.com"
                     autoComplete="email"
+                    aria-invalid={!!fieldErrors.email}
+                    aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
                   />
+                  {fieldErrors.email && <FieldError id="login-email-error">{fieldErrors.email}</FieldError>}
                 </label>
-                <label>
-                  <span>Senha</span>
+                <div className="login-field">
+                  <div className="login-label-row">
+                    <label htmlFor="login-password">Senha</label>
+                    <button type="button" onClick={() => changeView('forgot')}>
+                      Esqueci minha senha
+                    </button>
+                  </div>
                   <div className="login-password">
                     <input
+                      id="login-password"
                       name="password"
                       type={showPassword ? 'text' : 'password'}
                       defaultValue="demo2025"
                       placeholder="Digite sua senha"
                       autoComplete="current-password"
+                      onKeyDown={trackCapsLock}
+                      onKeyUp={trackCapsLock}
+                      onBlur={() => setCapsLock(false)}
+                      aria-invalid={!!fieldErrors.password}
+                      aria-describedby={[fieldErrors.password && 'login-password-error', capsLock && 'login-caps'].filter(Boolean).join(' ') || undefined}
                     />
                     <button
                       type="button"
@@ -288,16 +330,19 @@ export default function LoginGateway() {
                       <EyeIcon hidden={!showPassword} />
                     </button>
                   </div>
-                </label>
+                  {capsLock && (
+                    <p id="login-caps" className="login-caps" role="status">
+                      Caps Lock está ativado
+                    </p>
+                  )}
+                  {fieldErrors.password && <FieldError id="login-password-error">{fieldErrors.password}</FieldError>}
+                </div>
 
                 <div className="login-options">
                   <label>
                     <input type="checkbox" defaultChecked />
                     <span>Lembrar de mim</span>
                   </label>
-                  <button type="button" onClick={() => changeView('forgot')}>
-                    Esqueci minha senha
-                  </button>
                 </div>
 
                 {error && (
@@ -305,9 +350,9 @@ export default function LoginGateway() {
                     {error}
                   </p>
                 )}
-                <button className="login-submit" type="submit" disabled={loading}>
-                  <span>{loading ? 'Entrando...' : 'Entrar'}</span>
-                  {!loading && <ArrowIcon />}
+                <button className="login-submit" type="submit" disabled={loading} aria-busy={loading}>
+                  <span>{loading ? 'Entrando…' : 'Entrar'}</span>
+                  {loading ? <Spinner /> : <ArrowIcon />}
                 </button>
               </form>
 
@@ -335,7 +380,7 @@ export default function LoginGateway() {
                 <h2>Vamos recuperar sua senha</h2>
                 <span>Informe o e-mail usado na Elevn para receber as instruções.</span>
               </header>
-              <form className="login-form" onSubmit={submitRecovery} noValidate>
+              <form className={`login-form ${shake ? 'shake' : ''}`} onSubmit={submitRecovery} noValidate>
                 <label>
                   <span>E-mail</span>
                   <input
@@ -343,7 +388,10 @@ export default function LoginGateway() {
                     type="email"
                     placeholder="seuemail@exemplo.com"
                     autoComplete="email"
+                    aria-invalid={!!fieldErrors.recovery}
+                    aria-describedby={fieldErrors.recovery ? 'recovery-error' : undefined}
                   />
+                  {fieldErrors.recovery && <FieldError id="recovery-error">{fieldErrors.recovery}</FieldError>}
                 </label>
                 {error && (
                   <p className="login-feedback error" role="alert">
@@ -370,14 +418,33 @@ export default function LoginGateway() {
                 <h2>Ative sua conta</h2>
                 <span>Use a chave recebida para conhecer a experiência Elevn.</span>
               </header>
-              <form className="login-form" onSubmit={submitAccess} noValidate>
+              <form className={`login-form ${shake ? 'shake' : ''}`} onSubmit={submitAccess} noValidate>
                 <label>
                   <span>E-mail</span>
-                  <input name="access-email" type="email" placeholder="seuemail@exemplo.com" />
+                  <input
+                    name="access-email"
+                    type="email"
+                    placeholder="seuemail@exemplo.com"
+                    autoComplete="email"
+                    aria-invalid={!!fieldErrors.accessEmail}
+                    aria-describedby={fieldErrors.accessEmail ? 'access-email-error' : undefined}
+                  />
+                  {fieldErrors.accessEmail && <FieldError id="access-email-error">{fieldErrors.accessEmail}</FieldError>}
                 </label>
                 <label>
                   <span>Chave de ativação</span>
-                  <input name="access-key" placeholder="ELEVN-DEMO" defaultValue="ELEVN-DEMO" />
+                  <input
+                    name="access-key"
+                    className="login-key-input"
+                    placeholder="XXXX-XXXX-XX"
+                    value={accessKey}
+                    onChange={(event) => setAccessKey(maskAccessKey(event.target.value))}
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-invalid={!!fieldErrors.accessKey}
+                    aria-describedby={fieldErrors.accessKey ? 'access-key-error' : undefined}
+                  />
+                  {fieldErrors.accessKey && <FieldError id="access-key-error">{fieldErrors.accessKey}</FieldError>}
                 </label>
                 <label>
                   <span>Crie uma senha</span>
@@ -388,7 +455,12 @@ export default function LoginGateway() {
                       placeholder="Digite sua senha"
                       value={accessPassword}
                       onChange={(event) => setAccessPassword(event.target.value)}
+                      onKeyDown={trackCapsLock}
+                      onKeyUp={trackCapsLock}
+                      onBlur={() => setCapsLock(false)}
                       autoComplete="new-password"
+                      aria-invalid={!!fieldErrors.accessPassword}
+                      aria-describedby="access-password-strength"
                     />
                     <button
                       type="button"
@@ -409,6 +481,8 @@ export default function LoginGateway() {
                       value={accessPasswordConfirmation}
                       onChange={(event) => setAccessPasswordConfirmation(event.target.value)}
                       autoComplete="new-password"
+                      aria-invalid={!!fieldErrors.confirm}
+                      aria-describedby={fieldErrors.confirm ? 'access-confirm-error' : undefined}
                     />
                     <button
                       type="button"
@@ -421,19 +495,15 @@ export default function LoginGateway() {
                     </button>
                   </div>
                 </label>
-                <div className="password-checklist" aria-label="Requisitos da senha">
-                  <strong>Sua senha precisa conter:</strong>
-                  <ul>
-                    {passwordRules.map((rule) => (
-                      <li key={rule.label} className={rule.met ? 'met' : ''}>
-                        <PasswordRuleIcon met={rule.met} />
-                        <span>
-                          {rule.label}
-                          {'detail' in rule && rule.detail && <small>{rule.detail}</small>}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                {fieldErrors.confirm && <FieldError id="access-confirm-error">{fieldErrors.confirm}</FieldError>}
+                {capsLock && (
+                  <p className="login-caps" role="status">
+                    Caps Lock está ativado
+                  </p>
+                )}
+                <div id="access-password-strength">
+                  <PasswordStrength value={accessPassword} checks={passwordRules} />
+                  {fieldErrors.accessPassword && <FieldError id="access-password-error">{fieldErrors.accessPassword}</FieldError>}
                 </div>
                 {error && (
                   <p className="login-feedback error" role="alert">
@@ -441,8 +511,8 @@ export default function LoginGateway() {
                   </p>
                 )}
                 <button className="login-submit" type="submit" disabled={loading}>
-                  <span>{loading ? 'Ativando...' : 'Ativar e entrar'}</span>
-                  {!loading && <ArrowIcon />}
+                  <span>{loading ? 'Ativando…' : 'Ativar e entrar'}</span>
+                  {loading ? <Spinner /> : <ArrowIcon />}
                 </button>
               </form>
             </>

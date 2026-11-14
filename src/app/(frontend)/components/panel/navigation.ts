@@ -79,8 +79,8 @@ export const clubTabs = [
 
 export const configTabs = [
   { id: 'equipe', label: 'Equipe e permissões', internal: 'employees' },
-  { id: 'tema', label: 'Cor do tema e aparência', internal: 'theme' },
-  { id: 'seguranca', label: 'Senha e segurança', internal: 'security' },
+  { id: 'tema', label: 'Aparência', internal: 'theme' },
+  { id: 'seguranca', label: 'Segurança', internal: 'security' },
 ] as const
 
 export const fichaTabs = [

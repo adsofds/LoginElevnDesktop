@@ -323,3 +323,32 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Entering the panel (after login): fade in with the sidebar sliding 8px from the left */
+@keyframes shell-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes shell-sidebar-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+
+.admin-shell {
+  animation: shell-fade-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.admin-shell > aside {
+  animation: shell-sidebar-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell,
+  .admin-shell > aside {
+    animation: none;
+  }
+}
