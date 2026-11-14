@@ -1,7 +1,17 @@
 'use client'
 
-import { useState, type ChangeEvent, type FormEvent } from 'react'
-import AppPreview, { playlistMeta } from './club/AppPreview'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import AppPreview, { playlistMeta, playlistMinutes } from './club/AppPreview'
+import {
+  ChallengeEditorSheet,
+  CheckinSheet,
+  LiveEventSheet,
+  TrackSheet,
+  VideoUploadSheet,
+  type ChallengeDraft,
+  type LiveEvent,
+  type VideoDraft,
+} from './club/ClubEditors'
 import CommunityChallenge from './club/CommunityChallenge'
 import { Icon } from './ui/icons'
 import { Menu } from './ui/Menu'
@@ -9,10 +19,16 @@ import { Tabs } from './ui/Tabs'
 
 export type ClubTab = 'inicio' | 'explorar' | 'comunidade'
 
-export type PlaylistTrackCategory =
-  | 'Treino & Biomecânica'
-  | 'Nutrição & Rotina que Funciona'
-  | 'Mentalidade & Performance'
+/** Track name. Tracks are created by the admin (see ClubTrack). */
+export type PlaylistTrackCategory = string
+
+export type ClubTrack = {
+  id: string
+  name: string
+  /** Who it is for, shown under the name ("para quem treina e não recupera bem"). */
+  goal: string
+  color: string
+}
 
 export type HeroAdSlide = {
   id: string
@@ -39,6 +55,10 @@ export type PlaylistLessonVideo = {
   watchProgressPercent?: number
   stoppedAtLabel?: string
   lastWatchedLabel?: string
+  /** The video can be 4:3 or 16:9; the cover is always 4:3. */
+  aspectRatio?: '4:3' | '16:9'
+  /** Optional PDF the student downloads with the lesson. */
+  materialName?: string
 }
 
 export type StudentPlaylist = {
@@ -54,15 +74,6 @@ export type StudentPlaylist = {
   lessons: PlaylistLessonVideo[]
 }
 
-export type ChallengeScoringConfig = {
-  treinoFeito: number
-  cardioPago: number
-  refeicaoFeita: number
-  aguaTomada: number
-  checkinLiveClin: number
-  bonusOfensiva7Dias: number
-}
-
 export type GymRatsRankingEntry = {
   id: string
   name: string
@@ -76,11 +87,20 @@ export type GymRatsRankingEntry = {
   goalBadge: string
 }
 
-export type GymRatsActivityKind =
-  | 'Treino Feito'
-  | 'Cardio Pago'
-  | 'Refeição Feita'
-  | 'Meta de Água Batida'
+/** Activity name as configured in the challenge. */
+export type GymRatsActivityKind = string
+
+/** Something students can register in a challenge, with the points it is worth. */
+export type ChallengeActivity = {
+  id: string
+  icon: string
+  name: string
+  points: number
+  requiresPhoto: boolean
+  /** How many times per day it can score. */
+  dailyLimit: number
+  rule?: string
+}
 
 export type GymRatsCheckinPost = {
   id: string
@@ -96,6 +116,18 @@ export type GymRatsCheckinPost = {
   timeLabel: string
   cheersCount: number
   cheeredByMe?: boolean
+  activityId?: string
+  activityIcon?: string
+  /** Real timestamp (set on load for the demo seeds, from dayOffset/time). */
+  postedAtIso?: string
+  dayOffset?: number
+  time?: string
+  /** Check-ins are approved automatically; the admin can reject with a reason. */
+  status?: 'aprovado' | 'reprovado'
+  rejectReason?: string
+  highlighted?: boolean
+  /** Automatic badge shown on the post, e.g. "14 dias seguidos". */
+  achievement?: string
 }
 
 export type GymRatsChallenge = {
@@ -109,7 +141,12 @@ export type GymRatsChallenge = {
   prizeSecond: string
   prizeThird: string
   rules: string[]
-  scoring: ChallengeScoringConfig
+  activities: ChallengeActivity[]
+  startIso?: string
+  endIso?: string
+  /** Demo seeds: start relative to today and length, resolved on load. */
+  startOffset?: number
+  lengthDays?: number
 }
 
 const studioCoverPresets4x3: { label: string; url: string; accent: string }[] = [
@@ -394,14 +431,63 @@ const initialChallenges: GymRatsChallenge[] = [
       'Refeições do plano WebDiet e meta de água (mínimo 35ml/kg) somam pontos extras diários.',
       'Manter 7 dias seguidos sem falhar libera automaticamente o Bônus de Ofensiva.',
     ],
-    scoring: {
-      treinoFeito: 100,
-      cardioPago: 70,
-      refeicaoFeita: 40,
-      aguaTomada: 30,
-      checkinLiveClin: 150,
-      bonusOfensiva7Dias: 200,
-    },
+    activities: [
+      {
+        id: 'abr-1',
+        icon: '🏋️',
+        name: 'Treino feito',
+        points: 100,
+        requiresPhoto: true,
+        dailyLimit: 1,
+        rule: 'Foto do treino ou do equipamento.',
+      },
+      {
+        id: 'abr-2',
+        icon: '🏃',
+        name: 'Cardio pago',
+        points: 70,
+        requiresPhoto: true,
+        dailyLimit: 1,
+        rule: 'Mínimo de 25 minutos contínuos.',
+      },
+      {
+        id: 'abr-3',
+        icon: '🥗',
+        name: 'Refeição do plano',
+        points: 40,
+        requiresPhoto: true,
+        dailyLimit: 5,
+        rule: 'Refeição do WebDiet.',
+      },
+      {
+        id: 'abr-4',
+        icon: '💧',
+        name: 'Meta de água',
+        points: 30,
+        requiresPhoto: false,
+        dailyLimit: 1,
+        rule: 'Mínimo 35 ml/kg.',
+      },
+      {
+        id: 'abr-5',
+        icon: '✅',
+        name: 'Check-in LiveClin em dia',
+        points: 150,
+        requiresPhoto: false,
+        dailyLimit: 1,
+      },
+      {
+        id: 'abr-6',
+        icon: '🔥',
+        name: 'Bônus 7 dias seguidos',
+        points: 200,
+        requiresPhoto: false,
+        dailyLimit: 1,
+        rule: 'Liberado automaticamente.',
+      },
+    ],
+    startOffset: -18,
+    lengthDays: 30,
   },
   {
     id: 'chal-elite',
@@ -419,14 +505,84 @@ const initialChallenges: GymRatsChallenge[] = [
       'Aberto a todos os alunos que utilizam o aplicativo Elevn.',
       'Obrigatório registrar 100% dos cardios prescritos e pesagem alimentar no WebDiet.',
     ],
-    scoring: {
-      treinoFeito: 120,
-      cardioPago: 100,
-      refeicaoFeita: 60,
-      aguaTomada: 40,
-      checkinLiveClin: 200,
-      bonusOfensiva7Dias: 250,
-    },
+    activities: [
+      {
+        id: 'eli-1',
+        icon: '🏋️',
+        name: 'Treino feito',
+        points: 120,
+        requiresPhoto: true,
+        dailyLimit: 1,
+        rule: 'Foto do treino ou do equipamento.',
+      },
+      {
+        id: 'eli-2',
+        icon: '🏃',
+        name: 'Cardio pago',
+        points: 100,
+        requiresPhoto: true,
+        dailyLimit: 1,
+        rule: 'Mínimo de 25 minutos contínuos.',
+      },
+      {
+        id: 'eli-3',
+        icon: '🥗',
+        name: 'Refeição do plano',
+        points: 60,
+        requiresPhoto: true,
+        dailyLimit: 5,
+        rule: 'Refeição do WebDiet.',
+      },
+      {
+        id: 'eli-4',
+        icon: '💧',
+        name: 'Meta de água',
+        points: 40,
+        requiresPhoto: false,
+        dailyLimit: 1,
+        rule: 'Mínimo 35 ml/kg.',
+      },
+      {
+        id: 'eli-5',
+        icon: '✅',
+        name: 'Check-in LiveClin em dia',
+        points: 200,
+        requiresPhoto: false,
+        dailyLimit: 1,
+      },
+      {
+        id: 'eli-6',
+        icon: '🔥',
+        name: 'Bônus 7 dias seguidos',
+        points: 250,
+        requiresPhoto: false,
+        dailyLimit: 1,
+        rule: 'Liberado automaticamente.',
+      },
+    ],
+    startOffset: -10,
+    lengthDays: 31,
+  },
+]
+
+export const initialTracks: ClubTrack[] = [
+  {
+    id: 'track-treino',
+    name: 'Treino & Biomecânica',
+    goal: 'Para executar melhor e evoluir carga sem dor',
+    color: '#6b6133',
+  },
+  {
+    id: 'track-nutricao',
+    name: 'Nutrição & Rotina que Funciona',
+    goal: 'Para seguir a dieta na vida real',
+    color: '#1f6e50',
+  },
+  {
+    id: 'track-mente',
+    name: 'Mentalidade & Performance',
+    goal: 'Para manter a constância quando a motivação acaba',
+    color: '#28518a',
   },
 ]
 
@@ -487,14 +643,19 @@ const initialGymRatsFeed: GymRatsCheckinPost[] = [
     challengeId: 'chal-abril',
     studentName: 'Lucas Andrade',
     studentAvatar: '/people/gustavo-lima.jpg',
-    activityKind: 'Treino Feito',
+    activityKind: 'Treino feito',
+    activityIcon: '🏋️',
+    activityId: 'abr-1',
     workoutOrMealTag: 'Treino B · Dorsal & Bíceps',
     pointsEarned: 100,
     title: 'Dorsal & Bíceps pago antes do trabalho!',
     note: 'Apliquei o ajuste de escápula da aula 001 do Elevn Club e senti muito mais a dorsal.',
     photoUrl4x3:
       'https://images.unsplash.com/photo-1637430308606-86576d8fef3c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    timeLabel: 'Hoje · 07:18 · 14º dia seguido',
+    timeLabel: 'Hoje · 07:18',
+    dayOffset: 0,
+    time: '07:18',
+    achievement: '14 dias seguidos',
     cheersCount: 18,
     cheeredByMe: true,
   },
@@ -503,14 +664,19 @@ const initialGymRatsFeed: GymRatsCheckinPost[] = [
     challengeId: 'chal-abril',
     studentName: 'Camila Rocha',
     studentAvatar: '/people/paula-nunes.jpg',
-    activityKind: 'Refeição Feita',
+    activityKind: 'Refeição do plano',
+    activityIcon: '🥗',
+    activityId: 'abr-3',
     workoutOrMealTag: 'Almoço WebDiet + 3,2L de Água',
     pointsEarned: 70,
     title: 'Marmita pesada na grama + meta de água batida!',
     note: 'Seguindo 100% o guia prático de marmitas da playlist de Nutrição.',
     photoUrl4x3:
       'https://images.unsplash.com/photo-1543352632-5a4b24e4d2a6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    timeLabel: 'Hoje · 12:40 · 11º dia seguido',
+    timeLabel: 'Hoje · 12:40',
+    dayOffset: 0,
+    time: '12:40',
+    achievement: '11 dias seguidos',
     cheersCount: 24,
   },
   {
@@ -518,17 +684,138 @@ const initialGymRatsFeed: GymRatsCheckinPost[] = [
     challengeId: 'chal-abril',
     studentName: 'Thiago Mendes',
     studentAvatar: '/people/breno-monteiro.png',
-    activityKind: 'Cardio Pago',
+    activityKind: 'Cardio pago',
+    activityIcon: '🏃',
+    activityId: 'abr-2',
     workoutOrMealTag: 'Corrida 40 min · Z2/Z3',
     pointsEarned: 70,
     title: 'Cardio pago na pista + mobilidade de quadril',
     note: 'Foco total para garantir o pódio do Desafio de Abril.',
     photoUrl4x3:
       'https://images.unsplash.com/photo-1502904550040-7534597429ae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-    timeLabel: 'Ontem · 19:30 · 9º dia seguido',
+    timeLabel: 'Ontem · 19:30',
+    dayOffset: -1,
+    time: '19:30',
     cheersCount: 15,
   },
+  {
+    id: 'post-4',
+    challengeId: 'chal-abril',
+    studentName: 'Mariana Costa',
+    studentAvatar: '/people/renata-alves.jpg',
+    activityKind: 'Meta de água',
+    activityIcon: '💧',
+    activityId: 'abr-4',
+    workoutOrMealTag: '3,4 L no dia',
+    pointsEarned: 30,
+    title: 'Garrafa de 2L zerada antes das 15h',
+    note: 'Lembrete no celular de hora em hora funcionou.',
+    photoUrl4x3: '',
+    timeLabel: '',
+    dayOffset: -1,
+    time: '15:05',
+    cheersCount: 7,
+  },
+  {
+    id: 'post-5',
+    challengeId: 'chal-abril',
+    studentName: 'Lucas Andrade',
+    studentAvatar: '/people/gustavo-lima.jpg',
+    activityKind: 'Cardio pago',
+    activityIcon: '🏃',
+    activityId: 'abr-2',
+    workoutOrMealTag: 'Bike 30 min · Z2',
+    pointsEarned: 70,
+    title: 'Bike antes do almoço',
+    note: 'Mantive a zona 2 o tempo todo.',
+    photoUrl4x3:
+      'https://images.unsplash.com/photo-1502904550040-7534597429ae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+    timeLabel: '',
+    dayOffset: -2,
+    time: '11:40',
+    achievement: '13 dias seguidos',
+    cheersCount: 10,
+  },
+  {
+    id: 'post-6',
+    challengeId: 'chal-abril',
+    studentName: 'Camila Rocha',
+    studentAvatar: '/people/paula-nunes.jpg',
+    activityKind: 'Treino feito',
+    activityIcon: '🏋️',
+    activityId: 'abr-1',
+    workoutOrMealTag: 'Treino A · Inferiores',
+    pointsEarned: 100,
+    title: 'Agachamento livre com carga nova',
+    note: 'Subi 5 kg mantendo a técnica da aula 002.',
+    photoUrl4x3:
+      'https://images.unsplash.com/photo-1637430308606-86576d8fef3c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+    timeLabel: '',
+    dayOffset: -2,
+    time: '06:50',
+    cheersCount: 10,
+  },
+  {
+    id: 'post-7',
+    challengeId: 'chal-abril',
+    studentName: 'Thiago Mendes',
+    studentAvatar: '/people/breno-monteiro.png',
+    activityKind: 'Refeição do plano',
+    activityIcon: '🥗',
+    activityId: 'abr-3',
+    workoutOrMealTag: 'Jantar WebDiet',
+    pointsEarned: 40,
+    title: 'Jantar no ponto mesmo fora de casa',
+    note: 'Usei a tabela de equivalências da playlist de Nutrição.',
+    photoUrl4x3:
+      'https://images.unsplash.com/photo-1543352632-5a4b24e4d2a6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+    timeLabel: '',
+    dayOffset: -4,
+    time: '20:10',
+    cheersCount: 16,
+  },
+  {
+    id: 'post-8',
+    challengeId: 'chal-abril',
+    studentName: 'Mariana Costa',
+    studentAvatar: '/people/renata-alves.jpg',
+    activityKind: 'Treino feito',
+    activityIcon: '🏋️',
+    activityId: 'abr-1',
+    workoutOrMealTag: 'Treino C · Posterior',
+    pointsEarned: 100,
+    title: 'Posterior completo',
+    note: 'Primeira semana sem faltar nenhum treino.',
+    photoUrl4x3:
+      'https://images.unsplash.com/photo-1637430308606-86576d8fef3c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
+    timeLabel: '',
+    dayOffset: -6,
+    time: '18:30',
+    achievement: '7 dias seguidos',
+    cheersCount: 22,
+  },
 ]
+
+const dateBR = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+/** "01/11/2026 a 30/11/2026 · Faltam 11 dias" */
+export function challengePeriodLabel(startIso?: string, endIso?: string) {
+  if (!startIso || !endIso) return ''
+  const start = new Date(startIso)
+  const end = new Date(endIso)
+  const left = Math.ceil((end.getTime() - Date.now()) / 86_400_000)
+  const status =
+    Date.now() < start.getTime()
+      ? 'Começa em breve'
+      : left > 0
+        ? `Faltam ${left} dias`
+        : 'Encerrado'
+  return `${dateBR.format(start)} a ${dateBR.format(end)} · ${status}`
+}
 
 type ModalKind = 'none' | 'video' | 'playlist' | 'ad' | 'challenge' | 'gymrats-checkin'
 
@@ -550,7 +837,7 @@ export default function CreationWorkspace({
   const [activeAdIndex, setActiveAdIndex] = useState(0)
   const [playlists, setPlaylists] = useState<StudentPlaylist[]>(initialPlaylists)
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
-  const [trackFilter, setTrackFilter] = useState<'Todos' | PlaylistTrackCategory>('Todos')
+  const [trackFilter, setTrackFilter] = useState<string>('Todos')
   const [explorePlaylistFilter, setExplorePlaylistFilter] = useState<string>('Todas')
   const [searchQuery, setSearchQuery] = useState('')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -562,48 +849,31 @@ export default function CreationWorkspace({
   const [leaderboard, setLeaderboard] = useState<GymRatsRankingEntry[]>(initialGymRatsLeaderboard)
   const [gymRatsFeed, setGymRatsFeed] = useState<GymRatsCheckinPost[]>(initialGymRatsFeed)
 
-  // Campos do Modal Criar / Editar Desafio GymRats
-  const [chalTitle, setChalTitle] = useState('')
-  const [chalPeriod, setChalPeriod] = useState('01/05/2026 a 31/05/2026 · 30 dias')
-  const [chalDesc, setChalDesc] = useState('')
-  const [chalCoverUrl, setChalCoverUrl] = useState(studioCoverPresets4x3[0].url)
-  const [chalPrize1, setChalPrize1] = useState('1 Mês de Consultoria Elevn Black Grátis + Kit Dux')
-  const [chalPrize2, setChalPrize2] = useState('50% OFF na Renovação + Camiseta Oficial Elevn Club')
-  const [chalPrize3, setChalPrize3] = useState('Avaliação Física + Coqueteleira Elevn')
-  const [chalRulesText, setChalRulesText] = useState(
-    'Envie foto 4:3 para validar o treino do dia.\nCardio mínimo de 25 minutos.\nRefeições do WebDiet e meta de água batida somam pontos diários.',
-  )
-  const [ptsTreino, setPtsTreino] = useState(100)
-  const [ptsCardio, setPtsCardio] = useState(70)
-  const [ptsRefeicao, setPtsRefeicao] = useState(40)
-  const [ptsAgua, setPtsAgua] = useState(30)
-  const [ptsCheckin, setPtsCheckin] = useState(150)
-  const [ptsBonus7d, setPtsBonus7d] = useState(200)
-
-  // Campos do Modal Registrar Pontos / Check-in na Comunidade
-  const [checkinActivityKind, setCheckinActivityKind] =
-    useState<GymRatsActivityKind>('Treino Feito')
-  const [checkinTag, setCheckinTag] = useState('Treino A · Superiores')
-  const [checkinTitle, setCheckinTitle] = useState('')
-  const [checkinNote, setCheckinNote] = useState('')
-  const [checkinPhotoUrl, setCheckinPhotoUrl] = useState(studioCoverPresets4x3[0].url)
+  // Trilhas, desafios, vídeos e encontros (editados em painéis laterais)
+  const [tracks, setTracks] = useState<ClubTrack[]>(initialTracks)
+  const [trackSheet, setTrackSheet] = useState<{ open: boolean; track: ClubTrack | null }>({
+    open: false,
+    track: null,
+  })
+  const [challengeSheet, setChallengeSheet] = useState<{
+    open: boolean
+    challenge: GymRatsChallenge | null
+  }>({ open: false, challenge: null })
+  const [videoSheet, setVideoSheet] = useState<{ open: boolean; playlistId?: string }>({
+    open: false,
+  })
+  const [checkinOpen, setCheckinOpen] = useState(false)
+  const [liveOpen, setLiveOpen] = useState(false)
+  const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([])
 
   // Modais de cadastro direto no Elevn Club
   const [activeModal, setActiveModal] = useState<ModalKind>('none')
   const [editingAdId, setEditingAdId] = useState<string | null>(null)
 
-  // Campos Modal: Vídeo 4:3
-  const [videoPlaylistId, setVideoPlaylistId] = useState<string>(initialPlaylists[0].id)
-  const [videoTitle, setVideoTitle] = useState('')
-  const [videoDescription, setVideoDescription] = useState('')
-  const [videoDuration, setVideoDuration] = useState('08 MIN')
-  const [videoCoverUrl, setVideoCoverUrl] = useState(studioCoverPresets4x3[0].url)
-  const [videoFileName, setVideoFileName] = useState('aula-elevn-4x3.mp4')
-
   // Campos Modal: Playlist
   const [plTitle, setPlTitle] = useState('')
   const [plShortUpper, setPlShortUpper] = useState('')
-  const [plTrack, setPlTrack] = useState<PlaylistTrackCategory>('Treino & Biomecânica')
+  const [plTrack, setPlTrack] = useState<PlaylistTrackCategory>(initialTracks[0].name)
   const [plDescription, setPlDescription] = useState('')
   const [plAccent, setPlAccent] = useState('#6b6133')
   const [plCoverUrl, setPlCoverUrl] = useState(studioCoverPresets4x3[0].url)
@@ -642,20 +912,16 @@ export default function CreationWorkspace({
     reader.readAsDataURL(file)
   }
 
-  const openUploadVideoModal = (preselectedPlaylistId?: string) => {
-    setVideoPlaylistId(preselectedPlaylistId || selectedPlaylistId || playlists[0]?.id || '')
-    setVideoTitle('')
-    setVideoDescription('')
-    setVideoDuration('08 MIN')
-    setVideoCoverUrl(studioCoverPresets4x3[0].url)
-    setVideoFileName('nova-aula-4x3.mp4')
-    setActiveModal('video')
-  }
+  const openUploadVideoModal = (preselectedPlaylistId?: string) =>
+    setVideoSheet({
+      open: true,
+      playlistId: preselectedPlaylistId || selectedPlaylistId || undefined,
+    })
 
   const openNewPlaylistModal = (defaultTrack?: PlaylistTrackCategory) => {
     setPlTitle('')
     setPlShortUpper('')
-    setPlTrack(defaultTrack || 'Treino & Biomecânica')
+    setPlTrack(defaultTrack || tracks[0]?.name || '')
     setPlDescription('')
     setPlAccent('#6b6133')
     setPlCoverUrl(studioCoverPresets4x3[1].url)
@@ -689,147 +955,89 @@ export default function CreationWorkspace({
     setActiveModal('ad')
   }
 
-  const openChallengeModal = (challengeToEdit?: GymRatsChallenge) => {
-    if (challengeToEdit) {
-      setEditingChallengeId(challengeToEdit.id)
-      setChalTitle(challengeToEdit.title)
-      setChalPeriod(challengeToEdit.periodLabel)
-      setChalDesc(challengeToEdit.description)
-      setChalCoverUrl(challengeToEdit.coverUrl)
-      setChalPrize1(challengeToEdit.prizeFirst)
-      setChalPrize2(challengeToEdit.prizeSecond)
-      setChalPrize3(challengeToEdit.prizeThird)
-      setChalRulesText(challengeToEdit.rules.join('\n'))
-      setPtsTreino(challengeToEdit.scoring.treinoFeito)
-      setPtsCardio(challengeToEdit.scoring.cardioPago)
-      setPtsRefeicao(challengeToEdit.scoring.refeicaoFeita)
-      setPtsAgua(challengeToEdit.scoring.aguaTomada)
-      setPtsCheckin(challengeToEdit.scoring.checkinLiveClin)
-      setPtsBonus7d(challengeToEdit.scoring.bonusOfensiva7Dias)
-    } else {
-      setEditingChallengeId(null)
-      setChalTitle('')
-      setChalPeriod('01/05/2026 a 31/05/2026 · 30 dias')
-      setChalDesc('')
-      setChalCoverUrl(studioCoverPresets4x3[0].url)
-      setChalPrize1('1 Mês de Consultoria Elevn Black Grátis + Kit Dux')
-      setChalPrize2('50% OFF na Renovação + Camiseta Oficial Elevn Club')
-      setChalPrize3('Avaliação Física Completa + Coqueteleira Elevn')
-      setChalRulesText(
-        'Aberto a todos os alunos do aplicativo Elevn.\nEnvie foto 4:3 para validar o treino do dia.\nCardio mínimo de 25 minutos.\nRefeições do WebDiet e meta de água batida somam pontos diários.',
-      )
-      setPtsTreino(100)
-      setPtsCardio(70)
-      setPtsRefeicao(40)
-      setPtsAgua(30)
-      setPtsCheckin(150)
-      setPtsBonus7d(200)
-    }
-    setActiveModal('challenge')
-  }
+  const openChallengeModal = (challengeToEdit?: GymRatsChallenge) =>
+    setChallengeSheet({ open: true, challenge: challengeToEdit ?? null })
 
-  const handleSaveChallenge = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const cleanTitle = chalTitle.trim() || 'Novo Desafio Consistência Elevn Club'
-    const parsedRules = chalRulesText
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-
-    const nextScoring: ChallengeScoringConfig = {
-      treinoFeito: Number(ptsTreino) || 100,
-      cardioPago: Number(ptsCardio) || 70,
-      refeicaoFeita: Number(ptsRefeicao) || 40,
-      aguaTomada: Number(ptsAgua) || 30,
-      checkinLiveClin: Number(ptsCheckin) || 150,
-      bonusOfensiva7Dias: Number(ptsBonus7d) || 200,
-    }
-
-    if (editingChallengeId) {
+  const saveChallenge = (draft: ChallengeDraft) => {
+    const label = challengePeriodLabel(draft.startIso, draft.endIso)
+    if (challengeSheet.challenge) {
+      const id = challengeSheet.challenge.id
       setChallenges((current) =>
-        current.map((ch) =>
-          ch.id === editingChallengeId
-            ? {
-                ...ch,
-                title: cleanTitle,
-                periodLabel: chalPeriod.trim() || '30 dias',
-                description:
-                  chalDesc.trim() ||
-                  'Desafio oficial aberto a todos os alunos do aplicativo com pontuação por treino, cardio, dieta e água.',
-                coverUrl: chalCoverUrl,
-                prizeFirst: chalPrize1.trim() || 'Prêmio 1º colocado',
-                prizeSecond: chalPrize2.trim() || 'Prêmio 2º colocado',
-                prizeThird: chalPrize3.trim() || 'Prêmio 3º colocado',
-                rules:
-                  parsedRules.length > 0
-                    ? parsedRules
-                    : ['Registre suas atividades diárias com foto 4:3.'],
-                scoring: nextScoring,
-              }
-            : ch,
-        ),
+        current.map((ch) => (ch.id === id ? { ...ch, ...draft, periodLabel: label } : ch)),
       )
-      setToastMessage(`Desafio "${cleanTitle}" atualizado para todos os alunos do aplicativo!`)
+      setToastMessage(`Desafio “${draft.title}” atualizado.`)
     } else {
       const created: GymRatsChallenge = {
+        ...draft,
         id: `chal-${Date.now()}`,
-        title: cleanTitle,
-        periodLabel: chalPeriod.trim() || '30 dias',
-        participantsCount: 1,
-        description:
-          chalDesc.trim() ||
-          'Desafio oficial aberto a todos os alunos do aplicativo com pontuação por treino, cardio, dieta e água.',
-        coverUrl: chalCoverUrl,
-        prizeFirst: chalPrize1.trim() || 'Prêmio 1º colocado',
-        prizeSecond: chalPrize2.trim() || 'Prêmio 2º colocado',
-        prizeThird: chalPrize3.trim() || 'Prêmio 3º colocado',
-        rules:
-          parsedRules.length > 0 ? parsedRules : ['Registre suas atividades diárias com foto 4:3.'],
-        scoring: nextScoring,
+        participantsCount: 0,
+        periodLabel: label,
       }
       setChallenges((current) => [created, ...current])
       setActiveChallengeId(created.id)
-      setToastMessage(`Novo desafio "${created.title}" criado e liberado para todos no aplicativo!`)
+      setToastMessage(`Desafio “${created.title}” criado e aberto a todos no app.`)
     }
-
-    setActiveModal('none')
+    setChallengeSheet({ open: false, challenge: null })
   }
 
-  const handleSaveVideo = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!videoTitle.trim()) return
-
-    const targetPlaylist = playlists.find((item) => item.id === videoPlaylistId) ?? playlists[0]
-    if (!targetPlaylist) return
-
-    const nextNumber = String(targetPlaylist.lessons.length + 1).padStart(3, '0')
-    const newLesson: PlaylistLessonVideo = {
-      id: `les-${Date.now()}`,
-      numberLabel: nextNumber,
-      title: videoTitle.trim(),
-      description:
-        videoDescription.trim() ||
-        'Aula publicada em formato 4:3 para visualização no celular dos alunos.',
-      durationMinutes: videoDuration.trim().toUpperCase().includes('MIN')
-        ? videoDuration.trim().toUpperCase()
-        : `${videoDuration.trim() || '08'} MIN`,
-      coverUrl: videoCoverUrl,
-      videoFileName,
-      publishedAt: 'Publicado agora',
-      watchProgressPercent: 15,
-      stoppedAtLabel: 'Recém-publicado · Começar agora',
-      lastWatchedLabel: 'Adicionado agora no Elevn Club',
-    }
-
+  const saveVideo = (playlistId: string, lesson: VideoDraft) => {
+    const target = playlists.find((item) => item.id === playlistId)
+    if (!target) return
+    const numberLabel = String(target.lessons.length + 1).padStart(3, '0')
     setPlaylists((current) =>
       current.map((pl) =>
-        pl.id === targetPlaylist.id ? { ...pl, lessons: [...pl.lessons, newLesson] } : pl,
+        pl.id === playlistId
+          ? {
+              ...pl,
+              lessons: [
+                ...pl.lessons,
+                { ...lesson, id: `les-${Date.now()}`, numberLabel, publishedAt: 'Publicado agora' },
+              ],
+            }
+          : pl,
       ),
     )
-    setActiveModal('none')
+    setVideoSheet({ open: false })
     setToastMessage(
-      `Vídeo "${newLesson.numberLabel} - ${newLesson.title}" publicado em "${targetPlaylist.title}"!`,
+      `Vídeo ${lesson.aspectRatio} “${numberLabel} - ${lesson.title}” publicado em “${target.title}”.`,
     )
+  }
+
+  const saveTrack = (track: ClubTrack) => {
+    const previous = tracks.find((item) => item.id === track.id)
+    if (previous) {
+      setTracks((current) => current.map((item) => (item.id === track.id ? track : item)))
+      if (previous.name !== track.name) {
+        setPlaylists((current) =>
+          current.map((pl) =>
+            pl.trackCategory === previous.name ? { ...pl, trackCategory: track.name } : pl,
+          ),
+        )
+        if (trackFilter === previous.name) setTrackFilter(track.name)
+      }
+      setToastMessage(`Trilha “${track.name}” atualizada.`)
+    } else {
+      setTracks((current) => [...current, track])
+      setToastMessage(`Trilha “${track.name}” criada. Adicione a primeira playlist.`)
+    }
+    setTrackSheet({ open: false, track: null })
+  }
+
+  const moveTrack = (id: string, step: -1 | 1) =>
+    setTracks((current) => {
+      const index = current.findIndex((item) => item.id === id)
+      const target = index + step
+      if (index < 0 || target < 0 || target >= current.length) return current
+      const next = [...current]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+
+  const deleteTrack = (track: ClubTrack) => {
+    if (playlists.some((pl) => pl.trackCategory === track.name)) return
+    setTracks((current) => current.filter((item) => item.id !== track.id))
+    if (trackFilter === track.name) setTrackFilter('Todos')
+    setToastMessage(`Trilha “${track.name}” excluída.`)
   }
 
   const handleSavePlaylist = (event: FormEvent<HTMLFormElement>) => {
@@ -906,74 +1114,125 @@ export default function CreationWorkspace({
     setActiveModal('none')
   }
 
-  const getPointsForActivity = (kind: GymRatsActivityKind): number => {
-    const s = activeChallenge?.scoring ?? {
-      treinoFeito: 100,
-      cardioPago: 70,
-      refeicaoFeita: 40,
-      aguaTomada: 30,
-      checkinLiveClin: 150,
-      bonusOfensiva7Dias: 200,
-    }
-    if (kind === 'Treino Feito') return s.treinoFeito
-    if (kind === 'Cardio Pago') return s.cardioPago
-    if (kind === 'Refeição Feita') return s.refeicaoFeita
-    return s.aguaTomada
-  }
-
-  const handleSaveGymRatsCheckin = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!checkinTitle.trim() || !activeChallenge) return
-    const awardedPoints = getPointsForActivity(checkinActivityKind)
-    const newPost: GymRatsCheckinPost = {
+  /** "Postar como Elevn": official post, approved and outside the ranking. */
+  const saveOfficialPost = (input: {
+    activity: ChallengeActivity
+    title: string
+    note: string
+    photoUrl: string
+  }) => {
+    if (!activeChallenge) return
+    const now = new Date()
+    const post: GymRatsCheckinPost = {
       id: `post-${Date.now()}`,
       challengeId: activeChallenge.id,
-      studentName: 'Breno Monteiro (Admin)',
+      studentName: 'Equipe Elevn',
       studentAvatar: '/people/breno-monteiro.png',
-      activityKind: checkinActivityKind,
-      workoutOrMealTag: checkinTag.trim() || checkinActivityKind,
-      pointsEarned: awardedPoints,
-      title: checkinTitle.trim(),
-      note:
-        checkinNote.trim() ||
-        `Registro validado no ${activeChallenge.title} (+${awardedPoints} pts).`,
-      photoUrl4x3: checkinPhotoUrl,
-      timeLabel: 'Agora mesmo · Verificado',
-      cheersCount: 1,
-      cheeredByMe: true,
+      activityKind: input.activity.name,
+      activityIcon: input.activity.icon,
+      activityId: input.activity.id,
+      workoutOrMealTag: 'Post oficial',
+      pointsEarned: 0,
+      title: input.title,
+      note: input.note,
+      photoUrl4x3: input.activity.requiresPhoto ? input.photoUrl : '',
+      timeLabel: 'Agora',
+      postedAtIso: now.toISOString(),
+      status: 'aprovado',
+      cheersCount: 0,
     }
-    setGymRatsFeed((current) => [newPost, ...current])
-    setLeaderboard((current) =>
-      current.map((entry, idx) =>
-        idx === 0
-          ? {
-              ...entry,
-              workoutsPaid:
-                checkinActivityKind === 'Treino Feito'
-                  ? entry.workoutsPaid + 1
-                  : entry.workoutsPaid,
-              cardioDone:
-                checkinActivityKind === 'Cardio Pago' ? entry.cardioDone + 1 : entry.cardioDone,
-              mealsLogged:
-                checkinActivityKind === 'Refeição Feita'
-                  ? entry.mealsLogged + 1
-                  : entry.mealsLogged,
-              waterDays:
-                checkinActivityKind === 'Meta de Água Batida'
-                  ? entry.waterDays + 1
-                  : entry.waterDays,
-              points: entry.points + awardedPoints,
-            }
-          : entry,
+    setGymRatsFeed((current) => [post, ...current])
+    setCheckinOpen(false)
+    setToastMessage('Post oficial publicado no mural.')
+  }
+
+  const rejectPost = (postId: string, reason: string) => {
+    setGymRatsFeed((current) =>
+      current.map((post) =>
+        post.id === postId
+          ? { ...post, status: 'reprovado', rejectReason: reason, highlighted: false }
+          : post,
       ),
     )
-    setCheckinTitle('')
-    setCheckinNote('')
-    setActiveModal('none')
-    setToastMessage(
-      `${checkinActivityKind} registrado (+${awardedPoints} pts) na Comunidade Elevn Club!`,
-    )
+    const post = gymRatsFeed.find((item) => item.id === postId)
+    if (post)
+      setToastMessage(
+        `Check-in de ${post.studentName} reprovado (−${post.pointsEarned} pts). O aluno vê o motivo no app.`,
+      )
   }
+
+  const restorePost = (postId: string) =>
+    setGymRatsFeed((current) =>
+      current.map((post) =>
+        post.id === postId ? { ...post, status: 'aprovado', rejectReason: undefined } : post,
+      ),
+    )
+
+  const toggleHighlight = (postId: string) =>
+    setGymRatsFeed((current) =>
+      current.map((post) =>
+        post.id === postId ? { ...post, highlighted: !post.highlighted } : post,
+      ),
+    )
+
+  // Ranking minus the points of rejected check-ins
+  const moderatedLeaderboard = leaderboard.map((member) => ({
+    ...member,
+    points:
+      member.points -
+      gymRatsFeed
+        .filter((post) => post.status === 'reprovado' && post.studentName === member.name)
+        .reduce((sum, post) => sum + post.pointsEarned, 0),
+  }))
+
+  // Demo dates relative to today (resolved after hydration so the static page matches)
+  useEffect(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const day = (offset: number) => new Date(today.getTime() + offset * 86_400_000)
+    setChallenges((current) =>
+      current.map((ch) => {
+        if (ch.startOffset === undefined || ch.startIso) return ch
+        const start = day(ch.startOffset)
+        const end = day(ch.startOffset + (ch.lengthDays ?? 30) - 1)
+        return {
+          ...ch,
+          startIso: start.toISOString(),
+          endIso: end.toISOString(),
+          periodLabel: challengePeriodLabel(start.toISOString(), end.toISOString()),
+        }
+      }),
+    )
+    setGymRatsFeed((current) =>
+      current.map((post) => {
+        if (post.postedAtIso || post.dayOffset === undefined) return post
+        const [hours, minutes] = (post.time ?? '12:00').split(':').map(Number)
+        const at = day(post.dayOffset)
+        at.setHours(hours, minutes)
+        return { ...post, postedAtIso: at.toISOString(), status: post.status ?? 'aprovado' }
+      }),
+    )
+    setLiveEvents((current) =>
+      current.length
+        ? current
+        : [
+            {
+              id: 'live-1',
+              title: 'Aulão de mobilidade para quem treina cedo',
+              host: 'Prof. Rafael Costa',
+              startsAtIso: new Date(day(2).getTime() + 19 * 3_600_000).toISOString(),
+              link: '',
+            },
+            {
+              id: 'live-2',
+              title: 'Clube do livro: Hábitos Atômicos, cap. 3',
+              host: 'Dr. Breno Monteiro',
+              startsAtIso: new Date(day(6).getTime() + 20 * 3_600_000).toISOString(),
+              link: '',
+            },
+          ],
+    )
+  }, [])
 
   const toggleCheerPost = (postId: string) => {
     setGymRatsFeed((current) =>
@@ -1016,10 +1275,26 @@ export default function CreationWorkspace({
     )
   })
 
-  const tracksToRender: PlaylistTrackCategory[] =
-    trackFilter === 'Todos'
-      ? ['Treino & Biomecânica', 'Nutrição & Rotina que Funciona', 'Mentalidade & Performance']
-      : [trackFilter]
+  const tracksToRender =
+    trackFilter === 'Todos' ? tracks : tracks.filter((track) => track.name === trackFilter)
+
+  const totalLessons = playlists.reduce((acc, p) => acc + p.lessons.length, 0)
+  const totalMinutes = playlists.reduce((acc, p) => acc + playlistMinutes(p), 0)
+  const averageCompletion = playlists.length
+    ? Math.round(playlists.reduce((acc, p) => acc + p.completionRate, 0) / playlists.length)
+    : 0
+  const watchingNow = playlists.reduce((acc, p) => acc + p.studentsWatching, 0)
+  const checkinsToday = gymRatsFeed.filter(
+    (post) =>
+      post.postedAtIso && new Date(post.postedAtIso).toDateString() === new Date().toDateString(),
+  ).length
+  const liveFormat = new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 
   const allVideosWithPlaylist = playlists.flatMap((pl) =>
     pl.lessons.map((lesson) => ({
@@ -1094,7 +1369,11 @@ export default function CreationWorkspace({
             </div>
 
             <div className="elevn-club-admin-actions">
-              <button type="button" className="elevn-club-preview-btn" onClick={() => setPreviewOpen(true)}>
+              <button
+                type="button"
+                className="elevn-club-preview-btn"
+                onClick={() => setPreviewOpen(true)}
+              >
                 <Icon name="eye" className="size-4" /> Prévia no app
               </button>
               <Menu
@@ -1102,15 +1381,27 @@ export default function CreationWorkspace({
                 items={[
                   {
                     id: 'video',
-                    label: 'Vídeo (4:3)',
-                    description: '1440 × 1080 px, para o celular do aluno',
+                    label: 'Vídeo',
+                    description: '4:3 ou 16:9 · a capa é sempre 4:3',
                     onSelect: () => openUploadVideoModal(),
                   },
                   {
                     id: 'playlist',
                     label: 'Playlist',
-                    description: 'Nova trilha de aulas',
+                    description: 'Sequência de aulas dentro de uma trilha',
                     onSelect: () => openNewPlaylistModal(),
+                  },
+                  {
+                    id: 'trilha',
+                    label: 'Trilha',
+                    description: 'Agrupa playlists por objetivo',
+                    onSelect: () => setTrackSheet({ open: true, track: null }),
+                  },
+                  {
+                    id: 'ao-vivo',
+                    label: 'Encontro ao vivo',
+                    description: 'Aparece em “Próximos encontros”',
+                    onSelect: () => setLiveOpen(true),
                   },
                   {
                     id: 'anuncio',
@@ -1147,7 +1438,11 @@ export default function CreationWorkspace({
           onClose={() => setPreviewOpen(false)}
           ad={currentHeroAd}
           playlists={playlists}
-          tracks={['Treino & Biomecânica', 'Nutrição & Rotina que Funciona', 'Mentalidade & Performance']}
+          tracks={tracks.map((track) => track.name)}
+          challenge={activeChallenge ?? null}
+          feed={gymRatsFeed}
+          leaderboard={moderatedLeaderboard}
+          liveEvents={liveEvents}
         />
 
         {toastMessage && (
@@ -1191,7 +1486,7 @@ export default function CreationWorkspace({
                     className="elevn-primary-gold-btn"
                     onClick={() => openUploadVideoModal(selectedPlaylist.id)}
                   >
-                    + ADICIONAR VÍDEO (4:3) NESTA PLAYLIST
+                    + Adicionar vídeo nesta playlist
                   </button>
                 </div>
               </div>
@@ -1236,7 +1531,7 @@ export default function CreationWorkspace({
                           type="button"
                           onClick={() => openUploadVideoModal(selectedPlaylist.id)}
                         >
-                          + Subir primeiro vídeo 4:3
+                          + Subir primeiro vídeo
                         </button>
                       </div>
                     ) : (
@@ -1244,7 +1539,7 @@ export default function CreationWorkspace({
                         <article key={lesson.id} className="elevn-pl-lesson-row">
                           <div className="elevn-pl-lesson-thumb-4x3">
                             <img src={lesson.coverUrl} alt={lesson.title} />
-                            <span>4:3</span>
+                            <span>{lesson.aspectRatio ?? '4:3'}</span>
                           </div>
                           <div className="elevn-pl-lesson-copy">
                             <h4>
@@ -1254,6 +1549,11 @@ export default function CreationWorkspace({
                               ▶ VÍDEO - {lesson.durationMinutes} · {lesson.publishedAt}
                             </small>
                             <p>{lesson.description}</p>
+                            {lesson.materialName && (
+                              <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-2 py-0.5 text-[11px] text-on-dark/75">
+                                <Icon name="form" className="size-3" /> {lesson.materialName}
+                              </span>
+                            )}
                           </div>
                           <button
                             type="button"
@@ -1269,7 +1569,7 @@ export default function CreationWorkspace({
                 </div>
 
                 <aside className="elevn-pl-progress-card">
-                  <h3>Meu Progresso</h3>
+                  <h3>Progresso dos alunos</h3>
                   <div className="elevn-pl-progress-nums">
                     <strong>{selectedPlaylist.completionRate}%</strong>
                     <span>
@@ -1285,8 +1585,8 @@ export default function CreationWorkspace({
                     playlist
                   </small>
                   <p>
-                    Você está indo muito bem! Continue subindo aulas práticas em formato 4:3 para
-                    guiar a execução dos alunos no aplicativo.
+                    Aulas curtas e práticas aumentam a conclusão. Vídeos 16:9 aparecem com faixas no
+                    celular; a capa continua 4:3.
                   </p>
                 </aside>
               </div>
@@ -1433,64 +1733,271 @@ export default function CreationWorkspace({
             )}
 
             <div className="elevn-catalog-container">
-              <div className="elevn-track-filters-bar">
-                <div className="pills">
+              <section
+                aria-label="Engajamento do Club"
+                className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-white/10 bg-white/10 lg:grid-cols-4"
+              >
+                {[
+                  {
+                    label: 'Alunos assistindo',
+                    value: watchingNow.toLocaleString('pt-BR'),
+                    hint: `em ${playlists.length} playlists`,
+                  },
+                  {
+                    label: 'Conteúdo publicado',
+                    value: `${totalLessons} aulas`,
+                    hint: `${totalMinutes} min no total`,
+                  },
+                  {
+                    label: 'Conclusão média',
+                    value: `${averageCompletion}%`,
+                    hint: 'das playlists iniciadas',
+                  },
+                  {
+                    label: 'Check-ins hoje',
+                    value: String(checkinsToday),
+                    hint: activeChallenge?.title ?? 'Comunidade',
+                    onClick: () => setClubTab('comunidade'),
+                  },
+                ].map((item) => {
+                  const body = (
+                    <>
+                      <span className="text-xs text-on-dark/60">{item.label}</span>
+                      <strong className="mt-1 block text-2xl font-semibold tracking-[-0.01em] text-on-dark tabular-nums">
+                        {item.value}
+                      </strong>
+                      <span className="mt-0.5 block truncate text-[11px] text-on-dark/50">
+                        {item.hint}
+                      </span>
+                    </>
+                  )
+                  return item.onClick ? (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={item.onClick}
+                      className="bg-[#17142c] px-4 py-3.5 text-left transition-colors hover:bg-[#1e1a38]"
+                    >
+                      {body}
+                    </button>
+                  ) : (
+                    <div key={item.label} className="bg-[#17142c] px-4 py-3.5">
+                      {body}
+                    </div>
+                  )
+                })}
+              </section>
+
+              <section
+                aria-labelledby="live-title"
+                className="rounded-card border border-white/10 bg-white/[0.03] p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h2 id="live-title" className="text-[15px] font-semibold text-on-dark">
+                    Próximos encontros ao vivo
+                  </h2>
                   <button
                     type="button"
-                    className={trackFilter === 'Todos' ? 'active' : ''}
-                    onClick={() => setTrackFilter('Todos')}
+                    onClick={() => setLiveOpen(true)}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-control border border-white/15 px-3 text-xs font-medium text-on-dark hover:bg-white/10"
                   >
-                    Todos
-                  </button>
-                  <button
-                    type="button"
-                    className={trackFilter === 'Treino & Biomecânica' ? 'active' : ''}
-                    onClick={() => setTrackFilter('Treino & Biomecânica')}
-                  >
-                    Treino & Biomecânica
-                  </button>
-                  <button
-                    type="button"
-                    className={trackFilter === 'Nutrição & Rotina que Funciona' ? 'active' : ''}
-                    onClick={() => setTrackFilter('Nutrição & Rotina que Funciona')}
-                  >
-                    Nutrição & Rotina que Funciona
-                  </button>
-                  <button
-                    type="button"
-                    className={trackFilter === 'Mentalidade & Performance' ? 'active' : ''}
-                    onClick={() => setTrackFilter('Mentalidade & Performance')}
-                  >
-                    Mentalidade & Performance
+                    <Icon name="calendar" className="size-3.5" /> Agendar encontro
                   </button>
                 </div>
+                {liveEvents.length === 0 ? (
+                  <p className="mt-3 text-sm text-on-dark/55">
+                    Nenhum encontro agendado. Lives aumentam o retorno dos alunos ao app.
+                  </p>
+                ) : (
+                  <ul className="mt-3 flex gap-3 overflow-x-auto pb-1">
+                    {liveEvents.map((event) => (
+                      <li
+                        key={event.id}
+                        className="flex min-w-[240px] items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5"
+                      >
+                        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--gold-88)]/15 text-[var(--gold-88)]">
+                          <Icon name="calendar" className="size-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-on-dark">{event.title}</p>
+                          <p className="truncate text-[11px] text-on-dark/55 capitalize">
+                            {liveFormat.format(new Date(event.startsAtIso)).replace('.', '')} ·{' '}
+                            {event.host}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={`Cancelar encontro ${event.title}`}
+                          onClick={() =>
+                            setLiveEvents((current) =>
+                              current.filter((item) => item.id !== event.id),
+                            )
+                          }
+                          className="grid size-7 place-items-center rounded-md text-on-dark/50 hover:bg-white/10 hover:text-on-dark"
+                        >
+                          <Icon name="close" className="size-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
 
+              <div className="flex flex-wrap items-center gap-2">
+                <div
+                  role="radiogroup"
+                  aria-label="Filtrar trilha"
+                  className="flex flex-wrap gap-1.5"
+                >
+                  {['Todos', ...tracks.map((track) => track.name)].map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      role="radio"
+                      aria-checked={trackFilter === name}
+                      onClick={() => setTrackFilter(name)}
+                      className={
+                        trackFilter === name
+                          ? 'h-8 rounded-full bg-[var(--gold-88)] px-3.5 text-xs font-semibold text-night'
+                          : 'h-8 rounded-full border border-white/15 px-3.5 text-xs font-medium text-on-dark/75 hover:bg-white/10'
+                      }
+                    >
+                      {name === 'Todos' ? 'Todas as trilhas' : name}
+                    </button>
+                  ))}
+                </div>
                 <button
                   type="button"
-                  className="inline-Explore-link"
+                  onClick={() => setTrackSheet({ open: true, track: null })}
+                  className="h-8 rounded-full border border-dashed border-white/25 px-3.5 text-xs font-medium text-on-dark/80 hover:bg-white/10"
+                >
+                  + Nova trilha
+                </button>
+                <button
+                  type="button"
+                  className="ml-auto text-xs font-medium text-[var(--gold-73)] hover:underline"
                   onClick={() => setClubTab('explorar')}
                 >
-                  Ver todos os vídeos & Continuar assistindo →
+                  Ver onde os alunos param →
                 </button>
               </div>
 
-              <div className="elevn-welcome-header">
-                <h2>Seja bem-vindo(a) ao Elevn Club!</h2>
-                <span>
-                  {playlists.length} playlists ativas ·{' '}
-                  {playlists.reduce((acc, p) => acc + p.lessons.length, 0)} aulas em formato 4:3
-                </span>
-              </div>
-
-              {tracksToRender.map((trackName) => {
+              {tracks.length === 0 && (
+                <div className="rounded-card border border-dashed border-white/15 px-6 py-10 text-center text-sm text-on-dark/60">
+                  Crie a primeira trilha para organizar as playlists por objetivo.
+                </div>
+              )}
+              {tracksToRender.map((track) => {
+                const trackName = track.name
                 const list = filteredPlaylists.filter((pl) => pl.trackCategory === trackName)
+                const all = playlists.filter((pl) => pl.trackCategory === trackName)
+                const lessons = all.reduce((acc, pl) => acc + pl.lessons.length, 0)
+                const completion = all.length
+                  ? Math.round(all.reduce((acc, pl) => acc + pl.completionRate, 0) / all.length)
+                  : 0
+                const position = tracks.findIndex((item) => item.id === track.id)
                 return (
-                  <section key={trackName} className="elevn-track-group">
-                    <header className="elevn-track-group-head">
-                      <h3>{trackName}</h3>
-                      <button type="button" onClick={() => openNewPlaylistModal(trackName)}>
-                        + Nova playlist nesta trilha
+                  <section
+                    key={track.id}
+                    className="elevn-track-group"
+                    aria-labelledby={`track-${track.id}`}
+                  >
+                    <header className="flex flex-wrap items-end gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="h-10 w-1 shrink-0 rounded-full"
+                        style={{ background: track.color }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h3
+                          id={`track-${track.id}`}
+                          className="text-base font-semibold text-on-dark"
+                        >
+                          {trackName}
+                        </h3>
+                        <p className="mt-0.5 truncate text-xs text-on-dark/60">
+                          {track.goal ? `${track.goal} · ` : ''}
+                          {all.length} {all.length === 1 ? 'playlist' : 'playlists'} · {lessons}{' '}
+                          aulas
+                        </p>
+                      </div>
+                      {all.length > 0 && (
+                        <div className="hidden w-36 sm:block" title="Conclusão média da trilha">
+                          <div className="flex justify-between text-[11px] text-on-dark/60">
+                            <span>Conclusão</span>
+                            <span className="tabular-nums">{completion}%</span>
+                          </div>
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className="h-full rounded-full"
+                              style={{ width: `${completion}%`, background: track.color }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openNewPlaylistModal(trackName)}
+                        className="h-8 rounded-control border border-white/15 px-3 text-xs font-medium text-on-dark hover:bg-white/10"
+                      >
+                        + Playlist
                       </button>
+                      <Menu
+                        label={`Opções da trilha ${trackName}`}
+                        items={[
+                          {
+                            id: 'editar',
+                            label: 'Editar trilha',
+                            description: 'Nome, objetivo e cor',
+                            onSelect: () => setTrackSheet({ open: true, track }),
+                          },
+                          ...(position > 0
+                            ? [
+                                {
+                                  id: 'subir',
+                                  label: 'Mover para cima',
+                                  onSelect: () => moveTrack(track.id, -1),
+                                },
+                              ]
+                            : []),
+                          ...(position < tracks.length - 1
+                            ? [
+                                {
+                                  id: 'descer',
+                                  label: 'Mover para baixo',
+                                  onSelect: () => moveTrack(track.id, 1),
+                                },
+                              ]
+                            : []),
+                          {
+                            id: 'excluir',
+                            label: 'Excluir trilha',
+                            description: all.length
+                              ? 'Mova ou exclua as playlists antes'
+                              : 'A trilha está vazia',
+                            danger: true,
+                            onSelect: () =>
+                              all.length
+                                ? setToastMessage(
+                                    `Mova as ${all.length} playlists de “${trackName}” antes de excluir a trilha.`,
+                                  )
+                                : deleteTrack(track),
+                          },
+                        ]}
+                        trigger={({ open, toggle, id }) => (
+                          <button
+                            type="button"
+                            onClick={toggle}
+                            aria-haspopup="menu"
+                            aria-expanded={open}
+                            aria-controls={open ? id : undefined}
+                            className="grid size-8 place-items-center rounded-control text-on-dark/70 hover:bg-white/10 hover:text-on-dark"
+                          >
+                            <Icon name="dots" className="size-4" />
+                            <span className="sr-only">Opções da trilha {trackName}</span>
+                          </button>
+                        )}
+                      />
                     </header>
 
                     <div className="elevn-posters-row">
@@ -1537,7 +2044,6 @@ export default function CreationWorkspace({
                           </div>
                         </article>
                       ))}
-
                     </div>
                   </section>
                 )
@@ -1637,7 +2143,7 @@ export default function CreationWorkspace({
                   </select>
 
                   <button type="button" onClick={() => openUploadVideoModal()}>
-                    + Subir Vídeo (4:3)
+                    + Subir vídeo
                   </button>
                 </div>
               </header>
@@ -1651,7 +2157,7 @@ export default function CreationWorkspace({
                   >
                     <div className="elevn-all-video-thumb">
                       <img src={video.coverUrl} alt={video.title} />
-                      <span className="ratio">4:3</span>
+                      <span className="ratio">{video.aspectRatio ?? '4:3'}</span>
                       <time>{video.durationMinutes}</time>
                     </div>
                     <div className="elevn-all-video-body">
@@ -1670,45 +2176,62 @@ export default function CreationWorkspace({
           /* ABA 3: COMUNIDADE (GYMRATS PRÓPRIO DA ELEVN COM DESAFIOS, PREMIAÇÕES 1º/2º/3º, REGRAS E SISTEMA DE PONTOS) */
           <div className="elevn-comunidade-view">
             {/* SELETOR DE DESAFIOS CRIADOS PELO ADMIN + BOTÃO DE CRIAR OUTRO DESAFIO */}
-            <section className="elevn-challenges-strip">
-              <div className="challenges-strip-left">
-                <span>Desafios</span>
-                <div className="challenge-pills-row">
-                  {challenges.map((ch) => (
+            <section className="flex flex-wrap items-center gap-2" aria-label="Desafios">
+              <div
+                role="tablist"
+                aria-label="Desafios"
+                className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1"
+              >
+                {challenges.map((ch) => {
+                  const active = ch.id === activeChallenge?.id
+                  return (
                     <button
                       key={ch.id}
                       type="button"
-                      className={ch.id === activeChallenge?.id ? 'active' : ''}
+                      role="tab"
+                      aria-selected={active}
                       onClick={() => setActiveChallengeId(ch.id)}
+                      className={
+                        active
+                          ? 'flex shrink-0 items-center gap-2.5 rounded-control border border-[var(--gold-88)]/60 bg-white/[0.06] py-1.5 pr-3 pl-1.5 text-left'
+                          : 'flex shrink-0 items-center gap-2.5 rounded-control border border-white/10 py-1.5 pr-3 pl-1.5 text-left opacity-75 hover:bg-white/[0.04] hover:opacity-100'
+                      }
                     >
-                      <strong>{ch.title}</strong>
-                      <small className="pub">Aberto a todos no App</small>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={ch.coverUrl}
+                        alt=""
+                        className="aspect-[4/3] w-12 rounded-md object-cover"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-on-dark">{ch.title}</span>
+                        <span className="block text-[11px] text-on-dark/55">
+                          {ch.participantsCount} participantes · {ch.activities.length} atividades
+                        </span>
+                      </span>
                     </button>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
-
-              <div className="challenges-strip-actions">
-                <button
-                  type="button"
-                  className="outline"
-                  onClick={() => activeChallenge && openChallengeModal(activeChallenge)}
-                >
-                  Editar desafio
-                </button>
-                <button type="button" className="gold" onClick={() => openChallengeModal()}>
-                  + Novo desafio
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => openChallengeModal()}
+                className="h-9 shrink-0 rounded-control border border-dashed border-white/25 px-3.5 text-xs font-medium text-on-dark/85 hover:bg-white/10"
+              >
+                + Novo desafio
+              </button>
             </section>
 
             {activeChallenge && (
               <CommunityChallenge
                 challenge={activeChallenge}
-                leaderboard={leaderboard}
+                leaderboard={moderatedLeaderboard}
                 feed={gymRatsFeed}
+                onReject={rejectPost}
+                onRestore={restorePost}
+                onHighlight={toggleHighlight}
                 onEditChallenge={() => openChallengeModal(activeChallenge)}
-                onPost={() => setActiveModal('gymrats-checkin')}
+                onPost={() => setCheckinOpen(true)}
                 onCheer={toggleCheerPost}
               />
             )}
@@ -1716,327 +2239,48 @@ export default function CreationWorkspace({
         )}
       </div>
 
-      {/* MODAL: CRIAR / EDITAR DESAFIO GYMRATS (ABERTO/FECHADO, PRÊMIOS 1º/2º/3º, REGRAS E SISTEMA DE PONTOS) */}
-      {activeModal === 'challenge' && (
-        <div className="elevn-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="elevn-modal-card wide">
-            <header className="elevn-modal-header">
-              <div>
-                <span>COMUNIDADE ELEVN CLUB · CONFIGURAR DESAFIO & SISTEMA DE PONTOS</span>
-                <h2>
-                  {editingChallengeId
-                    ? 'Editar Desafio, Premiações, Regras e Pontuação'
-                    : 'Criar Novo Desafio na Comunidade'}
-                </h2>
-              </div>
-              <button type="button" onClick={() => setActiveModal('none')}>
-                ✕
-              </button>
-            </header>
-
-            <form className="elevn-modal-form" onSubmit={handleSaveChallenge}>
-              <div className="elevn-modal-split">
-                <div className="elevn-modal-cover-col">
-                  <label className="elevn-field-title">Capa 4:3 do Desafio</label>
-                  <div className="elevn-cover-4x3-box">
-                    <img src={chalCoverUrl} alt="Capa do desafio" />
-                    <span>DESAFIO 4:3</span>
-                  </div>
-
-                  <label className="elevn-upload-trigger">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageFileUpload(e, setChalCoverUrl)}
-                    />
-                    Subir capa 4:3 do desafio
-                  </label>
-
-                  <div className="elevn-dimension-note">
-                    <strong>Observação de dimensões (Celular):</strong>
-                    <span>
-                      Envie a capa do desafio em <strong>1440 × 1080 px (Proporção 4:3)</strong>{' '}
-                      para exibição perfeita na tela do celular dos alunos. Todos os desafios ficam
-                      abertos a todos que têm o aplicativo.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="elevn-modal-fields-col">
-                  <div className="elevn-two-cols">
-                    <label className="elevn-input-block">
-                      <span>Título do Desafio</span>
-                      <input
-                        type="text"
-                        value={chalTitle}
-                        onChange={(e) => setChalTitle(e.target.value)}
-                        placeholder="Ex.: Desafio 30 Dias Seca Barriga & Consistência"
-                        required
-                      />
-                    </label>
-                    <label className="elevn-input-block">
-                      <span>Período / Duração</span>
-                      <input
-                        type="text"
-                        value={chalPeriod}
-                        onChange={(e) => setChalPeriod(e.target.value)}
-                        placeholder="01/05/2026 a 31/05/2026"
-                      />
-                    </label>
-                  </div>
-
-                  <label className="elevn-input-block">
-                    <span>Descrição do Desafio</span>
-                    <input
-                      type="text"
-                      value={chalDesc}
-                      onChange={(e) => setChalDesc(e.target.value)}
-                      placeholder="Explique o objetivo geral do desafio para os alunos..."
-                    />
-                  </label>
-
-                  {/* PREMIAÇÕES 1º, 2º E 3º COLOCADO */}
-                  <div className="elevn-modal-subbox">
-                    <strong>Premiações do Pódio (1º, 2º e 3º Colocado)</strong>
-                    <div className="elevn-three-cols">
-                      <label className="elevn-input-block">
-                        <span>1º Colocado (Ouro)</span>
-                        <input
-                          type="text"
-                          value={chalPrize1}
-                          onChange={(e) => setChalPrize1(e.target.value)}
-                        />
-                      </label>
-                      <label className="elevn-input-block">
-                        <span>2º Colocado (Prata)</span>
-                        <input
-                          type="text"
-                          value={chalPrize2}
-                          onChange={(e) => setChalPrize2(e.target.value)}
-                        />
-                      </label>
-                      <label className="elevn-input-block">
-                        <span>3º Colocado (Bronze)</span>
-                        <input
-                          type="text"
-                          value={chalPrize3}
-                          onChange={(e) => setChalPrize3(e.target.value)}
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* SISTEMA DE PONTOS */}
-                  <div className="elevn-modal-subbox">
-                    <strong>Sistema de Pontos (Quanto vale cada atividade em pontos)</strong>
-                    <div className="elevn-three-cols">
-                      <label className="elevn-input-block">
-                        <span>Treino Feito (pts)</span>
-                        <input
-                          type="number"
-                          value={ptsTreino}
-                          onChange={(e) => setPtsTreino(Number(e.target.value))}
-                        />
-                      </label>
-                      <label className="elevn-input-block">
-                        <span>Cardio Pago (pts)</span>
-                        <input
-                          type="number"
-                          value={ptsCardio}
-                          onChange={(e) => setPtsCardio(Number(e.target.value))}
-                        />
-                      </label>
-                      <label className="elevn-input-block">
-                        <span>Refeição Feita (pts)</span>
-                        <input
-                          type="number"
-                          value={ptsRefeicao}
-                          onChange={(e) => setPtsRefeicao(Number(e.target.value))}
-                        />
-                      </label>
-                      <label className="elevn-input-block">
-                        <span>Água Batida (pts)</span>
-                        <input
-                          type="number"
-                          value={ptsAgua}
-                          onChange={(e) => setPtsAgua(Number(e.target.value))}
-                        />
-                      </label>
-                      <label className="elevn-input-block">
-                        <span>Check-in LiveClin (pts)</span>
-                        <input
-                          type="number"
-                          value={ptsCheckin}
-                          onChange={(e) => setPtsCheckin(Number(e.target.value))}
-                        />
-                      </label>
-                      <label className="elevn-input-block">
-                        <span>Bônus 7 Dias Seguidos</span>
-                        <input
-                          type="number"
-                          value={ptsBonus7d}
-                          onChange={(e) => setPtsBonus7d(Number(e.target.value))}
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  <label className="elevn-input-block">
-                    <span>Regras do Desafio (uma regra por linha)</span>
-                    <textarea
-                      rows={3}
-                      value={chalRulesText}
-                      onChange={(e) => setChalRulesText(e.target.value)}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <footer className="elevn-modal-footer">
-                <button type="button" className="cancel" onClick={() => setActiveModal('none')}>
-                  Cancelar
-                </button>
-                <button type="submit" className="confirm">
-                  {editingChallengeId ? 'Salvar Alterações do Desafio' : 'Publicar Novo Desafio'}
-                </button>
-              </footer>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: SUBIR VÍDEO 4:3 */}
-      {activeModal === 'video' && (
-        <div className="elevn-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="elevn-modal-card">
-            <header className="elevn-modal-header">
-              <div>
-                <span>ELEVN CLUB · NOVO VÍDEO 4:3</span>
-                <h2>Subir Aula em Vídeo para Playlist</h2>
-              </div>
-              <button type="button" onClick={() => setActiveModal('none')}>
-                ✕
-              </button>
-            </header>
-
-            <form className="elevn-modal-form" onSubmit={handleSaveVideo}>
-              <div className="elevn-modal-split">
-                <div className="elevn-modal-cover-col">
-                  <label className="elevn-field-title">Capa do Vídeo (Exclusiva 4:3)</label>
-                  <div className="elevn-cover-4x3-box">
-                    <img src={videoCoverUrl} alt="Capa 4:3" />
-                    <span>4:3 · MOBILE</span>
-                  </div>
-
-                  <label className="elevn-upload-trigger">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageFileUpload(e, setVideoCoverUrl)}
-                    />
-                    Subir capa 4:3 do dispositivo
-                  </label>
-
-                  <div className="elevn-dimension-note">
-                    <strong>Observação de dimensões (Celular):</strong>
-                    <span>
-                      Dimensão recomendada da capa do vídeo:{' '}
-                      <strong>1440 × 1080 px (Proporção 4:3 Mobile)</strong> · JPG ou PNG até 5 MB.
-                    </span>
-                  </div>
-
-                  <div className="elevn-presets-row">
-                    {studioCoverPresets4x3.map((preset) => (
-                      <button
-                        key={preset.url}
-                        type="button"
-                        className={videoCoverUrl === preset.url ? 'active' : ''}
-                        onClick={() => setVideoCoverUrl(preset.url)}
-                      >
-                        <img src={preset.url} alt={preset.label} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="elevn-modal-fields-col">
-                  <label className="elevn-input-block">
-                    <span>1. Playlist de destino</span>
-                    <select
-                      value={videoPlaylistId}
-                      onChange={(e) => setVideoPlaylistId(e.target.value)}
-                    >
-                      {playlists.map((pl) => (
-                        <option key={pl.id} value={pl.id}>
-                          {pl.title} ({pl.trackCategory})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="elevn-input-block">
-                    <span>2. Título do Vídeo</span>
-                    <input
-                      type="text"
-                      value={videoTitle}
-                      onChange={(e) => setVideoTitle(e.target.value)}
-                      placeholder="Ex.: Ajuste de escápula na Remada Baixa"
-                      required
-                    />
-                  </label>
-
-                  <div className="elevn-two-cols">
-                    <label className="elevn-input-block">
-                      <span>3. Arquivo de Vídeo</span>
-                      <label className="elevn-file-input">
-                        <input
-                          type="file"
-                          accept="video/*"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0]
-                            if (f) setVideoFileName(f.name)
-                          }}
-                        />
-                        <span>Escolher</span>
-                        <small>{videoFileName}</small>
-                      </label>
-                    </label>
-
-                    <label className="elevn-input-block">
-                      <span>Duração</span>
-                      <input
-                        type="text"
-                        value={videoDuration}
-                        onChange={(e) => setVideoDuration(e.target.value)}
-                        placeholder="08 MIN"
-                      />
-                    </label>
-                  </div>
-
-                  <label className="elevn-input-block">
-                    <span>4. Descrição da Aula</span>
-                    <textarea
-                      rows={3}
-                      value={videoDescription}
-                      onChange={(e) => setVideoDescription(e.target.value)}
-                      placeholder="Orientação prática que o aluno verá abaixo do vídeo..."
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <footer className="elevn-modal-footer">
-                <button type="button" className="cancel" onClick={() => setActiveModal('none')}>
-                  Cancelar
-                </button>
-                <button type="submit" className="confirm">
-                  Publicar no Elevn Club
-                </button>
-              </footer>
-            </form>
-          </div>
-        </div>
-      )}
+      <ChallengeEditorSheet
+        open={challengeSheet.open}
+        challenge={challengeSheet.challenge}
+        presets={studioCoverPresets4x3}
+        onClose={() => setChallengeSheet({ open: false, challenge: null })}
+        onSave={saveChallenge}
+      />
+      <VideoUploadSheet
+        open={videoSheet.open}
+        playlists={playlists}
+        defaultPlaylistId={videoSheet.playlistId}
+        presets={studioCoverPresets4x3}
+        onClose={() => setVideoSheet({ open: false })}
+        onSave={saveVideo}
+      />
+      <TrackSheet
+        open={trackSheet.open}
+        track={trackSheet.track}
+        takenNames={tracks
+          .filter((item) => item.id !== trackSheet.track?.id)
+          .map((item) => item.name)}
+        onClose={() => setTrackSheet({ open: false, track: null })}
+        onSave={saveTrack}
+      />
+      <CheckinSheet
+        open={checkinOpen}
+        challenge={activeChallenge ?? null}
+        presets={studioCoverPresets4x3}
+        onClose={() => setCheckinOpen(false)}
+        onSave={saveOfficialPost}
+      />
+      <LiveEventSheet
+        open={liveOpen}
+        onClose={() => setLiveOpen(false)}
+        onSave={(event) => {
+          setLiveEvents((current) =>
+            [...current, event].sort((a, b) => a.startsAtIso.localeCompare(b.startsAtIso)),
+          )
+          setLiveOpen(false)
+          setToastMessage(`Encontro “${event.title}” agendado.`)
+        }}
+      />
 
       {/* MODAL: CRIAR PLAYLIST */}
       {activeModal === 'playlist' && (
@@ -2103,11 +2347,11 @@ export default function CreationWorkspace({
                       value={plTrack}
                       onChange={(e) => setPlTrack(e.target.value as PlaylistTrackCategory)}
                     >
-                      <option value="Treino & Biomecânica">Treino & Biomecânica</option>
-                      <option value="Nutrição & Rotina que Funciona">
-                        Nutrição & Rotina que Funciona
-                      </option>
-                      <option value="Mentalidade & Performance">Mentalidade & Performance</option>
+                      {tracks.map((track) => (
+                        <option key={track.id} value={track.name}>
+                          {track.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
 
@@ -2310,110 +2554,6 @@ export default function CreationWorkspace({
                 </button>
                 <button type="submit" className="confirm">
                   Salvar Anúncio Compacto
-                </button>
-              </footer>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: REGISTRAR ATIVIDADE PONTUADA NO GYMRATS (TREINO, CARDIO, REFEIÇÃO OU ÁGUA) */}
-      {activeModal === 'gymrats-checkin' && (
-        <div className="elevn-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="elevn-modal-card">
-            <header className="elevn-modal-header">
-              <div>
-                <span>COMUNIDADE ELEVN CLUB · REGISTRAR ATIVIDADE PONTUADA</span>
-                <h2>Registrar Treino, Cardio, Refeição ou Meta de Água</h2>
-              </div>
-              <button type="button" onClick={() => setActiveModal('none')}>
-                ✕
-              </button>
-            </header>
-
-            <form className="elevn-modal-form" onSubmit={handleSaveGymRatsCheckin}>
-              <div className="elevn-modal-split">
-                <div className="elevn-modal-cover-col">
-                  <label className="elevn-field-title">Foto 4:3 da Atividade</label>
-                  <div className="elevn-cover-4x3-box">
-                    <img src={checkinPhotoUrl} alt="Foto da atividade" />
-                    <span>+{getPointsForActivity(checkinActivityKind)} PTS</span>
-                  </div>
-
-                  <label className="elevn-upload-trigger">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageFileUpload(e, setCheckinPhotoUrl)}
-                    />
-                    Enviar foto 4:3
-                  </label>
-                </div>
-
-                <div className="elevn-modal-fields-col">
-                  <label className="elevn-input-block">
-                    <span>1. Qual atividade está sendo registrada?</span>
-                    <select
-                      value={checkinActivityKind}
-                      onChange={(e) =>
-                        setCheckinActivityKind(e.target.value as GymRatsActivityKind)
-                      }
-                    >
-                      <option value="Treino Feito">
-                        Treino Feito (+{activeChallenge?.scoring.treinoFeito ?? 100} pts)
-                      </option>
-                      <option value="Cardio Pago">
-                        Cardio Pago (+{activeChallenge?.scoring.cardioPago ?? 70} pts)
-                      </option>
-                      <option value="Refeição Feita">
-                        Refeição do Plano Feita (+{activeChallenge?.scoring.refeicaoFeita ?? 40}{' '}
-                        pts)
-                      </option>
-                      <option value="Meta de Água Batida">
-                        Meta de Água Batida (+{activeChallenge?.scoring.aguaTomada ?? 30} pts)
-                      </option>
-                    </select>
-                  </label>
-
-                  <label className="elevn-input-block">
-                    <span>2. Identificação (Ex.: Treino A, Almoço WebDiet, 3.5L Água)</span>
-                    <input
-                      type="text"
-                      value={checkinTag}
-                      onChange={(e) => setCheckinTag(e.target.value)}
-                      placeholder="Ex.: Treino A · Peito & Ombro"
-                    />
-                  </label>
-
-                  <label className="elevn-input-block">
-                    <span>3. Título do Registro</span>
-                    <input
-                      type="text"
-                      value={checkinTitle}
-                      onChange={(e) => setCheckinTitle(e.target.value)}
-                      placeholder="Ex.: Treino concluído e água do dia batida!"
-                      required
-                    />
-                  </label>
-
-                  <label className="elevn-input-block">
-                    <span>4. Comentário para a Comunidade</span>
-                    <textarea
-                      rows={2}
-                      value={checkinNote}
-                      onChange={(e) => setCheckinNote(e.target.value)}
-                      placeholder="Conte como foi o registro de hoje..."
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <footer className="elevn-modal-footer">
-                <button type="button" className="cancel" onClick={() => setActiveModal('none')}>
-                  Cancelar
-                </button>
-                <button type="submit" className="confirm">
-                  Publicar Registro (+{getPointsForActivity(checkinActivityKind)} pts)
                 </button>
               </footer>
             </form>
