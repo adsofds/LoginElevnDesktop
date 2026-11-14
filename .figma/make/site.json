@@ -1,0 +1,9 @@
+{
+  "title": "Elevn Protótipo",
+  "description": "Organize Trello tasks and calendar commitments, and send personal email-style updates and messages to students with inbox, replies, and completion tracking.",
+  "language": "pt-br",
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

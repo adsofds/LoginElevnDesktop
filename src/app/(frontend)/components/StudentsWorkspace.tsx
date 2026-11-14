@@ -1,0 +1,4189 @@
+'use client'
+
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
+
+type CheckinState = 'Pendente' | 'Realizado' | 'Atrasado'
+
+export type StudentPhotoAngle = 'Frente' | 'Costas' | 'Perfil Direito' | 'Pós-Treino'
+
+export type StudentAppPhoto = {
+  id: string
+  angle: StudentPhotoAngle
+  dateLabel: string
+  cycleLabel: string
+  weightKg: string
+  waistCm?: string
+  imageUrl: string
+  studentNote: string
+  adminObservation?: string
+}
+type RenewalState = 'Em dia' | 'Perto de vencer' | 'Recuperado' | 'Não renovou'
+type StudentHealth = 'Em dia' | 'Atenção' | 'Em risco'
+
+type LiveClinCheckinData = {
+  submittedAt: string
+  protocolName: string
+  fastingWeight: string
+  offPlanMeals: string
+  hungerLevels: string
+  waterIntake: string
+  bowelFrequency: string
+  abdominalDiscomfort: string
+  strengthWorkouts: string
+  exercisePerformance: string
+  aerobicSessions: string
+  sleepHours: string
+  dedicationLevel: string
+  bodyPerception: string
+  menuChangesRequest: string
+  openFeedback: string
+}
+
+type AppStudentObservation = {
+  id: string
+  when: string
+  category: 'Treino' | 'Dieta' | 'Rotina'
+  note: string
+}
+
+type WorkoutExercise = {
+  name: string
+  sets: string
+  rest: string
+  loadNote: string
+}
+
+type WorkoutSessionPlan = {
+  code: string
+  title: string
+  schedule: string
+  studentAppComment: string
+  commentSentAt: string
+  adminReply?: string
+  repliedAt?: string
+  exercises: WorkoutExercise[]
+}
+
+type WorkoutAppComment = {
+  workoutCode: 'Treino A' | 'Treino B' | 'Treino C'
+  workoutTitle: string
+  sentAt: string
+  comment: string
+  adminReply?: string
+  repliedAt?: string
+}
+
+type StudentWorkoutPlan = {
+  splitName: string
+  frequency: string
+  cardioPrescription: string
+  technicalGuideline: string
+  sessions: WorkoutSessionPlan[]
+}
+
+type DietMealPlan = {
+  time: string
+  title: string
+  macros: string
+  items: string[]
+  substitutions: string
+}
+
+type StudentDietPlan = {
+  strategyName: string
+  dailyCalories: string
+  proteinTarget: string
+  carbsTarget: string
+  fatTarget: string
+  waterTarget: string
+  supplements: string
+  meals: DietMealPlan[]
+}
+
+type StudentRecord = {
+  id: string
+  name: string
+  avatar: string
+  whatsapp: string
+  goal: 'Emagrecimento' | 'Hipertrofia' | 'Performance'
+  phase: 'Déficit' | 'Superávit' | 'Manutenção'
+  plan: 'Mensal' | 'Trimestral' | 'Semestral' | 'Anual'
+  monthlyRevenue: number
+  adherence: number
+  checkinAdherence: number
+  checkinState: CheckinState
+  lastCheckin: string
+  checkinNote: string
+  lastWorkoutActivity: string
+  lastWorkoutTitle: string
+  weeklyWorkoutsCompleted: string
+  expirationDate: string
+  daysToExpire: number
+  renewalState: RenewalState
+  nonRenewalReason?: string
+  status: StudentHealth
+  weightChange: string
+  coachFeedback?: string
+  hasLogin?: boolean
+  loginEmail?: string
+  accessKey?: string
+  accessKeyGeneratedAt?: string
+  workoutComments?: WorkoutAppComment[]
+  appPhotos?: StudentAppPhoto[]
+  liveClinCheckin: LiveClinCheckinData
+  appObservations: AppStudentObservation[]
+}
+
+type StudentAccessInfo = {
+  hasLogin: boolean
+  loginEmail?: string
+  accessKey?: string
+  accessKeyGeneratedAt?: string
+}
+
+const defaultAccessByStudentId: Record<string, StudentAccessInfo> = {
+  'student-lucas': {
+    hasLogin: true,
+    loginEmail: 'lucas.andrade@gmail.com',
+    accessKey: 'ELVN-4821-LA',
+    accessKeyGeneratedAt: 'Ativada no primeiro acesso',
+  },
+  'student-camila': {
+    hasLogin: true,
+    loginEmail: 'camila.rocha@outlook.com',
+    accessKey: 'ELVN-7390-CR',
+    accessKeyGeneratedAt: 'Ativada no primeiro acesso',
+  },
+  'student-juliana': {
+    hasLogin: false,
+  },
+  'student-pedro': {
+    hasLogin: false,
+  },
+  'student-rafael': {
+    hasLogin: true,
+    loginEmail: 'rafael.souza@uol.com.br',
+    accessKey: 'ELVN-9102-RS',
+    accessKeyGeneratedAt: 'Ativada no primeiro acesso',
+  },
+  'student-aline': {
+    hasLogin: true,
+    loginEmail: 'aline.moraes@gmail.com',
+    accessKey: 'ELVN-6540-AM',
+    accessKeyGeneratedAt: 'Ativada no primeiro acesso',
+  },
+  'student-thiago': {
+    hasLogin: true,
+    loginEmail: 'thiago.nunes@icloud.com',
+    accessKey: 'ELVN-3381-TN',
+    accessKeyGeneratedAt: 'Ativada no primeiro acesso',
+  },
+  'student-gabriel': {
+    hasLogin: false,
+  },
+}
+
+function getStudentAccessInfo(
+  student: StudentRecord,
+  generatedKeysMap?: Record<string, { key: string; generatedAt: string }>,
+): StudentAccessInfo {
+  const fallback = defaultAccessByStudentId[student.id] ?? {
+    hasLogin: false,
+  }
+  const hasLogin = typeof student.hasLogin === 'boolean' ? student.hasLogin : fallback.hasLogin
+  const loginEmail = student.loginEmail ?? fallback.loginEmail
+  const sessionGenerated = generatedKeysMap?.[student.id]
+  const accessKey = sessionGenerated
+    ? sessionGenerated.key
+    : hasLogin
+      ? (student.accessKey ?? fallback.accessKey)
+      : undefined
+  const accessKeyGeneratedAt = sessionGenerated
+    ? sessionGenerated.generatedAt
+    : hasLogin
+      ? (student.accessKeyGeneratedAt ?? fallback.accessKeyGeneratedAt)
+      : undefined
+  return {
+    hasLogin,
+    loginEmail: hasLogin ? loginEmail : undefined,
+    accessKey,
+    accessKeyGeneratedAt,
+  }
+}
+
+function createFormattedAccessKey(studentName: string): string {
+  const parts = studentName.trim().split(/\s+/)
+  const initials =
+    parts.length >= 2
+      ? `${parts[0][0] ?? 'E'}${parts[parts.length - 1][0] ?? 'L'}`.toUpperCase()
+      : (parts[0]?.slice(0, 2) || 'EL').toUpperCase()
+  const randomDigits = Math.floor(1000 + Math.random() * 9000)
+  return `ELVN-${randomDigits}-${initials}`
+}
+
+function buildWhatsAppUrl(phone: string, studentName: string) {
+  const firstName = studentName.split(' ')[0]
+  const text = encodeURIComponent(
+    `Olá ${firstName}, tudo bem? Passando aqui pela Elevn para falarmos sobre seu acompanhamento e check-in da semana!`,
+  )
+  return `https://wa.me/${phone}?text=${text}`
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.82 14.01c-.24.68-1.41 1.3-1.95 1.38-.5.08-1.13.11-1.82-.11-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.79-4.17-4.93-4.36-.14-.19-1.18-1.57-1.18-2.99 0-1.42.74-2.12 1.01-2.41.26-.29.58-.36.77-.36.19 0 .38 0 .55.01.18.01.41-.07.65.49.24.58.82 2 .89 2.14.07.14.12.31.02.5-.1.19-.14.31-.29.48-.14.17-.3.38-.43.51-.14.14-.29.3-.12.58.17.29.75 1.24 1.61 2 .89.79 1.61 1.07 1.92 1.2.24.1.38.08.53-.05.15-.14.62-.72.79-.96.17-.24.34-.19.58-.11.24.08 1.51.71 1.77.84.26.13.43.19.5.3.07.11.07.63-.17 1.31z"
+      />
+    </svg>
+  )
+}
+
+function SearchLupIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35"
+      />
+    </svg>
+  )
+}
+
+type ExternalPlatformStudent = {
+  id: string
+  name: string
+  avatar: string
+  whatsapp: string
+  email: string
+  goal: StudentRecord['goal']
+  phase: StudentRecord['phase']
+  plan: StudentRecord['plan']
+  mfitWorkoutSummary: string
+  webDietSummary: string
+}
+
+const externalPlatformCatalog: ExternalPlatformStudent[] = [
+  {
+    id: 'ext-mariana',
+    name: 'Mariana Azevedo',
+    avatar: '/people/renata-alves.jpg',
+    whatsapp: '5511998441122',
+    email: 'mariana.azevedo@gmail.com',
+    goal: 'Emagrecimento',
+    phase: 'Déficit',
+    plan: 'Trimestral',
+    mfitWorkoutSummary: 'MFIT: Divisão ABC + Cardio (5x/semana)',
+    webDietSummary: 'WebDiet: Déficit 1.850 kcal · 160g Proteína',
+  },
+  {
+    id: 'ext-bruno',
+    name: 'Bruno Cavalcanti',
+    avatar: '/people/gustavo-lima.jpg',
+    whatsapp: '5511997113344',
+    email: 'bruno.cavalcanti@outlook.com',
+    goal: 'Hipertrofia',
+    phase: 'Superávit',
+    plan: 'Semestral',
+    mfitWorkoutSummary: 'MFIT: Periodização ABCD Força & Hipertrofia',
+    webDietSummary: 'WebDiet: Superávit Limpo 2.750 kcal',
+  },
+  {
+    id: 'ext-fernanda',
+    name: 'Fernanda Tavares',
+    avatar: '/people/paula-nunes.jpg',
+    whatsapp: '5511996225588',
+    email: 'fernanda.tavares@icloud.com',
+    goal: 'Performance',
+    phase: 'Manutenção',
+    plan: 'Anual',
+    mfitWorkoutSummary: 'MFIT: Híbrido Força + Corrida 10km',
+    webDietSummary: 'WebDiet: Normocalórica 2.450 kcal',
+  },
+  {
+    id: 'ext-henrique',
+    name: 'Henrique Bastos',
+    avatar: '/people/breno-monteiro.png',
+    whatsapp: '5511995337799',
+    email: 'henrique.bastos@gmail.com',
+    goal: 'Hipertrofia',
+    phase: 'Superávit',
+    plan: 'Trimestral',
+    mfitWorkoutSummary: 'MFIT: Upper / Lower 4x por semana',
+    webDietSummary: 'WebDiet: Superávit 2.680 kcal',
+  },
+]
+
+const initialStudents: StudentRecord[] = [
+  {
+    id: 'student-lucas',
+    name: 'Lucas Andrade',
+    avatar: '/people/gustavo-lima.jpg',
+    whatsapp: '5511998123401',
+    goal: 'Emagrecimento',
+    phase: 'Déficit',
+    plan: 'Trimestral',
+    monthlyRevenue: 420,
+    adherence: 86,
+    checkinAdherence: 92,
+    checkinState: 'Pendente',
+    lastCheckin: 'Hoje, 08:42',
+    checkinNote: 'Reduziu 1,1 kg na quinzena e pediu ajuste no lanche da tarde em dias de perna.',
+    lastWorkoutActivity: 'Treinou hoje às 07:15',
+    lastWorkoutTitle: 'Treino B · Dorsal e Bíceps',
+    weeklyWorkoutsCompleted: '5/5 treinos na semana',
+    expirationDate: '18 nov',
+    daysToExpire: 11,
+    renewalState: 'Em dia',
+    status: 'Em dia',
+    weightChange: '-1,1 kg',
+    liveClinCheckin: {
+      submittedAt: 'Hoje, 08:42 via LiveClin',
+      protocolName: 'Cutting Fase 2 · Ciclo Novembro',
+      fastingWeight: '81,4 kg (-1,1 kg na quinzena)',
+      offPlanMeals: '1 refeição fora do planejado (jantar de sábado)',
+      hungerLevels: 'Fome moderada às 17h nos dias de treino de pernas',
+      waterIntake: '3,4 L / dia',
+      bowelFrequency: 'Sim, todos os dias regularmente',
+      abdominalDiscomfort: 'Não senti gases nem inchaço',
+      strengthWorkouts: '5 sessões de musculação nos últimos 7 dias',
+      exercisePerformance: 'Sim, progredi carga na remada curvada e no leg press',
+      aerobicSessions: '4 sessões de cardio (esteira inclinada 30 min)',
+      sleepHours: '7h30 por noite em média',
+      dedicationLevel: '9 / 10 — Muito dedicado',
+      bodyPerception: 'Sim, cintura mais fina (-2 cm) e maior definição abdominal',
+      menuChangesRequest:
+        'Gostaria de incluir uma fruta ou aumentar o carboidrato no lanche das 16h30 nos dias de inferiores.',
+      openFeedback:
+        'Semana muito consistente nos treinos. Senti mais fome no fim da tarde apenas nos dias de perna pesada.',
+    },
+    appObservations: [
+      {
+        id: 'obs-lucas-1',
+        when: 'Hoje, 07:58 (MFIT)',
+        category: 'Treino',
+        note: 'Subi carga na remada curvada para 35kg cada lado mantendo 10 repetições limpas.',
+      },
+      {
+        id: 'obs-lucas-2',
+        when: 'Quinta, 16:40 (WebDiet)',
+        category: 'Dieta',
+        note: 'Troquei o pão integral por tapioca com ovos antes da reunião externa.',
+      },
+    ],
+  },
+  {
+    id: 'student-camila',
+    name: 'Camila Rocha',
+    avatar: '/people/renata-alves.jpg',
+    whatsapp: '5511997451290',
+    goal: 'Hipertrofia',
+    phase: 'Superávit',
+    plan: 'Anual',
+    monthlyRevenue: 390,
+    adherence: 74,
+    checkinAdherence: 85,
+    checkinState: 'Realizado',
+    lastCheckin: 'Hoje, 09:40',
+    checkinNote:
+      'Bateu 100% dos treinos da semana e relatou melhora no sono após ajuste do jantar.',
+    lastWorkoutActivity: 'Treinou hoje às 08:30',
+    lastWorkoutTitle: 'Treino C · Glúteos e Posterior',
+    weeklyWorkoutsCompleted: '5/5 treinos na semana',
+    expirationDate: '12 nov',
+    daysToExpire: 5,
+    renewalState: 'Recuperado',
+    status: 'Atenção',
+    weightChange: '+0,6 kg',
+    coachFeedback: 'Subir 150 kcal nos dias de membros inferiores e manter cardio leve.',
+    liveClinCheckin: {
+      submittedAt: 'Hoje, 09:40 via LiveClin',
+      protocolName: 'Bulking Limpo · Fase 3',
+      fastingWeight: '62,8 kg (+0,6 kg no mês)',
+      offPlanMeals: 'Nenhuma refeição fora do plano',
+      hungerLevels: 'Apetite estável, alta saciedade no pós-treino',
+      waterIntake: '2,9 L / dia',
+      bowelFrequency: 'Sim, diariamente',
+      abdominalDiscomfort: 'Nenhum desconforto após tirar lactose do jantar',
+      strengthWorkouts: '5 sessões de musculação nos últimos 7 dias',
+      exercisePerformance: 'Sim, bati 110kg na elevação pélvica para 4x10',
+      aerobicSessions: '3 sessões de bike ergométrica (25 min)',
+      sleepHours: '8h por noite em média',
+      dedicationLevel: '9,5 / 10 — Excelente dedicação',
+      bodyPerception: 'Sim, glúteo e posterior mais densos mantendo linha de cintura',
+      menuChangesRequest: 'Manter cardápio atual, apenas variar opção de fruta no café da manhã.',
+      openFeedback:
+        'Treinos renderam demais essa semana! Não marquei todos os checks de refeição no app na quarta e quinta por correria, mas segui a marmita 100%.',
+    },
+    appObservations: [
+      {
+        id: 'obs-camila-1',
+        when: 'Hoje, 09:15 (MFIT)',
+        category: 'Treino',
+        note: 'Elevação pélvica fechou com 110kg para 4x10. Ótima ativação!',
+      },
+      {
+        id: 'obs-camila-2',
+        when: 'Quarta, 20:10 (WebDiet)',
+        category: 'Rotina',
+        note: 'Dia intenso de fechamento, não consegui dar check nas refeições mas comi tudo do plano.',
+      },
+    ],
+  },
+  {
+    id: 'student-juliana',
+    name: 'Juliana Costa',
+    avatar: '/people/paula-nunes.jpg',
+    whatsapp: '5511996338812',
+    goal: 'Emagrecimento',
+    phase: 'Déficit',
+    plan: 'Trimestral',
+    monthlyRevenue: 450,
+    adherence: 52,
+    checkinAdherence: 58,
+    checkinState: 'Pendente',
+    lastCheckin: 'Ontem, 21:15',
+    checkinNote: 'Enviou fotos e relatou dificuldade no fim de semana por viagem a trabalho.',
+    lastWorkoutActivity: 'Treinou ontem às 19:20',
+    lastWorkoutTitle: 'Treino A · Superiores + HIIT',
+    weeklyWorkoutsCompleted: '3/5 treinos na semana',
+    expirationDate: '08 nov',
+    daysToExpire: 2,
+    renewalState: 'Perto de vencer',
+    status: 'Em risco',
+    weightChange: '-0,3 kg',
+    liveClinCheckin: {
+      submittedAt: 'Ontem, 21:15 via LiveClin',
+      protocolName: 'Recomposição Corporal · Executivo',
+      fastingWeight: '69,2 kg (-0,3 kg)',
+      offPlanMeals: '3 refeições fora do planejado em viagem a trabalho',
+      hungerLevels: 'Ansiedade e vontade de doce à noite nos dias de hotel',
+      waterIntake: '2,1 L / dia',
+      bowelFrequency: 'Não, ficou 2 dias sem ir durante a viagem',
+      abdominalDiscomfort: 'Leve inchaço abdominal e retenção pós-voo',
+      strengthWorkouts: '3 sessões de musculação (academia do hotel)',
+      exercisePerformance: 'Estável, adaptou exercícios com halteres',
+      aerobicSessions: '2 sessões de HIIT na esteira (20 min)',
+      sleepHours: '6h por noite em média',
+      dedicationLevel: '7 / 10 — Fez o possível em viagem',
+      bodyPerception: 'Notou leve redução de medidas apesar da retenção da viagem',
+      menuChangesRequest:
+        'Gostaria de opções práticas de lanche proteico para levar na bolsa em semanas de viagem.',
+      openFeedback:
+        'Viajei de quarta a sexta para congresso. Mesmo sem marcar a dieta, consegui fazer 3 treinos no hotel.',
+    },
+    appObservations: [
+      {
+        id: 'obs-juliana-1',
+        when: 'Ontem, 19:55 (MFIT)',
+        category: 'Treino',
+        note: 'Fiz o Treino A adaptado com halteres na academia do hotel + 20 min de esteira inclinada.',
+      },
+      {
+        id: 'obs-juliana-2',
+        when: 'Sexta, 13:30 (WebDiet)',
+        category: 'Dieta',
+        note: 'Almoço no evento: escolhi grelhado com legumes e arroz branco.',
+      },
+    ],
+  },
+  {
+    id: 'student-pedro',
+    name: 'Pedro Lima',
+    avatar: '/people/breno-monteiro.png',
+    whatsapp: '5511995027741',
+    goal: 'Hipertrofia',
+    phase: 'Superávit',
+    plan: 'Semestral',
+    monthlyRevenue: 410,
+    adherence: 63,
+    checkinAdherence: 70,
+    checkinState: 'Atrasado',
+    lastCheckin: 'Há 4 dias',
+    checkinNote: 'Aguardando envio das fotos comparativas e confirmação da renovação.',
+    lastWorkoutActivity: 'Treinou há 3 dias (Seg, 18:10)',
+    lastWorkoutTitle: 'Treino A · Peito, Ombro e Tríceps',
+    weeklyWorkoutsCompleted: '2/5 treinos na semana',
+    expirationDate: '06 nov',
+    daysToExpire: 1,
+    renewalState: 'Perto de vencer',
+    status: 'Em risco',
+    weightChange: '+0,4 kg',
+    liveClinCheckin: {
+      submittedAt: 'Pendente no LiveClin (último há 11 dias)',
+      protocolName: 'Hipertrofia Intermediário · Fase 2',
+      fastingWeight: '79,0 kg (+0,4 kg)',
+      offPlanMeals: '2 refeições fora do planejado',
+      hungerLevels: 'Apetite normal',
+      waterIntake: '2,6 L / dia',
+      bowelFrequency: 'Sim, diariamente',
+      abdominalDiscomfort: 'Sem desconfortos',
+      strengthWorkouts: '2 sessões de musculação nos últimos 7 dias',
+      exercisePerformance: 'Mantendo cargas habituais',
+      aerobicSessions: '1 sessão de caminhada rápida',
+      sleepHours: '6h30 por noite (semana de provas)',
+      dedicationLevel: '6,5 / 10 — Semana corrida na pós-graduação',
+      bodyPerception: 'Estável nesta quinzena',
+      menuChangesRequest: 'Refeições mais rápidas para o horário noturno.',
+      openFeedback:
+        'Aluno treinou segunda e terça pelo aplicativo, aguardando atualização do check-in semanal e confirmação de renovação.',
+    },
+    appObservations: [
+      {
+        id: 'obs-pedro-1',
+        when: 'Segunda, 19:02 (MFIT)',
+        category: 'Treino',
+        note: 'Supino inclinado com halteres concluído. Semana corrida com provas da pós.',
+      },
+    ],
+  },
+  {
+    id: 'student-rafael',
+    name: 'Rafael Souza',
+    avatar: '/people/gustavo-lima.jpg',
+    whatsapp: '5511994189920',
+    goal: 'Performance',
+    phase: 'Manutenção',
+    plan: 'Semestral',
+    monthlyRevenue: 480,
+    adherence: 93,
+    checkinAdherence: 96,
+    checkinState: 'Realizado',
+    lastCheckin: 'Hoje, 06:30',
+    checkinNote: 'PR no agachamento e excelente recuperação entre sessões de corrida e força.',
+    lastWorkoutActivity: 'Treinou hoje às 06:00',
+    lastWorkoutTitle: 'Treino Força + Rodagem 8km',
+    weeklyWorkoutsCompleted: '6/6 treinos na semana',
+    expirationDate: '22 nov',
+    daysToExpire: 15,
+    renewalState: 'Em dia',
+    status: 'Em dia',
+    weightChange: 'Estável',
+    coachFeedback: 'Manter periodização atual e ajustar hidratação intra-treino.',
+    liveClinCheckin: {
+      submittedAt: 'Hoje, 06:30 via LiveClin',
+      protocolName: 'Híbrido Força & Meia Maratona',
+      fastingWeight: '75,2 kg (estável na meta)',
+      offPlanMeals: 'Nenhuma refeição fora do plano',
+      hungerLevels: 'Fome bem controlada com as 5 refeições do plano',
+      waterIntake: '4,0 L / dia',
+      bowelFrequency: 'Sim, todos os dias',
+      abdominalDiscomfort: 'Zero desconforto, ótima tolerância ao gel intra-treino',
+      strengthWorkouts: '4 sessões de musculação (força) nos últimos 7 dias',
+      exercisePerformance: 'Sim, recorde pessoal no agachamento livre',
+      aerobicSessions: '3 sessões de corrida de rua (tiros + longo de 14km)',
+      sleepHours: '8h por noite em média',
+      dedicationLevel: '10 / 10 — Dedicação total',
+      bodyPerception: 'Sim, musculatura mais seca e melhor rendimento cardiovascular',
+      menuChangesRequest: 'Não precisa alterar o cardápio, está perfeito para a rotina.',
+      openFeedback:
+        'Semana excelente! Bati meu PR no agachamento e mantive pace 4:35 nos tiros de quinta sem fadiga residual.',
+    },
+    appObservations: [
+      {
+        id: 'obs-rafael-1',
+        when: 'Hoje, 06:15 (MFIT)',
+        category: 'Treino',
+        note: 'Finalizei o treino de força inferior em 48 min. Sensação de esforço 8/10.',
+      },
+    ],
+  },
+  {
+    id: 'student-aline',
+    name: 'Aline Moraes',
+    avatar: '/people/renata-alves.jpg',
+    whatsapp: '5511993114509',
+    goal: 'Emagrecimento',
+    phase: 'Déficit',
+    plan: 'Trimestral',
+    monthlyRevenue: 420,
+    adherence: 94,
+    checkinAdherence: 95,
+    checkinState: 'Realizado',
+    lastCheckin: 'Hoje, 10:05',
+    checkinNote: 'Redução de 4 cm de cintura nas últimas 3 semanas com alta adesão alimentar.',
+    lastWorkoutActivity: 'Treinou hoje às 09:10',
+    lastWorkoutTitle: 'Treino B · Inferiores Foco Quadríceps',
+    weeklyWorkoutsCompleted: '5/5 treinos na semana',
+    expirationDate: '03 dez',
+    daysToExpire: 26,
+    renewalState: 'Em dia',
+    status: 'Em dia',
+    weightChange: '-1,8 kg',
+    coachFeedback: 'Parabéns pela consistência! Mantemos o protocolo mais 14 dias.',
+    liveClinCheckin: {
+      submittedAt: 'Hoje, 10:05 via LiveClin',
+      protocolName: 'Definição Feminina · Fase 2',
+      fastingWeight: '60,4 kg (-1,8 kg em 21 dias)',
+      offPlanMeals: '1 refeição livre planejada no domingo',
+      hungerLevels: 'Saciedade excelente, especialmente com o mingau proteico',
+      waterIntake: '3,1 L / dia',
+      bowelFrequency: 'Sim, diariamente',
+      abdominalDiscomfort: 'Não senti nenhum desconforto',
+      strengthWorkouts: '5 sessões de musculação nos últimos 7 dias',
+      exercisePerformance: 'Sim, subiu +10kg no leg press 45° com boa execução',
+      aerobicSessions: '4 sessões de escada ergométrica (25 min)',
+      sleepHours: '7h45 por noite em média',
+      dedicationLevel: '9,5 / 10 — Muito dedicada',
+      bodyPerception: 'Sim! Redução de 4 cm de cintura e roupas folgadas',
+      menuChangesRequest: 'Gostaria de incluir opção de panqueca de banana no pré-treino.',
+      openFeedback:
+        'Estou muito feliz com o resultado no espelho e nas roupas! O treino novo encaixou perfeitamente no meu horário de almoço.',
+    },
+    appObservations: [
+      {
+        id: 'obs-aline-1',
+        when: 'Hoje, 09:50 (MFIT)',
+        category: 'Treino',
+        note: 'Leg press 45° concluído com +10kg em relação à semana passada.',
+      },
+    ],
+  },
+  {
+    id: 'student-thiago',
+    name: 'Thiago Nunes',
+    avatar: '/people/gustavo-lima.jpg',
+    whatsapp: '5511992083317',
+    goal: 'Hipertrofia',
+    phase: 'Superávit',
+    plan: 'Trimestral',
+    monthlyRevenue: 420,
+    adherence: 58,
+    checkinAdherence: 64,
+    checkinState: 'Pendente',
+    lastCheckin: 'Há 2 dias',
+    checkinNote: 'Pediu revisão do treino B por desconforto leve no ombro direito.',
+    lastWorkoutActivity: 'Treinou ontem às 20:15',
+    lastWorkoutTitle: 'Treino C · Pernas Completo',
+    weeklyWorkoutsCompleted: '4/5 treinos na semana',
+    expirationDate: '10 nov',
+    daysToExpire: 4,
+    renewalState: 'Perto de vencer',
+    status: 'Em risco',
+    weightChange: '+0,2 kg',
+    liveClinCheckin: {
+      submittedAt: 'Há 2 dias via LiveClin',
+      protocolName: 'Hipertrofia · Ajuste Articular',
+      fastingWeight: '84,1 kg (+0,2 kg)',
+      offPlanMeals: '2 refeições fora do planejado',
+      hungerLevels: 'Apetite bom ao longo do dia',
+      waterIntake: '3,0 L / dia',
+      bowelFrequency: 'Sim, diariamente',
+      abdominalDiscomfort: 'Sem gases ou inchaço',
+      strengthWorkouts: '4 sessões de musculação nos últimos 7 dias',
+      exercisePerformance: 'Sim em pernas e costas; leve incômodo no ombro direito em empurrar',
+      aerobicSessions: '2 sessões de bike horizontal (20 min)',
+      sleepHours: '7h por noite em média',
+      dedicationLevel: '8 / 10 — Dedicado nos treinos',
+      bodyPerception: 'Sim, ganho de volume em dorsal e quadríceps',
+      menuChangesRequest: 'Substituir batata-doce do almoço por macarrão ou mandioca.',
+      openFeedback:
+        'Continuei treinando firme (fiz 4 treinos na semana). Só gostaria de trocar o desenvolvimento militar com barra por halter pegada neutra.',
+    },
+    appObservations: [
+      {
+        id: 'obs-thiago-1',
+        when: 'Ontem, 21:05 (MFIT)',
+        category: 'Treino',
+        note: 'Treino de pernas 100% feito! No treino de amanhã vou usar pegada neutra para poupar o ombro.',
+      },
+    ],
+  },
+  {
+    id: 'student-gabriel',
+    name: 'Gabriel Torres',
+    avatar: '/people/breno-monteiro.png',
+    whatsapp: '5511991556082',
+    goal: 'Emagrecimento',
+    phase: 'Déficit',
+    plan: 'Trimestral',
+    monthlyRevenue: 390,
+    adherence: 61,
+    checkinAdherence: 68,
+    checkinState: 'Realizado',
+    lastCheckin: 'Há 3 dias',
+    checkinNote: 'Encerrou ciclo trimestral e informou pausa temporária.',
+    lastWorkoutActivity: 'Treinou há 5 dias',
+    lastWorkoutTitle: 'Treino Full Body',
+    weeklyWorkoutsCompleted: '2/4 treinos na semana',
+    expirationDate: '02 nov',
+    daysToExpire: 0,
+    renewalState: 'Não renovou',
+    nonRenewalReason: 'Pausa financeira temporária; pediu para retomar contato em janeiro.',
+    status: 'Atenção',
+    weightChange: '-3,4 kg no ciclo',
+    coachFeedback: 'Deixamos plano de manutenção estruturado até o retorno em janeiro.',
+    liveClinCheckin: {
+      submittedAt: 'Há 3 dias via LiveClin',
+      protocolName: 'Fechamento de Ciclo Trimestral',
+      fastingWeight: '86,2 kg (-3,4 kg no trimestre)',
+      offPlanMeals: '2 refeições fora na semana',
+      hungerLevels: 'Controlado e adaptado à rotina',
+      waterIntake: '3,0 L / dia',
+      bowelFrequency: 'Sim, diariamente',
+      abdominalDiscomfort: 'Sem desconforto',
+      strengthWorkouts: '3 sessões de musculação nos últimos 7 dias',
+      exercisePerformance: 'Sim, evoluiu bem ao longo do trimestre',
+      aerobicSessions: '2 sessões de corrida leve',
+      sleepHours: '7h30 por noite',
+      dedicationLevel: '8 / 10',
+      bodyPerception: 'Sim, perdeu 3,4 kg e 5 cm de abdômen no ciclo',
+      menuChangesRequest: 'Solicitou guia de manutenção para os próximos 60 dias.',
+      openFeedback:
+        'Gostei muito do acompanhamento e perdi mais de 3kg, mas vou precisar pausar 2 meses por reforma de apartamento. Volto em janeiro!',
+    },
+    appObservations: [
+      {
+        id: 'obs-gabriel-1',
+        when: 'Há 5 dias (MFIT)',
+        category: 'Rotina',
+        note: 'Agradeço demais o suporte da equipe! Em janeiro estou de volta.',
+      },
+    ],
+  },
+]
+
+type QuickFilter =
+  | 'todos'
+  | 'pendentes'
+  | 'atrasados'
+  | 'realizados'
+  | 'vencendo'
+  | 'recuperados'
+  | 'nao-renovaram'
+  | 'sem-login'
+
+function getLiveClinAnswers(student: StudentRecord): LiveClinCheckinData {
+  const fallback =
+    initialStudents.find((item) => item.id === student.id)?.liveClinCheckin ??
+    initialStudents[0].liveClinCheckin
+  const current = student.liveClinCheckin
+  if (!current || !current.fastingWeight) {
+    return fallback
+  }
+  return {
+    submittedAt: current.submittedAt || fallback.submittedAt,
+    protocolName: current.protocolName || fallback.protocolName,
+    fastingWeight: current.fastingWeight || fallback.fastingWeight,
+    offPlanMeals: current.offPlanMeals || fallback.offPlanMeals,
+    hungerLevels: current.hungerLevels || fallback.hungerLevels,
+    waterIntake: current.waterIntake || fallback.waterIntake,
+    bowelFrequency: current.bowelFrequency || fallback.bowelFrequency,
+    abdominalDiscomfort: current.abdominalDiscomfort || fallback.abdominalDiscomfort,
+    strengthWorkouts: current.strengthWorkouts || fallback.strengthWorkouts,
+    exercisePerformance: current.exercisePerformance || fallback.exercisePerformance,
+    aerobicSessions: current.aerobicSessions || fallback.aerobicSessions,
+    sleepHours: current.sleepHours || fallback.sleepHours,
+    dedicationLevel: current.dedicationLevel || fallback.dedicationLevel,
+    bodyPerception: current.bodyPerception || fallback.bodyPerception,
+    menuChangesRequest: current.menuChangesRequest || fallback.menuChangesRequest,
+    openFeedback: current.openFeedback || fallback.openFeedback,
+  }
+}
+
+const defaultWorkoutCommentsByStudentId: Record<string, WorkoutAppComment[]> = {
+  'student-lucas': [
+    {
+      workoutCode: 'Treino A',
+      workoutTitle: 'Peito, Ombro e Tríceps',
+      sentAt: 'Segunda, 08:10 (App MFIT)',
+      comment:
+        'Supino inclinado rendeu muito bem com 30kg/lado. Senti ótimo pump de ombro no bi-set final.',
+    },
+    {
+      workoutCode: 'Treino B',
+      workoutTitle: 'Dorsal e Bíceps',
+      sentAt: 'Hoje, 07:58 (App MFIT)',
+      comment:
+        'Subi carga na remada curvada para 35kg cada lado mantendo 10 repetições limpas e sem roubar.',
+    },
+    {
+      workoutCode: 'Treino C',
+      workoutTitle: 'Membros Inferiores Completo',
+      sentAt: 'Quarta, 08:05 (App MFIT)',
+      comment:
+        'Treino de perna foi bem puxado! Saí com bastante fome no fim da tarde após o leg press.',
+    },
+  ],
+  'student-camila': [
+    {
+      workoutCode: 'Treino A',
+      workoutTitle: 'Superiores & Core',
+      sentAt: 'Segunda, 09:20 (App MFIT)',
+      comment:
+        'Puxada frontal e desenvolvimento com halteres concluídos sem desconforto e com boa postura.',
+    },
+    {
+      workoutCode: 'Treino B',
+      workoutTitle: 'Inferiores Foco Quadríceps',
+      sentAt: 'Quarta, 09:10 (App MFIT)',
+      comment:
+        'Agachamento no hack e cadeira extensora com drop-set queimaram demais, mantive os intervalos de 60s.',
+    },
+    {
+      workoutCode: 'Treino C',
+      workoutTitle: 'Glúteos e Posterior',
+      sentAt: 'Hoje, 09:15 (App MFIT)',
+      comment:
+        'Elevação pélvica fechou com 110kg para 4x10 com 2s de isometria no topo. Ótima ativação!',
+    },
+  ],
+  'student-juliana': [
+    {
+      workoutCode: 'Treino A',
+      workoutTitle: 'Superiores + HIIT',
+      sentAt: 'Ontem, 19:55 (App MFIT)',
+      comment:
+        'Fiz o Treino A adaptado com halteres na academia do hotel + 20 min de esteira inclinada.',
+    },
+    {
+      workoutCode: 'Treino B',
+      workoutTitle: 'Dorsal, Ombro Posterior & Abdômen',
+      sentAt: 'Terça, 19:10 (App MFIT)',
+      comment:
+        'Consegui fazer todas as séries de remada e puxada antes de viajar, ritmo excelente.',
+    },
+    {
+      workoutCode: 'Treino C',
+      workoutTitle: 'Inferiores Completo',
+      sentAt: 'Sábado, 11:00 (App MFIT)',
+      comment:
+        'Afundo búlgaro exigiu bastante equilíbrio, mas fechei as 3 séries de 10 repetições por perna.',
+    },
+  ],
+  'student-pedro': [
+    {
+      workoutCode: 'Treino A',
+      workoutTitle: 'Peito, Ombro e Tríceps',
+      sentAt: 'Segunda, 19:02 (App MFIT)',
+      comment:
+        'Supino inclinado com halteres concluído. Semana corrida com provas da pós, mas mantive a carga.',
+    },
+    {
+      workoutCode: 'Treino B',
+      workoutTitle: 'Dorsal e Bíceps',
+      sentAt: 'Terça, 19:40 (App MFIT)',
+      comment:
+        'Puxada aberta e remada cavalinho feitas em 45 minutos para conseguir estudar à noite.',
+    },
+    {
+      workoutCode: 'Treino C',
+      workoutTitle: 'Pernas Completo',
+      sentAt: 'Sexta passada, 18:50 (App MFIT)',
+      comment: 'Leg press e mesa flexora ok; senti o posterior bem trabalhado no stiff com barra.',
+    },
+  ],
+  'student-rafael': [
+    {
+      workoutCode: 'Treino A',
+      workoutTitle: 'Força Inferior & Core',
+      sentAt: 'Hoje, 06:15 (App MFIT)',
+      comment:
+        'Finalizei o treino de força inferior em 48 min. Bati meu PR no agachamento livre com RPE 8!',
+    },
+    {
+      workoutCode: 'Treino B',
+      workoutTitle: 'Força Superior & Mobilidade',
+      sentAt: 'Quarta, 06:20 (App MFIT)',
+      comment:
+        'Barra fixa com +10kg no cinto saiu limpa nas 4 séries. Zero fadiga para a corrida de quinta.',
+    },
+    {
+      workoutCode: 'Treino C',
+      workoutTitle: 'Potência, Unilaterais & Preventivo',
+      sentAt: 'Sexta, 06:10 (App MFIT)',
+      comment:
+        ' Panturrilha, tibial e RDL concluídos sem dor muscular tardia antes do longão de 14km.',
+    },
+  ],
+  'student-aline': [
+    {
+      workoutCode: 'Treino A',
+      workoutTitle: 'Superiores & Cintura Escapular',
+      sentAt: 'Segunda, 12:50 (App MFIT)',
+      comment:
+        'Treino encaixou certinho no horário de almoço (42 min). Aumentei 2kg na elevação lateral.',
+    },
+    {
+      workoutCode: 'Treino B',
+      workoutTitle: 'Inferiores Foco Quadríceps',
+      sentAt: 'Hoje, 09:50 (App MFIT)',
+      comment: 'Leg press 45° concluído com +10kg em relação à semana passada e ótima amplitude.',
+    },
+    {
+      workoutCode: 'Treino C',
+      workoutTitle: 'Glúteos, Posterior & Escada',
+      sentAt: 'Quinta, 12:55 (App MFIT)',
+      comment:
+        'Stiff e elevação pélvica renderam super bem + 25 min de escada ergométrica sem parar.',
+    },
+  ],
+  'student-thiago': [
+    {
+      workoutCode: 'Treino A',
+      workoutTitle: 'Peito, Ombro e Tríceps',
+      sentAt: 'Segunda, 20:30 (App MFIT)',
+      comment:
+        'Senti leve incômodo no ombro direito no desenvolvimento com barra; com halter pegada neutra ficou 100%.',
+    },
+    {
+      workoutCode: 'Treino B',
+      workoutTitle: 'Dorsal, Trapézio e Bíceps',
+      sentAt: 'Quarta, 20:45 (App MFIT)',
+      comment: 'Treino de costas excelente! Remada serrote com 38kg e ótimo controle na descida.',
+    },
+    {
+      workoutCode: 'Treino C',
+      workoutTitle: 'Pernas Completo',
+      sentAt: 'Ontem, 21:05 (App MFIT)',
+      comment:
+        'Treino de pernas 100% feito! Agachamento hack e mesa flexora com carga máxima da quinzena.',
+    },
+  ],
+  'student-gabriel': [
+    {
+      workoutCode: 'Treino A',
+      workoutTitle: 'Superiores Completo',
+      sentAt: 'Há 6 dias (App MFIT)',
+      comment: 'Treino de manutenção de superiores concluído em 45 minutos.',
+    },
+    {
+      workoutCode: 'Treino B',
+      workoutTitle: 'Inferiores & Core',
+      sentAt: 'Há 5 dias (App MFIT)',
+      comment: 'Mantive as cargas no leg press e agachamento para preservar massa magra.',
+    },
+    {
+      workoutCode: 'Treino C',
+      workoutTitle: 'Full Body Metabólico',
+      sentAt: 'Há 4 dias (App MFIT)',
+      comment: 'Última sessão do ciclo antes da pausa; vou manter 3x por semana até janeiro.',
+    },
+  ],
+}
+
+function getStudentWorkoutComments(student: StudentRecord): WorkoutAppComment[] {
+  if (student.workoutComments && student.workoutComments.length === 3) {
+    return student.workoutComments
+  }
+  return (
+    defaultWorkoutCommentsByStudentId[student.id] ?? [
+      {
+        workoutCode: 'Treino A',
+        workoutTitle: 'Empurrar · Peito, Ombros e Tríceps',
+        sentAt: 'Segunda (App MFIT)',
+        comment:
+          'Boa adaptação às cargas iniciais no supino inclinado e desenvolvimento com halteres.',
+      },
+      {
+        workoutCode: 'Treino B',
+        workoutTitle: 'Puxar · Dorsal e Bíceps',
+        sentAt: 'Quarta (App MFIT)',
+        comment: 'Execução controlada na puxada frontal e remada curvada, mantendo intervalos.',
+      },
+      {
+        workoutCode: 'Treino C',
+        workoutTitle: 'Membros Inferiores Completo',
+        sentAt: 'Sexta (App MFIT)',
+        comment: 'Treino de pernas finalizado com ótima percepção de esforço no leg press 45°.',
+      },
+    ]
+  )
+}
+
+function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
+  const comments = getStudentWorkoutComments(student)
+  const commentA = comments.find((c) => c.workoutCode === 'Treino A') ?? comments[0]
+  const commentB = comments.find((c) => c.workoutCode === 'Treino B') ?? comments[1]
+  const commentC = comments.find((c) => c.workoutCode === 'Treino C') ?? comments[2]
+
+  if (student.goal === 'Hipertrofia') {
+    return {
+      splitName: `Periodização ABCD · Hipertrofia (${student.phase})`,
+      frequency: '5 sessões de musculação + 3 sessões de cardio leve por semana',
+      cardioPrescription:
+        '25 min de bike ergométrica ou caminhada inclinada (125–135 bpm) pós-treino',
+      technicalGuideline:
+        'Cadência controlada 2010 nos compostos; manter 1 a 2 repetições na reserva (RIR 1–2) e progredir carga quando atingir o topo da faixa.',
+      sessions: [
+        {
+          code: 'Treino A',
+          title: 'Peito, Ombro Anterior & Tríceps',
+          schedule: 'Segunda e Quinta',
+          studentAppComment: commentA.comment,
+          commentSentAt: commentA.sentAt,
+          adminReply: commentA.adminReply,
+          repliedAt: commentA.repliedAt,
+          exercises: [
+            {
+              name: 'Supino Inclinado com Halteres',
+              sets: '4 × 8–10 reps',
+              rest: '90s',
+              loadNote: '32 kg/lado · ótima estabilidade',
+            },
+            {
+              name: 'Supino Reto Máquina Articulada',
+              sets: '3 × 10–12 reps',
+              rest: '75s',
+              loadNote: '80 kg totais · pico de contração 1s',
+            },
+            {
+              name: 'Desenvolvimento Neutro com Halteres',
+              sets: '4 × 8–10 reps',
+              rest: '90s',
+              loadNote: 'Pegada neutra confortável para o ombro',
+            },
+            {
+              name: 'Elevação Lateral na Polia Baixa',
+              sets: '4 × 12–15 reps',
+              rest: '60s',
+              loadNote: 'Controle excêntrico de 3 segundos',
+            },
+            {
+              name: 'Tríceps Corda no Pulley + Francês Unilateral',
+              sets: '4 × 10–12 reps',
+              rest: '60s',
+              loadNote: 'Extensão completa sem mover cotovelos',
+            },
+          ],
+        },
+        {
+          code: 'Treino B',
+          title: 'Dorsal, Trapézio & Bíceps',
+          schedule: 'Terça e Sexta',
+          studentAppComment: commentB.comment,
+          commentSentAt: commentB.sentAt,
+          adminReply: commentB.adminReply,
+          repliedAt: commentB.repliedAt,
+          exercises: [
+            {
+              name: 'Puxada Frontal Aberta Pronada',
+              sets: '4 × 8–10 reps',
+              rest: '90s',
+              loadNote: 'Depressão escapular antes de puxar',
+            },
+            {
+              name: 'Remada Curvada / Cavalinho Apoio no Peito',
+              sets: '4 × 8–10 reps',
+              rest: '90s',
+              loadNote: 'Progressão de carga registrada nesta semana',
+            },
+            {
+              name: 'Remada Unilateral com Halter (Serrote)',
+              sets: '3 × 10–12 reps',
+              rest: '75s',
+              loadNote: 'Alongamento máximo na fase excêntrica',
+            },
+            {
+              name: 'Crucifixo Inverso na Máquina (Deltoide Posterior)',
+              sets: '3 × 12–15 reps',
+              rest: '60s',
+              loadNote: 'Foco em posterior de ombro',
+            },
+            {
+              name: 'Rosca Direta Barra W + Rosca Martelo',
+              sets: '4 × 10–12 reps',
+              rest: '60s',
+              loadNote: 'Sem balanço de tronco',
+            },
+          ],
+        },
+        {
+          code: 'Treino C',
+          title: 'Membros Inferiores Completo (Quadríceps, Posterior & Glúteos)',
+          schedule: 'Quarta e Sábado',
+          studentAppComment: commentC.comment,
+          commentSentAt: commentC.sentAt,
+          adminReply: commentC.adminReply,
+          repliedAt: commentC.repliedAt,
+          exercises: [
+            {
+              name: 'Agachamento Livre ou Hack Machine',
+              sets: '4 × 8–10 reps',
+              rest: '120s',
+              loadNote: 'Amplitude completa com controle lombar',
+            },
+            {
+              name: 'Elevação Pélvica com Barra',
+              sets: '4 × 10–12 reps',
+              rest: '90s',
+              loadNote: '110 kg · 2s de isometria no topo',
+            },
+            {
+              name: 'Leg Press 45°',
+              sets: '4 × 10–12 reps',
+              rest: '90s',
+              loadNote: '+10 kg na última sessão sem perder padrão',
+            },
+            {
+              name: 'Mesa Flexora + Stiff com Barra',
+              sets: '4 × 10–12 reps',
+              rest: '75s',
+              loadNote: 'Alongamento de isquiotibiais controlado',
+            },
+            {
+              name: 'Cadeira Extensora + Panturrilha em Pé',
+              sets: '4 × 12–15 reps',
+              rest: '60s',
+              loadNote: 'Falha concêntrica na última série',
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  if (student.goal === 'Performance') {
+    return {
+      splitName: 'Protocolo Híbrido · Força Específica & Corrida (Meia Maratona)',
+      frequency: '4 sessões de força + 3 sessões de corrida periodizada por semana',
+      cardioPrescription:
+        'Terça: Tiros 6×1km (pace 4:35) · Quinta: Tempo Run 8km · Sábado: Longão 14km (Z2)',
+      technicalGuideline:
+        'Priorizar velocidade de barra nos levantamentos básicos e manter RIR 2 para evitar fadiga residual nas sessões de pista.',
+      sessions: [
+        {
+          code: 'Treino A',
+          title: 'Força Inferior & Estabilidade de Core',
+          schedule: 'Segunda e Quinta',
+          studentAppComment: commentA.comment,
+          commentSentAt: commentA.sentAt,
+          adminReply: commentA.adminReply,
+          repliedAt: commentA.repliedAt,
+          exercises: [
+            {
+              name: 'Agachamento Livre Barra Alta',
+              sets: '4 × 5 reps',
+              rest: '120s',
+              loadNote: 'PR batido nesta semana · RPE 8',
+            },
+            {
+              name: 'Levantamento Terra Romeno (RDL)',
+              sets: '4 × 6–8 reps',
+              rest: '90s',
+              loadNote: 'Potência na subida e controle excêntrico',
+            },
+            {
+              name: 'Afundo Búlgaro com Halteres',
+              sets: '3 × 8 reps/perna',
+              rest: '75s',
+              loadNote: 'Estabilidade de quadril e tornozelo',
+            },
+            {
+              name: 'Panturrilha Sóleo Sentado + Tibial Anterior',
+              sets: '4 × 15 reps',
+              rest: '60s',
+              loadNote: 'Prevenção de canelite e potência elástica',
+            },
+            {
+              name: 'Prancha RKC + Pallof Press no Cabo',
+              sets: '3 × 40s',
+              rest: '45s',
+              loadNote: 'Transferência direta para economia de corrida',
+            },
+          ],
+        },
+        {
+          code: 'Treino B',
+          title: 'Força Superior & Mobilidade Torácica',
+          schedule: 'Quarta e Sexta',
+          studentAppComment: commentB.comment,
+          commentSentAt: commentB.sentAt,
+          adminReply: commentB.adminReply,
+          repliedAt: commentB.repliedAt,
+          exercises: [
+            {
+              name: 'Supino Reto com Halteres',
+              sets: '4 × 6–8 reps',
+              rest: '90s',
+              loadNote: 'Execução explosiva na concêntrica',
+            },
+            {
+              name: 'Barra Fixa Pronada (Pull-ups)',
+              sets: '4 × 8–10 reps',
+              rest: '90s',
+              loadNote: 'Peso corporal + 10 kg no cinto',
+            },
+            {
+              name: 'Desenvolvimento Landmine Unilateral',
+              sets: '3 × 8–10 reps',
+              rest: '75s',
+              loadNote: 'Integração escapular e core',
+            },
+            {
+              name: 'Remada Baixa Triângulo + Face Pull',
+              sets: '3 × 12 reps',
+              rest: '60s',
+              loadNote: 'Postura torácica para corrida longa',
+            },
+          ],
+        },
+        {
+          code: 'Treino C',
+          title: 'Potência Unilateral, Core & Preventivo de Corrida',
+          schedule: 'Sexta e Sábado',
+          studentAppComment: commentC.comment,
+          commentSentAt: commentC.sentAt,
+          adminReply: commentC.adminReply,
+          repliedAt: commentC.repliedAt,
+          exercises: [
+            {
+              name: 'Agachamento Búlgaro Explosivo com Halteres',
+              sets: '3 × 8 reps/perna',
+              rest: '75s',
+              loadNote: 'Estabilidade de quadril para corrida',
+            },
+            {
+              name: 'Stiff Unilateral + Panturrilha no Degrau',
+              sets: '4 × 12 reps',
+              rest: '60s',
+              loadNote: 'Prevenção de tendinopatia de Aquiles',
+            },
+            {
+              name: 'Prancha Lateral Dinâmica + Dead Bug',
+              sets: '3 × 45s',
+              rest: '45s',
+              loadNote: 'Controle pélvico em fadiga',
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  return {
+    splitName: `Divisão ABC + Cardio Metabólico · ${student.goal} (${student.phase})`,
+    frequency: '5 sessões de musculação + 4 sessões de cardio estruturado por semana',
+    cardioPrescription:
+      '30 min de esteira inclinada (inclin. 10–12% · 5,4 km/h) ou escada ergométrica pós-treino',
+    technicalGuideline:
+      'Manter densidade alta de treino respeitando os intervalos de descanso para otimizar gasto energético e preservação de massa magra.',
+    sessions: [
+      {
+        code: 'Treino A',
+        title: 'Empurrar · Peito, Ombros, Tríceps & Core',
+        schedule: 'Segunda e Quinta',
+        studentAppComment: commentA.comment,
+        commentSentAt: commentA.sentAt,
+        adminReply: commentA.adminReply,
+        repliedAt: commentA.repliedAt,
+        exercises: [
+          {
+            name: 'Supino Inclinado com Halteres',
+            sets: '4 × 10–12 reps',
+            rest: '75s',
+            loadNote: 'Carga firme mantendo amplitude máxima',
+          },
+          {
+            name: 'Crucifixo Máquina (Peck Deck)',
+            sets: '3 × 12–15 reps',
+            rest: '60s',
+            loadNote: 'Segurar 1s no pico de contração',
+          },
+          {
+            name: 'Desenvolvimento com Halteres + Elevação Lateral',
+            sets: '4 × 10 + 12 reps',
+            rest: '75s',
+            loadNote: 'Bi-set metabólico para deltoides',
+          },
+          {
+            name: 'Tríceps Pulley Barra Reta',
+            sets: '3 × 12–15 reps',
+            rest: '60s',
+            loadNote: 'Cotovelos fixos ao lado do tronco',
+          },
+          {
+            name: 'Abdominal Infra Paralela + Prancha Isométrica',
+            sets: '4 × 15 reps + 45s',
+            rest: '45s',
+            loadNote: 'Ativação de transverso abdominal',
+          },
+        ],
+      },
+      {
+        code: 'Treino B',
+        title: 'Puxar · Dorsal, Posterior de Ombro & Bíceps',
+        schedule: 'Terça e Sexta',
+        studentAppComment: commentB.comment,
+        commentSentAt: commentB.sentAt,
+        adminReply: commentB.adminReply,
+        repliedAt: commentB.repliedAt,
+        exercises: [
+          {
+            name: 'Remada Curvada Pronada com Barra',
+            sets: '4 × 8–10 reps',
+            rest: '90s',
+            loadNote: '35 kg/lado · 10 repetições limpas',
+          },
+          {
+            name: 'Puxada Alta Pegada Neutra (Triângulo)',
+            sets: '4 × 10–12 reps',
+            rest: '75s',
+            loadNote: 'Alongar bem dorsal no topo',
+          },
+          {
+            name: 'Pulldown com Corda na Polia Alta',
+            sets: '3 × 12–15 reps',
+            rest: '60s',
+            loadNote: 'Conexão mente-músculo constante',
+          },
+          {
+            name: 'Rosca Alternada Banco 45° + Rosca Martelo',
+            sets: '3 × 10–12 reps',
+            rest: '60s',
+            loadNote: 'Controle total da descida',
+          },
+        ],
+      },
+      {
+        code: 'Treino C',
+        title: 'Membros Inferiores · Quadríceps, Posterior & Glúteos',
+        schedule: 'Quarta e Sábado',
+        studentAppComment: commentC.comment,
+        commentSentAt: commentC.sentAt,
+        adminReply: commentC.adminReply,
+        repliedAt: commentC.repliedAt,
+        exercises: [
+          {
+            name: 'Leg Press 45° Amplitude Completa',
+            sets: '4 × 10–12 reps',
+            rest: '90s',
+            loadNote: 'Subiu +10 kg nesta semana',
+          },
+          {
+            name: 'Agachamento Búlgaro ou Passada com Halteres',
+            sets: '3 × 10 reps/perna',
+            rest: '90s',
+            loadNote: 'Foco em glúteo e estabilidade de joelho',
+          },
+          {
+            name: 'Cadeira Extensora com Drop-set na Última',
+            sets: '4 × 12–15 reps',
+            rest: '60s',
+            loadNote: '1s de contração no topo',
+          },
+          {
+            name: 'Mesa Flexora + Stiff com Halteres',
+            sets: '4 × 10–12 reps',
+            rest: '75s',
+            loadNote: 'Coluna neutra e posterior alongado',
+          },
+          {
+            name: 'Panturrilha no Leg Press',
+            sets: '4 × 15–20 reps',
+            rest: '45s',
+            loadNote: 'Pausa de 2s no alongamento',
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function getStudentDietPlan(student: StudentRecord): StudentDietPlan {
+  if (student.phase === 'Superávit') {
+    return {
+      strategyName: `Superávit Limpo Controlado · ${student.goal}`,
+      dailyCalories: '2.680 kcal / dia (2.850 kcal nos dias de membros inferiores)',
+      proteinTarget: '175 g / dia (2,1 g/kg)',
+      carbsTarget: '345 g / dia (4,2 g/kg)',
+      fatTarget: '66 g / dia (0,8 g/kg)',
+      waterTarget: '3,2 L a 3,5 L de água por dia',
+      supplements: 'Creatina 5g/dia · Whey Concentrado 30g · Beta-Alanina 3g · Ômega-3 2g',
+      meals: [
+        {
+          time: '07:30',
+          title: 'Refeição 1 · Café da Manhã',
+          macros: '540 kcal · 36g P · 64g C · 14g G',
+          items: [
+            '3 ovos inteiros mexidos + 2 claras',
+            '2 fatias de pão de fermentação natural (80g) ou 60g de tapioca',
+            '1 banana prata amassada com 30g de aveia em flocos e canela',
+            'Café preto sem açúcar + 150g de mamão ou morangos',
+          ],
+          substitutions:
+            'Pode substituir o pão por 120g de cuscuz de milho hidratado ou panqueca de banana com aveia.',
+        },
+        {
+          time: '12:30',
+          title: 'Refeição 2 · Almoço',
+          macros: '720 kcal · 48g P · 92g C · 16g G',
+          items: [
+            '160g de peito de frango grelhado ou patinho moído (pesado pronto)',
+            '220g de arroz branco ou integral + 100g de feijão carioca',
+            'Salada crua à vontade + 120g de legumes no vapor (brócolis e cenoura)',
+            '1 colher de sopa de azeite de oliva extravirgem (10 ml)',
+          ],
+          substitutions:
+            'Pode substituir o arroz por 240g de macarrão grano duro ou 260g de batata-inglesa/mandioca.',
+        },
+        {
+          time: '16:30',
+          title: 'Refeição 3 · Lanche da Tarde / Pré-Treino',
+          macros: '490 kcal · 32g P · 68g C · 10g G',
+          items: [
+            '170g de iogurte natural desnatado + 30g de Whey Protein',
+            '45g de granola sem açúcar ou 50g de aveia em flocos',
+            '1 maçã média ou 140g de uva sem semente + 15g de pasta de amendoim',
+          ],
+          substitutions:
+            'Em dias de rotina externa: sanduíche com 2 fatias de pão integral + 120g de frango desfiado + 1 fruta.',
+        },
+        {
+          time: '19:30',
+          title: 'Refeição 4 · Pós-Treino Imediato',
+          macros: '360 kcal · 28g P · 58g C · 2g G',
+          items: [
+            '30g de Whey Protein em água + 5g de Creatina monohidratada',
+            '1 banana nanica grande + 20g de doce de leite ou mel',
+          ],
+          substitutions: 'Pode unir ao jantar quando treinar próximo das 20h.',
+        },
+        {
+          time: '21:00',
+          title: 'Refeição 5 · Jantar (Sem Lactose)',
+          macros: '570 kcal · 44g P · 63g C · 14g G',
+          items: [
+            '160g de tilápia assada, salmão ou filé de frango grelhado',
+            '200g de purê de batata-inglesa ou arroz jasmine',
+            'Mix de folhas verdes, abobrinha grelhada e tomate-cereja + 8 ml de azeite',
+          ],
+          substitutions:
+            'Pode substituir o peixe por 150g de mignon suíno ou carne magra grelhada.',
+        },
+      ],
+    }
+  }
+
+  if (student.phase === 'Manutenção') {
+    return {
+      strategyName: `Manutenção Normocalórica & Performance Híbrida · ${student.goal}`,
+      dailyCalories: '2.550 kcal / dia (ajuste de +300 kcal nos sábados de corrida longa)',
+      proteinTarget: '165 g / dia (2,2 g/kg)',
+      carbsTarget: '330 g / dia (4,4 g/kg)',
+      fatTarget: '62 g / dia (0,8 g/kg)',
+      waterTarget: '4,0 L de água por dia + eletrólitos nos treinos >60 min',
+      supplements:
+        'Creatina 5g/dia · Gel de Carboidrato (30g CHO intra-longão) · Eletrólitos · Whey 30g',
+      meals: [
+        {
+          time: '05:30',
+          title: 'Refeição 1 · Pré-Treino Matinal (Rápida Absorção)',
+          macros: '310 kcal · 20g P · 52g C · 3g G',
+          items: [
+            '2 fatias de pão branco tostado com 25g de geleia de frutas',
+            '20g de Whey Protein diluído em água ou café expresso',
+            '500 ml de água com pitada de sal integral ao acordar',
+          ],
+          substitutions: 'Nos treinos >12km, incluir 1 sachê de gel de carboidrato no km 7.',
+        },
+        {
+          time: '08:00',
+          title: 'Refeição 2 · Pós-Treino / Café da Manhã Completo',
+          macros: '560 kcal · 38g P · 66g C · 15g G',
+          items: [
+            '3 ovos mexidos + 50g de queijo cottage ou minas frescal light',
+            '80g de cuscuz ou tapioca + 1 porção de mamão papaya com 20g de aveia',
+          ],
+          substitutions: 'Pode substituir por 2 fatias de pão sourdough + omelete de 3 ovos.',
+        },
+        {
+          time: '12:45',
+          title: 'Refeição 3 · Almoço',
+          macros: '690 kcal · 46g P · 88g C · 16g G',
+          items: [
+            '160g de alcatra limpa grelhada ou peito de frango',
+            '200g de arroz + 100g de feijão preto ou lentilha',
+            'Legumes assados (abóbora cabotiá e brócolis) + salada verde com azeite',
+          ],
+          substitutions: 'Pode trocar arroz e feijão por 250g de batata-doce assada ou macarrão.',
+        },
+        {
+          time: '16:30',
+          title: 'Refeição 4 · Lanche da Tarde',
+          macros: '420 kcal · 30g P · 50g C · 11g G',
+          items: [
+            'Mingau proteico: 40g de aveia + 30g de Whey + 1 banana fatiada + 10g de castanhas',
+          ],
+          substitutions: 'Iogurte proteico + 1 fruta + 40g de granola sem açúcar.',
+        },
+        {
+          time: '20:30',
+          title: 'Refeição 5 · Jantar Recuperativo',
+          macros: '570 kcal · 42g P · 64g C · 15g G',
+          items: [
+            '160g de filé de frango ou peixe branco grelhado',
+            '180g de arroz ou mandioca cozida + salada completa com azeite extravirgem',
+          ],
+          substitutions: 'Wrap integral recheado com 150g de frango desfiado, ricota e salada.',
+        },
+      ],
+    }
+  }
+
+  return {
+    strategyName: `Déficit Calórico Estruturado · Alta Saciedade (${student.goal})`,
+    dailyCalories: '1.850 kcal / dia (2.050 kcal nos dias de treino de pernas)',
+    proteinTarget: '160 g / dia (2,2 g/kg)',
+    carbsTarget: '175 g / dia (2,3 g/kg)',
+    fatTarget: '54 g / dia (0,75 g/kg)',
+    waterTarget: '3,2 L a 3,5 L de água por dia',
+    supplements: 'Creatina 5g/dia · Whey Protein Isolado/Concentrado 30g · Psyllium 5g · Ômega-3',
+    meals: [
+      {
+        time: '07:30',
+        title: 'Refeição 1 · Café da Manhã Proteico',
+        macros: '380 kcal · 32g P · 34g C · 12g G',
+        items: [
+          '2 ovos inteiros + 2 claras mexidas com espinafre e tomate',
+          '1 fatia de pão integral (40g) ou 45g de tapioca com chia',
+          '120g de mamão ou melão + café preto sem açúcar',
+        ],
+        substitutions:
+          'Opção pré-treino rápida: panqueca de 1 banana + 2 ovos + 20g de aveia + canela.',
+      },
+      {
+        time: '12:30',
+        title: 'Refeição 2 · Almoço (Alta Densidade Nutricional)',
+        macros: '510 kcal · 45g P · 52g C · 13g G',
+        items: [
+          '150g de peito de frango grelhado ou patinho moído magro',
+          '130g de arroz integral ou branco + 80g de feijão',
+          'Prato cheio de folhas verdes + 150g de legumes (abobrinha, brócolis, vagem)',
+          '1 colher de chá de azeite de oliva extravirgem (5 ml)',
+        ],
+        substitutions:
+          'Pode substituir o arroz + feijão por 180g de batata-inglesa assada ou 160g de abóbora cabotiá + 100g de arroz.',
+      },
+      {
+        time: '16:30',
+        title: 'Refeição 3 · Lanche da Tarde (Reforçado em Dias de Inferiores)',
+        macros: '360 kcal · 30g P · 38g C · 9g G',
+        items: [
+          '160g de iogurte natural desnatado + 30g de Whey Protein',
+          '25g de aveia em flocos + 100g de morangos ou 1 maçã média',
+          'Nos dias de treino de pernas: adicionar +1 fruta média ou 30g de pão integral',
+        ],
+        substitutions:
+          'Opção prática para bolsa/viagem: 1 shake proteico (30g Whey) + 1 fruta + 15g de amêndoas.',
+      },
+      {
+        time: '20:00',
+        title: 'Refeição 4 · Jantar de Definição',
+        macros: '430 kcal · 42g P · 36g C · 12g G',
+        items: [
+          '150g de filé de tilápia, merluza ou peito de frango em tiras',
+          '130g de batata-doce, mandioca ou arroz',
+          'Salada verde variada à vontade + aspargos ou brócolis no vapor',
+        ],
+        substitutions: 'Omelete de forno com 2 ovos + 100g de frango desfiado + salada completa.',
+      },
+      {
+        time: '22:00',
+        title: 'Refeição 5 · Ceia (Controle de Apetite Noturno)',
+        macros: '170 kcal · 14g P · 15g C · 8g G',
+        items: [
+          '120g de iogurte zero lactose ou mingau leve com 15g de Whey + cacau 100%',
+          'Chá de camomila ou melissa sem açúcar',
+        ],
+        substitutions: '2 quadradinhos (15g) de chocolate 70% cacau + 100g de morangos.',
+      },
+    ],
+  }
+}
+
+type StudentsWorkspaceProps = {
+  onSendWorkoutReplyToInternal?: (payload: {
+    studentId: string
+    studentName: string
+    studentAvatar: string
+    workoutCode: 'Treino A' | 'Treino B' | 'Treino C'
+    workoutTitle: string
+    studentComment: string
+    adminReply: string
+  }) => void
+  onOpenInternalInbox?: () => void
+}
+
+function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
+  if (student.appPhotos && student.appPhotos.length > 0) {
+    return student.appPhotos
+  }
+
+  const isFemale =
+    student.name.startsWith('Camila') ||
+    student.name.startsWith('Juliana') ||
+    student.name.startsWith('Marina') ||
+    student.name.startsWith('Sofia') ||
+    student.name.startsWith('Aline') ||
+    student.name.startsWith('Beatriz') ||
+    student.name.startsWith('Renata') ||
+    student.name.startsWith('Fernanda') ||
+    student.name.startsWith('Larissa') ||
+    student.name.startsWith('Gabriela') ||
+    student.name.startsWith('Bianca')
+
+  if (isFemale) {
+    return [
+      {
+        id: `${student.id}-photo-1`,
+        angle: 'Frente',
+        dateLabel: '10/01/2026 · 07:45',
+        cycleLabel: 'Avaliação Inicial (Semana 1)',
+        weightKg: '68,4 kg',
+        waistCm: '74 cm',
+        imageUrl:
+          'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80',
+        studentNote: 'Foto enviada pelo aplicativo em jejum logo após acordar.',
+        adminObservation: 'Marco inicial para comparação de linha de cintura e definição.',
+      },
+      {
+        id: `${student.id}-photo-2`,
+        angle: 'Costas',
+        dateLabel: '10/01/2026 · 07:47',
+        cycleLabel: 'Avaliação Inicial (Semana 1)',
+        weightKg: '68,4 kg',
+        waistCm: '74 cm',
+        imageUrl:
+          'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=80',
+        studentNote: 'Registro de costas relaxada no primeiro check-in do app.',
+      },
+      {
+        id: `${student.id}-photo-3`,
+        angle: 'Perfil Direito',
+        dateLabel: '22/02/2026 · 08:10',
+        cycleLabel: 'Check-in Intermediário (Semana 6)',
+        weightKg: '65,9 kg',
+        waistCm: '70 cm',
+        imageUrl:
+          'https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=900&q=80',
+        studentNote: 'Já sentindo muita diferença na retenção abdominal e disposição!',
+        adminObservation: 'Redução nítida de circunferência abdominal.',
+      },
+      {
+        id: `${student.id}-photo-4`,
+        angle: 'Frente',
+        dateLabel: '12/04/2026 · 07:50',
+        cycleLabel: 'Check-in Atual (Semana 12)',
+        weightKg: '63,8 kg',
+        waistCm: '67 cm',
+        imageUrl:
+          'https://images.unsplash.com/photo-1594381898411-846e7d193883?auto=format&fit=crop&w=900&q=80',
+        studentNote: 'Foto atual enviada pelo aplicativo hoje cedo em jejum.',
+        adminObservation: 'Excelente evolução estética (-4,6 kg e -7 cm de cintura).',
+      },
+      {
+        id: `${student.id}-photo-5`,
+        angle: 'Costas',
+        dateLabel: '12/04/2026 · 07:52',
+        cycleLabel: 'Check-in Atual (Semana 12)',
+        weightKg: '63,8 kg',
+        waistCm: '67 cm',
+        imageUrl:
+          'https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=900&q=80',
+        studentNote: 'Costas e posteriores bem mais marcados neste ciclo.',
+      },
+      {
+        id: `${student.id}-photo-6`,
+        angle: 'Pós-Treino',
+        dateLabel: '14/04/2026 · 19:20',
+        cycleLabel: 'Registro no App · Pós-Treino B',
+        weightKg: '63,9 kg',
+        imageUrl:
+          'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=80',
+        studentNote: 'Foto enviada no app após finalizar o treino de membros inferiores.',
+      },
+    ]
+  }
+
+  return [
+    {
+      id: `${student.id}-photo-1`,
+      angle: 'Frente',
+      dateLabel: '08/01/2026 · 07:30',
+      cycleLabel: 'Avaliação Inicial (Semana 1)',
+      weightKg: '84,6 kg',
+      waistCm: '88 cm',
+      imageUrl:
+        'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=900&q=80',
+      studentNote: 'Primeira foto enviada pelo aplicativo Elevn em jejum.',
+      adminObservation: 'Ponto de partida para recomposição corporal.',
+    },
+    {
+      id: `${student.id}-photo-2`,
+      angle: 'Costas',
+      dateLabel: '08/01/2026 · 07:32',
+      cycleLabel: 'Avaliação Inicial (Semana 1)',
+      weightKg: '84,6 kg',
+      waistCm: '88 cm',
+      imageUrl:
+        'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=900&q=80',
+      studentNote: 'Costas relaxado na primeira semana do protocolo.',
+    },
+    {
+      id: `${student.id}-photo-3`,
+      angle: 'Perfil Direito',
+      dateLabel: '20/02/2026 · 08:00',
+      cycleLabel: 'Check-in Intermediário (Semana 6)',
+      weightKg: '81,2 kg',
+      waistCm: '83 cm',
+      imageUrl:
+        'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=900&q=80',
+      studentNote: 'Metade do protocolo concluída, cintura diminuiu bastante.',
+      adminObservation: 'Ótima resposta ao ajuste de cardio e déficit controlado.',
+    },
+    {
+      id: `${student.id}-photo-4`,
+      angle: 'Frente',
+      dateLabel: '12/04/2026 · 07:40',
+      cycleLabel: 'Check-in Atual (Semana 12)',
+      weightKg: '78,4 kg',
+      waistCm: '79 cm',
+      imageUrl:
+        'https://images.unsplash.com/photo-1637430308606-86576d8fef3c?auto=format&fit=crop&w=900&q=80',
+      studentNote: 'Foto enviada hoje pelo aplicativo em jejum. Densidade muito melhor!',
+      adminObservation: 'Redução de 6,2 kg mantendo volume de peitoral e ombros.',
+    },
+    {
+      id: `${student.id}-photo-5`,
+      angle: 'Costas',
+      dateLabel: '12/04/2026 · 07:42',
+      cycleLabel: 'Check-in Atual (Semana 12)',
+      weightKg: '78,4 kg',
+      waistCm: '79 cm',
+      imageUrl:
+        'https://images.unsplash.com/photo-1672344048213-76b6e77304bd?auto=format&fit=crop&w=900&q=80',
+      studentNote: 'Costas atual após 12 semanas de Treino B focado em largura dorsal.',
+    },
+    {
+      id: `${student.id}-photo-6`,
+      angle: 'Pós-Treino',
+      dateLabel: '14/04/2026 · 20:10',
+      cycleLabel: 'Registro no App · Pós-Treino A',
+      weightKg: '78,7 kg',
+      imageUrl:
+        'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=900&q=80',
+      studentNote: 'Registro enviado direto pelo aplicativo após finalizar o treino.',
+    },
+  ]
+}
+
+export default function StudentsWorkspace({
+  onSendWorkoutReplyToInternal,
+  onOpenInternalInbox,
+}: StudentsWorkspaceProps = {}) {
+  const [students, setStudents] = useState<StudentRecord[]>(initialStudents)
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('todos')
+  const [goalFilter, setGoalFilter] = useState<string>('Todos')
+  const [search, setSearch] = useState('')
+  const [modalStudentId, setModalStudentId] = useState<string | null>(null)
+  const [modalTab, setModalTab] = useState<'checkin' | 'treino' | 'dieta' | 'fotos'>('checkin')
+  const [photoAngleFilter, setPhotoAngleFilter] = useState<'Todos' | StudentPhotoAngle>('Todos')
+  const [compareMode, setCompareMode] = useState<'side-by-side' | 'slider'>('side-by-side')
+  const [sliderPosition, setSliderPosition] = useState(50)
+  const [overlayBlendOpacity, setOverlayBlendOpacity] = useState(0)
+  const [isDraggingSlider, setIsDraggingSlider] = useState(false)
+  const sliderViewportRef = useRef<HTMLDivElement | null>(null)
+  const [compareBeforeId, setCompareBeforeId] = useState<string>('')
+
+  const updateSliderFromClientX = (clientX: number) => {
+    const container = sliderViewportRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    if (rect.width <= 0) return
+    const rawPercent = ((clientX - rect.left) / rect.width) * 100
+    const clamped = Math.max(2, Math.min(98, Math.round(rawPercent)))
+    setSliderPosition(clamped)
+  }
+
+  const handleSliderPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setIsDraggingSlider(true)
+    updateSliderFromClientX(event.clientX)
+  }
+
+  const handleSliderPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isDraggingSlider) return
+    event.preventDefault()
+    updateSliderFromClientX(event.clientX)
+  }
+
+  const handleSliderPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    setIsDraggingSlider(false)
+  }
+  const [compareAfterId, setCompareAfterId] = useState<string>('')
+  const [addPhotoFormOpen, setAddPhotoFormOpen] = useState(false)
+  const [newPhotoAngle, setNewPhotoAngle] = useState<StudentPhotoAngle>('Frente')
+  const [newPhotoWeight, setNewPhotoWeight] = useState('78,0 kg')
+  const [newPhotoWaist, setNewPhotoWaist] = useState('78 cm')
+  const [newPhotoCycle, setNewPhotoCycle] = useState('Novo Envio pelo App')
+  const [newPhotoNote, setNewPhotoNote] = useState('')
+  const [newPhotoUrl, setNewPhotoUrl] = useState(
+    'https://images.unsplash.com/photo-1637430308606-86576d8fef3c?auto=format&fit=crop&w=900&q=80',
+  )
+  const [newStudentOpen, setNewStudentOpen] = useState(false)
+  const [feedbackDraft, setFeedbackDraft] = useState('')
+  const [nonRenewalOpenForId, setNonRenewalOpenForId] = useState<string | null>(null)
+  const [nonRenewalDraft, setNonRenewalDraft] = useState('')
+  const [priorityNonRenewalId, setPriorityNonRenewalId] = useState<string | null>(null)
+  const [priorityNonRenewalDraft, setPriorityNonRenewalDraft] = useState('')
+  const [generatedKeysByStudent, setGeneratedKeysByStudent] = useState<
+    Record<string, { key: string; generatedAt: string }>
+  >({})
+  const [generatedKeyBanner, setGeneratedKeyBanner] = useState<{
+    studentId: string
+    studentName: string
+    key: string
+  } | null>(null)
+  const [loginEmailDraft, setLoginEmailDraft] = useState('')
+  const [newStudentNameQuery, setNewStudentNameQuery] = useState('')
+  const [externalSearchOpen, setExternalSearchOpen] = useState(false)
+  const [externalSearchResults, setExternalSearchResults] = useState<ExternalPlatformStudent[]>([])
+  const [workoutCommentDrafts, setWorkoutCommentDrafts] = useState<
+    Record<'Treino A' | 'Treino B' | 'Treino C', string>
+  >({
+    'Treino A': '',
+    'Treino B': '',
+    'Treino C': '',
+  })
+  const [lastRepliedWorkout, setLastRepliedWorkout] = useState<string | null>(null)
+
+  const openStudentModal = (
+    studentId: string,
+    initialTab: 'checkin' | 'treino' | 'dieta' | 'fotos' = 'checkin',
+  ) => {
+    setModalStudentId(studentId)
+    setModalTab(initialTab)
+    const target = students.find((item) => item.id === studentId)
+    if (target) {
+      const info = getStudentAccessInfo(target, generatedKeysByStudent)
+      setLoginEmailDraft(info.loginEmail ?? '')
+      const photos = getStudentDefaultAppPhotos(target)
+      const firstFront = photos.find((p) => p.angle === 'Frente') ?? photos[0]
+      const latestFront =
+        [...photos].reverse().find((p) => p.angle === 'Frente' && p.id !== firstFront?.id) ??
+        photos[photos.length - 1] ??
+        photos[0]
+      setCompareBeforeId(firstFront?.id ?? '')
+      setCompareAfterId(latestFront?.id ?? '')
+    }
+  }
+
+  useEffect(() => {
+    setStudents((current) =>
+      current.map((student) => {
+        const access = getStudentAccessInfo(student, {})
+        return {
+          ...student,
+          hasLogin: access.hasLogin,
+          loginEmail: access.loginEmail,
+          accessKey: access.accessKey,
+          accessKeyGeneratedAt: access.accessKeyGeneratedAt,
+          workoutComments: getStudentWorkoutComments(student),
+          liveClinCheckin: getLiveClinAnswers(student),
+        }
+      }),
+    )
+  }, [])
+
+  const pendingCheckinsCount = students.filter(
+    (student) => student.checkinState === 'Pendente' || student.checkinState === 'Atrasado',
+  ).length
+  const onlyPendingCount = students.filter((student) => student.checkinState === 'Pendente').length
+  const delayedCheckinsCount = students.filter(
+    (student) => student.checkinState === 'Atrasado',
+  ).length
+  const completedCheckinsCount = students.filter(
+    (student) => student.checkinState === 'Realizado',
+  ).length
+  const expiringSoonCount = students.filter(
+    (student) => student.renewalState === 'Perto de vencer',
+  ).length
+  const recoveredCount = students.filter((student) => student.renewalState === 'Recuperado').length
+  const nonRenewedCount = students.filter(
+    (student) => student.renewalState === 'Não renovou',
+  ).length
+  const noLoginCount = students.filter(
+    (student) => !getStudentAccessInfo(student, generatedKeysByStudent).hasLogin,
+  ).length
+  const activePortfolioRevenue =
+    21210 +
+    students
+      .filter((student) => student.renewalState !== 'Não renovou')
+      .reduce((acc, item) => acc + item.monthlyRevenue, 0)
+
+  const filteredStudents = students.filter((student) => {
+    if (quickFilter === 'pendentes' && student.checkinState !== 'Pendente') {
+      return false
+    }
+    if (quickFilter === 'atrasados' && student.checkinState !== 'Atrasado') return false
+    if (quickFilter === 'realizados' && student.checkinState !== 'Realizado') return false
+    if (quickFilter === 'vencendo' && student.renewalState !== 'Perto de vencer') return false
+    if (quickFilter === 'recuperados' && student.renewalState !== 'Recuperado') return false
+    if (quickFilter === 'nao-renovaram' && student.renewalState !== 'Não renovou') return false
+    if (
+      quickFilter === 'sem-login' &&
+      getStudentAccessInfo(student, generatedKeysByStudent).hasLogin
+    ) {
+      return false
+    }
+    if (goalFilter !== 'Todos' && student.goal !== goalFilter) return false
+
+    if (!search.trim()) return true
+    const query = search.toLowerCase()
+    return (
+      student.name.toLowerCase().includes(query) ||
+      student.goal.toLowerCase().includes(query) ||
+      student.phase.toLowerCase().includes(query) ||
+      student.plan.toLowerCase().includes(query) ||
+      student.lastWorkoutTitle.toLowerCase().includes(query)
+    )
+  })
+
+  const modalStudent = modalStudentId
+    ? (students.find((student) => student.id === modalStudentId) ?? null)
+    : null
+  const modalLiveClin = modalStudent ? getLiveClinAnswers(modalStudent) : null
+  const modalWorkoutPlan = modalStudent ? getStudentWorkoutPlan(modalStudent) : null
+  const modalDietPlan = modalStudent ? getStudentDietPlan(modalStudent) : null
+  const modalAccessInfo = modalStudent
+    ? getStudentAccessInfo(modalStudent, generatedKeysByStudent)
+    : null
+  const modalWorkoutComments = modalStudent ? getStudentWorkoutComments(modalStudent) : []
+  const modalAppPhotos = modalStudent ? getStudentDefaultAppPhotos(modalStudent) : []
+  const filteredModalPhotos = modalAppPhotos.filter(
+    (photo) => photoAngleFilter === 'Todos' || photo.angle === photoAngleFilter,
+  )
+  const photoBefore =
+    modalAppPhotos.find((p) => p.id === compareBeforeId) ?? modalAppPhotos[0] ?? null
+  const photoAfter =
+    modalAppPhotos.find((p) => p.id === compareAfterId) ??
+    modalAppPhotos[modalAppPhotos.length - 1] ??
+    modalAppPhotos[0] ??
+    null
+
+  const handleNewPhotoFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setNewPhotoUrl(reader.result)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleAddStudentAppPhoto = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!modalStudent) return
+    const existingPhotos = getStudentDefaultAppPhotos(modalStudent)
+    const now = new Date()
+    const dateLabel = `${now.toLocaleDateString('pt-BR')} · ${now.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`
+    const createdPhoto: StudentAppPhoto = {
+      id: `${modalStudent.id}-photo-${Date.now()}`,
+      angle: newPhotoAngle,
+      dateLabel,
+      cycleLabel: newPhotoCycle.trim() || 'Enviada pelo Aplicativo',
+      weightKg: newPhotoWeight.trim() || modalLiveClin?.fastingWeight || '78,0 kg',
+      waistCm: newPhotoWaist.trim() || undefined,
+      imageUrl: newPhotoUrl,
+      studentNote:
+        newPhotoNote.trim() || 'Foto cadastrada pelo aluno diretamente no aplicativo Elevn.',
+    }
+    const updatedList = [...existingPhotos, createdPhoto]
+    setStudents((current) =>
+      current.map((item) =>
+        item.id === modalStudent.id ? { ...item, appPhotos: updatedList } : item,
+      ),
+    )
+    setCompareAfterId(createdPhoto.id)
+    setNewPhotoNote('')
+    setAddPhotoFormOpen(false)
+  }
+
+  const pairSameAngleForComparison = (angle: StudentPhotoAngle) => {
+    setPhotoAngleFilter(angle)
+    const matching = modalAppPhotos.filter((p) => p.angle === angle)
+    if (matching.length >= 2) {
+      setCompareBeforeId(matching[0].id)
+      setCompareAfterId(matching[matching.length - 1].id)
+    } else if (matching.length === 1) {
+      setCompareBeforeId(matching[0].id)
+      setCompareAfterId(matching[0].id)
+    }
+  }
+
+  const replyToStudentWorkoutComment = (
+    student: StudentRecord,
+    workoutCode: 'Treino A' | 'Treino B' | 'Treino C',
+    replyText: string,
+  ) => {
+    const cleanText = replyText.trim()
+    if (!cleanText) return
+    const existingComments = getStudentWorkoutComments(student)
+    const targetComment =
+      existingComments.find((entry) => entry.workoutCode === workoutCode) ?? existingComments[0]
+
+    setStudents((current) =>
+      current.map((item) => {
+        if (item.id !== student.id) return item
+        const existing = getStudentWorkoutComments(item)
+        const updated = existing.map((entry) =>
+          entry.workoutCode === workoutCode
+            ? {
+                ...entry,
+                adminReply: cleanText,
+                repliedAt: 'Respondido agora (enviado para Interno)',
+              }
+            : entry,
+        )
+        return {
+          ...item,
+          workoutComments: updated,
+        }
+      }),
+    )
+    onSendWorkoutReplyToInternal?.({
+      studentId: student.id,
+      studentName: student.name,
+      studentAvatar: student.avatar,
+      workoutCode,
+      workoutTitle: targetComment.workoutTitle,
+      studentComment: targetComment.comment,
+      adminReply: cleanText,
+    })
+    setWorkoutCommentDrafts((current) => ({ ...current, [workoutCode]: '' }))
+    setLastRepliedWorkout(`${student.id}-${workoutCode}`)
+  }
+
+  const generateAccessKeyForStudent = (student: StudentRecord) => {
+    const newKey = createFormattedAccessKey(student.name)
+    const currentAccess = getStudentAccessInfo(student, generatedKeysByStudent)
+    setGeneratedKeysByStudent((current) => ({
+      ...current,
+      [student.id]: {
+        key: newKey,
+        generatedAt: 'Gerada agora pelo admin',
+      },
+    }))
+    setStudents((current) =>
+      current.map((item) =>
+        item.id === student.id
+          ? {
+              ...item,
+              hasLogin: currentAccess.hasLogin,
+              loginEmail: currentAccess.loginEmail,
+              accessKey: newKey,
+              accessKeyGeneratedAt: 'Gerada agora pelo admin',
+            }
+          : item,
+      ),
+    )
+    setGeneratedKeyBanner({
+      studentId: student.id,
+      studentName: student.name,
+      key: newKey,
+    })
+  }
+
+  const saveStudentLoginEmail = (studentId: string, emailValue: string) => {
+    const cleanEmail = emailValue.trim().toLowerCase()
+    if (!cleanEmail) return
+    setStudents((current) =>
+      current.map((item) => {
+        if (item.id !== studentId) return item
+        const currentAccess = getStudentAccessInfo(item)
+        return {
+          ...item,
+          hasLogin: true,
+          loginEmail: cleanEmail,
+          accessKey: currentAccess.accessKey || createFormattedAccessKey(item.name),
+          accessKeyGeneratedAt: 'Vinculada ao login ativo',
+        }
+      }),
+    )
+  }
+
+  const completeCheckin = (studentId: string, customFeedback?: string) => {
+    setStudents((current) =>
+      current.map((student) =>
+        student.id === studentId
+          ? {
+              ...student,
+              checkinState: 'Realizado',
+              lastCheckin: 'Respondido agora',
+              checkinAdherence: Math.min(100, student.checkinAdherence + 4),
+              status: student.status === 'Em risco' ? 'Atenção' : 'Em dia',
+              coachFeedback:
+                customFeedback?.trim() ||
+                student.coachFeedback ||
+                'Check-in LiveClin revisado com ajustes de carga e dieta aplicados.',
+            }
+          : student,
+      ),
+    )
+    setFeedbackDraft('')
+  }
+
+  const recoverStudentPlan = (studentId: string) => {
+    setStudents((current) =>
+      current.map((student) =>
+        student.id === studentId
+          ? {
+              ...student,
+              renewalState: 'Recuperado',
+              nonRenewalReason: undefined,
+              status: 'Em dia',
+              daysToExpire: 90,
+              expirationDate: 'Renovado (+90d)',
+            }
+          : student,
+      ),
+    )
+    setNonRenewalOpenForId(null)
+    if (priorityNonRenewalId === studentId) {
+      setPriorityNonRenewalId(null)
+      setPriorityNonRenewalDraft('')
+    }
+  }
+
+  const markNonRenewed = (studentId: string, reasonText: string) => {
+    const cleanReason =
+      reasonText.trim() || 'Aluno optou por não renovar neste ciclo (registrado pelo admin).'
+    setStudents((current) =>
+      current.map((student) =>
+        student.id === studentId
+          ? {
+              ...student,
+              renewalState: 'Não renovou',
+              nonRenewalReason: cleanReason,
+              status: 'Atenção',
+            }
+          : student,
+      ),
+    )
+    setNonRenewalOpenForId(null)
+    setNonRenewalDraft('')
+    setPriorityNonRenewalId(null)
+    setPriorityNonRenewalDraft('')
+  }
+
+  const handleSearchExternalPlatforms = () => {
+    const query = newStudentNameQuery.trim().toLowerCase()
+    const existingNames = new Set(students.map((item) => item.name.toLowerCase()))
+    const available = externalPlatformCatalog.filter(
+      (candidate) => !existingNames.has(candidate.name.toLowerCase()),
+    )
+    const matched = query
+      ? available.filter(
+          (candidate) =>
+            candidate.name.toLowerCase().includes(query) ||
+            candidate.goal.toLowerCase().includes(query) ||
+            candidate.mfitWorkoutSummary.toLowerCase().includes(query) ||
+            candidate.webDietSummary.toLowerCase().includes(query),
+        )
+      : available
+
+    if (query && matched.length === 0) {
+      const cleanTypedName = newStudentNameQuery.trim()
+      const customMatch: ExternalPlatformStudent = {
+        id: `ext-custom-${Date.now()}`,
+        name: cleanTypedName,
+        avatar: '/people/renata-alves.jpg',
+        whatsapp: '5511998887766',
+        email: `${cleanTypedName.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
+        goal: 'Emagrecimento',
+        phase: 'Déficit',
+        plan: 'Trimestral',
+        mfitWorkoutSummary: 'MFIT: Treino ABC + Cardio encontrado no MFIT',
+        webDietSummary: 'WebDiet: Plano alimentar sincronizado do WebDiet',
+      }
+      setExternalSearchResults([customMatch])
+    } else {
+      setExternalSearchResults(matched)
+    }
+    setExternalSearchOpen(true)
+  }
+
+  const handleImportExternalStudent = (candidate: ExternalPlatformStudent) => {
+    const importedRecord: StudentRecord = {
+      id: `student-${Date.now()}`,
+      name: candidate.name,
+      avatar: candidate.avatar,
+      whatsapp: candidate.whatsapp,
+      goal: candidate.goal,
+      phase: candidate.phase,
+      plan: candidate.plan,
+      monthlyRevenue: candidate.plan === 'Anual' ? 480 : candidate.plan === 'Semestral' ? 450 : 420,
+      adherence: 90,
+      checkinAdherence: 95,
+      checkinState: 'Pendente',
+      lastCheckin: 'Importado agora',
+      checkinNote: `${candidate.webDietSummary} · ${candidate.mfitWorkoutSummary}.`,
+      lastWorkoutActivity: 'Sincronizado via MFIT',
+      lastWorkoutTitle: candidate.mfitWorkoutSummary.replace('MFIT: ', ''),
+      weeklyWorkoutsCompleted: '5/5 treinos na semana',
+      expirationDate: '15 fev',
+      daysToExpire: 90,
+      renewalState: 'Em dia',
+      status: 'Em dia',
+      weightChange: 'Importado',
+      hasLogin: true,
+      loginEmail: candidate.email,
+      accessKey: createFormattedAccessKey(candidate.name),
+      accessKeyGeneratedAt: 'Importada junto com o cadastro MFIT/WebDiet',
+      liveClinCheckin: {
+        submittedAt: 'Sincronizado na importação (LiveClin + WebDiet + MFIT)',
+        protocolName: `${candidate.goal} · ${candidate.phase}`,
+        fastingWeight: '71,5 kg (importado do WebDiet)',
+        offPlanMeals: 'Nenhuma refeição fora do plano',
+        hungerLevels: 'Saciedade bem ajustada no cardápio WebDiet',
+        waterIntake: '3,2 L / dia',
+        bowelFrequency: 'Sim, diariamente',
+        abdominalDiscomfort: 'Sem desconforto abdominal',
+        strengthWorkouts: '5 sessões prescritas no MFIT',
+        exercisePerformance: 'Boa adaptação às cargas iniciais no MFIT',
+        aerobicSessions: '3 sessões semanais prescritas',
+        sleepHours: '7h30 por noite',
+        dedicationLevel: '9,5 / 10 — Perfil sincronizado',
+        bodyPerception: 'Avaliação inicial importada do WebDiet e MFIT',
+        menuChangesRequest: 'Cardápio importado do WebDiet sem pendências.',
+        openFeedback: 'Dados de treino (MFIT) e dieta (WebDiet) vinculados com sucesso.',
+      },
+      appObservations: [
+        {
+          id: `obs-import-${Date.now()}`,
+          when: 'Agora (MFIT & WebDiet)',
+          category: 'Treino',
+          note: `Ficha importada com sucesso: ${candidate.mfitWorkoutSummary} e ${candidate.webDietSummary}.`,
+        },
+      ],
+    }
+    setStudents((current) => [importedRecord, ...current])
+    setExternalSearchOpen(false)
+    setExternalSearchResults([])
+    setNewStudentNameQuery('')
+    setNewStudentOpen(false)
+  }
+
+  const handleCreateStudent = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const name = (newStudentNameQuery || String(form.get('student-name') || '')).trim()
+    if (!name) return
+    const whatsapp =
+      String(form.get('student-whatsapp') || '').replace(/\D/g, '') || '5511999999999'
+    const goal = String(form.get('student-goal') || 'Emagrecimento') as StudentRecord['goal']
+    const phase = String(form.get('student-phase') || 'Déficit') as StudentRecord['phase']
+    const plan = String(form.get('student-plan') || 'Trimestral') as StudentRecord['plan']
+    const newRecord: StudentRecord = {
+      id: `student-${Date.now()}`,
+      name,
+      avatar: '/people/renata-alves.jpg',
+      whatsapp,
+      goal,
+      phase,
+      plan,
+      monthlyRevenue: 420,
+      adherence: 88,
+      checkinAdherence: 100,
+      checkinState: 'Pendente',
+      lastCheckin: 'Novo cadastro',
+      checkinNote: 'Avaliação inicial recebida. Aguardando montagem do primeiro protocolo.',
+      lastWorkoutActivity: 'Primeiro acesso hoje',
+      lastWorkoutTitle: 'Avaliação física & Treino A',
+      weeklyWorkoutsCompleted: '1/5 treinos na semana',
+      expirationDate: '05 fev',
+      daysToExpire: 90,
+      renewalState: 'Em dia',
+      status: 'Em dia',
+      weightChange: 'Inicial',
+      hasLogin: false,
+      liveClinCheckin: {
+        submittedAt: 'Hoje via LiveClin (Anamnese Inicial)',
+        protocolName: 'Protocolo Inicial Personalizado',
+        fastingWeight: '72,0 kg (peso inicial em jejum)',
+        offPlanMeals: 'Iniciando planejamento alimentar',
+        hungerLevels: 'Moderado no período noturno',
+        waterIntake: '2,5 L / dia',
+        bowelFrequency: 'Sim, diariamente',
+        abdominalDiscomfort: 'Não relatou desconforto abdominal',
+        strengthWorkouts: '4 sessões planejadas por semana',
+        exercisePerformance: 'Iniciando ciclo de adaptação',
+        aerobicSessions: '3 sessões planejadas por semana',
+        sleepHours: '7h30 por noite',
+        dedicationLevel: '10 / 10 — Motivado para iniciar',
+        bodyPerception: 'Marco zero registrado com fotos iniciais',
+        menuChangesRequest: 'Prefere refeições práticas no almoço.',
+        openFeedback: 'Anamnese completa preenchida no LiveClin para estruturação do plano.',
+      },
+      appObservations: [
+        {
+          id: `obs-${Date.now()}`,
+          when: 'Hoje (MFIT & WebDiet)',
+          category: 'Rotina',
+          note: 'Acesso liberado no MFIT e no WebDiet com horários configurados.',
+        },
+      ],
+    }
+    setStudents((current) => [newRecord, ...current])
+    setModalStudentId(newRecord.id)
+    setNewStudentOpen(false)
+    setNewStudentNameQuery('')
+    setExternalSearchOpen(false)
+    event.currentTarget.reset()
+  }
+
+  return (
+    <section className="students-workspace">
+      <header className="students-workspace-header">
+        <div>
+          <p>GESTÃO DE CARTEIRA · CHECK-IN LIVECLIN, TREINO MFIT & DIETA WEBDIET</p>
+          <h1>Alunos</h1>
+          <span>
+            Check-in semanal no LiveClin, atividade de treino no MFIT, dieta no WebDiet, receita e
+            controle de renovações.
+          </span>
+        </div>
+        <div className="students-header-actions">
+          <button
+            type="button"
+            className="students-primary-button"
+            onClick={() => setNewStudentOpen((current) => !current)}
+          >
+            + Cadastrar aluno
+          </button>
+        </div>
+      </header>
+
+      {newStudentOpen && (
+        <div className="student-create-wrapper">
+          <form className="student-create-form" onSubmit={handleCreateStudent}>
+            <label>
+              <span>Nome do aluno (buscar no WebDiet e MFIT)</span>
+              <div className="student-name-search-field">
+                <input
+                  name="student-name"
+                  value={newStudentNameQuery}
+                  onChange={(event) => setNewStudentNameQuery(event.target.value)}
+                  placeholder="Digite o nome ou clique na lupa..."
+                  required
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="student-search-lupa-btn"
+                  onClick={handleSearchExternalPlatforms}
+                  title="Buscar aluno no WebDiet e MFIT"
+                  aria-label="Buscar aluno no WebDiet e MFIT"
+                >
+                  <SearchLupIcon />
+                </button>
+              </div>
+            </label>
+            <label>
+              <span>WhatsApp (com DDD)</span>
+              <input name="student-whatsapp" placeholder="Ex.: 5511998887766" />
+            </label>
+            <label>
+              <span>Objetivo</span>
+              <select name="student-goal" defaultValue="Emagrecimento">
+                <option>Emagrecimento</option>
+                <option>Hipertrofia</option>
+                <option>Performance</option>
+              </select>
+            </label>
+            <label>
+              <span>Fase nutricional</span>
+              <select name="student-phase" defaultValue="Déficit">
+                <option>Déficit</option>
+                <option>Superávit</option>
+                <option>Manutenção</option>
+              </select>
+            </label>
+            <label>
+              <span>Plano</span>
+              <select name="student-plan" defaultValue="Trimestral">
+                <option>Mensal</option>
+                <option>Trimestral</option>
+                <option>Semestral</option>
+                <option>Anual</option>
+              </select>
+            </label>
+            <div className="student-create-actions">
+              <button type="submit">Salvar aluno</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewStudentOpen(false)
+                  setExternalSearchOpen(false)
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+
+          {externalSearchOpen && (
+            <div
+              className="external-platform-results"
+              role="region"
+              aria-label="Alunos encontrados no WebDiet e MFIT"
+            >
+              <header>
+                <div>
+                  <span>INTEGRAÇÃO DIRETA · WEBDIET & MFIT</span>
+                  <strong>
+                    {externalSearchResults.length}{' '}
+                    {externalSearchResults.length === 1
+                      ? 'aluno encontrado pronto para importar'
+                      : 'alunos encontrados prontos para importar'}
+                  </strong>
+                </div>
+                <button type="button" onClick={() => setExternalSearchOpen(false)}>
+                  Fechar busca
+                </button>
+              </header>
+              <div className="external-platform-list">
+                {externalSearchResults.map((candidate) => (
+                  <article key={candidate.id} className="external-platform-item">
+                    <img src={candidate.avatar} alt={`Foto de ${candidate.name}`} />
+                    <div>
+                      <strong>{candidate.name}</strong>
+                      <span>
+                        {candidate.goal} ({candidate.phase}) · Plano {candidate.plan} ·{' '}
+                        {candidate.email}
+                      </span>
+                      <small>
+                        {candidate.mfitWorkoutSummary} · {candidate.webDietSummary}
+                      </small>
+                    </div>
+                    <button
+                      type="button"
+                      className="import-student-btn"
+                      onClick={() => handleImportExternalStudent(candidate)}
+                    >
+                      IMPORTAR
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <section className="students-kpi-grid six-cards" aria-label="Indicadores de alunos">
+        <button type="button" className="student-kpi-card" onClick={() => setQuickFilter('todos')}>
+          <header>
+            <span>RECEITA DO MÊS</span>
+            <i className="tone-positive">+8% no mês</i>
+          </header>
+          <strong>R$ {activePortfolioRevenue.toLocaleString('pt-BR')}</strong>
+          <small>Ticket médio R$ 418 · {students.length + 120} alunos ativos</small>
+        </button>
+
+        <button
+          type="button"
+          className={`student-kpi-card ${quickFilter === 'pendentes' ? 'active' : ''}`}
+          onClick={() =>
+            setQuickFilter((current) => (current === 'pendentes' ? 'todos' : 'pendentes'))
+          }
+        >
+          <header>
+            <span>CHECK-INS LIVECLIN PENDENTES</span>
+            <i className="tone-warning">Prioridade</i>
+          </header>
+          <strong>{pendingCheckinsCount + 10}</strong>
+          <small>{pendingCheckinsCount} na fila imediata para responder hoje</small>
+        </button>
+
+        <button
+          type="button"
+          className={`student-kpi-card ${quickFilter === 'realizados' ? 'active' : ''}`}
+          onClick={() =>
+            setQuickFilter((current) => (current === 'realizados' ? 'todos' : 'realizados'))
+          }
+        >
+          <header>
+            <span>CHECK-INS REALIZADOS</span>
+            <i className="tone-positive">No prazo</i>
+          </header>
+          <strong>{completedCheckinsCount + 110}</strong>
+          <small>LiveClin + registros no MFIT e WebDiet</small>
+        </button>
+
+        <button
+          type="button"
+          className={`student-kpi-card ${quickFilter === 'vencendo' ? 'active' : ''}`}
+          onClick={() =>
+            setQuickFilter((current) => (current === 'vencendo' ? 'todos' : 'vencendo'))
+          }
+        >
+          <header>
+            <span>PERTO DE VENCER</span>
+            <i className="tone-danger">7 dias</i>
+          </header>
+          <strong>{String(expiringSoonCount + 6).padStart(2, '0')}</strong>
+          <small>{expiringSoonCount} planos críticos nos próximos 4 dias</small>
+        </button>
+
+        <button
+          type="button"
+          className={`student-kpi-card ${quickFilter === 'recuperados' ? 'active' : ''}`}
+          onClick={() =>
+            setQuickFilter((current) => (current === 'recuperados' ? 'todos' : 'recuperados'))
+          }
+        >
+          <header>
+            <span>PLANOS RECUPERADOS</span>
+            <i className="tone-positive">83% retenção</i>
+          </header>
+          <strong>{recoveredCount + 13} / 18</strong>
+          <small>renovados antes ou logo após o vencimento</small>
+        </button>
+
+        <button
+          type="button"
+          className={`student-kpi-card ${quickFilter === 'nao-renovaram' ? 'active' : ''}`}
+          onClick={() =>
+            setQuickFilter((current) => (current === 'nao-renovaram' ? 'todos' : 'nao-renovaram'))
+          }
+        >
+          <header>
+            <span>NÃO RENOVARAM</span>
+            <i className="tone-danger">Com motivo</i>
+          </header>
+          <strong>{String(nonRenewedCount + 1).padStart(2, '0')}</strong>
+          <small>Clique para ver os motivos registrados</small>
+        </button>
+      </section>
+
+      <section className="students-priority-cards" aria-label="Cards de resumo operacional">
+        <article className="priority-panel">
+          <header>
+            <div>
+              <span>LIVECLIN + MFIT & WEBDIET</span>
+              <h2>Check-ins pendentes de avaliação</h2>
+            </div>
+            <strong>{pendingCheckinsCount}</strong>
+          </header>
+          <div className="priority-list">
+            {students
+              .filter(
+                (student) =>
+                  student.checkinState === 'Pendente' || student.checkinState === 'Atrasado',
+              )
+              .map((student) => (
+                <div key={student.id} className="priority-item">
+                  <img src={student.avatar} alt={`Foto de ${student.name}`} />
+                  <div>
+                    <strong>{student.name}</strong>
+                    <span>
+                      {student.lastCheckin} · <b>{student.lastWorkoutActivity}</b>
+                    </span>
+                    <p>{student.checkinNote}</p>
+                  </div>
+                  <div className="priority-item-actions">
+                    <button type="button" onClick={() => openStudentModal(student.id)}>
+                      Ver ficha
+                    </button>
+                    <a
+                      href={buildWhatsAppUrl(student.whatsapp, student.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="whatsapp-action-link"
+                      title={`Conversar com ${student.name} no WhatsApp`}
+                      aria-label={`Conversar com ${student.name} no WhatsApp`}
+                    >
+                      <WhatsAppIcon />
+                    </a>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </article>
+
+        <article className="priority-panel">
+          <header>
+            <div>
+              <span>ATIVIDADE DE TREINO NO MFIT</span>
+              <h2>Últimos treinos e check-ins concluídos</h2>
+            </div>
+            <strong>{completedCheckinsCount}</strong>
+          </header>
+          <div className="priority-list">
+            {students
+              .filter((student) => student.checkinState === 'Realizado')
+              .map((student) => {
+                const workoutComments = getStudentWorkoutComments(student)
+                return (
+                  <div key={student.id} className="priority-item">
+                    <img src={student.avatar} alt={`Foto de ${student.name}`} />
+                    <div>
+                      <strong>{student.name}</strong>
+                      <span>
+                        <b>{student.lastWorkoutActivity}</b> · {student.weeklyWorkoutsCompleted}
+                      </span>
+                      <div className="priority-workout-comments">
+                        {workoutComments.map((wc) => (
+                          <p key={wc.workoutCode}>
+                            <b>{wc.workoutCode}:</b> {wc.comment}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="priority-item-actions">
+                      <button
+                        type="button"
+                        className="subtle"
+                        onClick={() => openStudentModal(student.id)}
+                      >
+                        Ver ficha
+                      </button>
+                      <a
+                        href={buildWhatsAppUrl(student.whatsapp, student.name)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="whatsapp-action-link"
+                        title={`Conversar com ${student.name} no WhatsApp`}
+                        aria-label={`Conversar com ${student.name} no WhatsApp`}
+                      >
+                        <WhatsAppIcon />
+                      </a>
+                    </div>
+                  </div>
+                )
+              })}
+          </div>
+        </article>
+
+        <article className="priority-panel">
+          <header>
+            <div>
+              <span>RETENÇÃO E RENOVAÇÕES</span>
+              <h2>Vencimentos, recuperados e motivos</h2>
+            </div>
+            <strong>
+              {recoveredCount}/{expiringSoonCount + recoveredCount}
+            </strong>
+          </header>
+          <div className="priority-list">
+            {students
+              .filter(
+                (student) =>
+                  student.renewalState === 'Perto de vencer' ||
+                  student.renewalState === 'Recuperado' ||
+                  student.renewalState === 'Não renovou',
+              )
+              .map((student) => (
+                <div key={student.id} className="priority-item">
+                  <img src={student.avatar} alt={`Foto de ${student.name}`} />
+                  <div>
+                    <strong>{student.name}</strong>
+                    <span>
+                      Plano {student.plan} (R$ {student.monthlyRevenue}/mês) · Venc.{' '}
+                      {student.expirationDate}
+                    </span>
+                    <p>
+                      {student.renewalState === 'Recuperado'
+                        ? 'Renovação confirmada e próximo ciclo liberado.'
+                        : student.renewalState === 'Não renovou'
+                          ? `Motivo: ${student.nonRenewalReason || 'Registrado pela administração.'}`
+                          : `Vence em ${student.daysToExpire} ${student.daysToExpire === 1 ? 'dia' : 'dias'} — acionar aluno.`}
+                    </p>
+                    {priorityNonRenewalId === student.id && (
+                      <div className="priority-nonrenewal-editor">
+                        <input
+                          type="text"
+                          value={priorityNonRenewalDraft}
+                          onChange={(event) => setPriorityNonRenewalDraft(event.target.value)}
+                          placeholder="Informe o motivo da não renovação (ex.: financeiro, pausa)..."
+                          aria-label={`Motivo da não renovação de ${student.name}`}
+                          autoFocus
+                        />
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => markNonRenewed(student.id, priorityNonRenewalDraft)}
+                          >
+                            Confirmar não renovou
+                          </button>
+                          <button
+                            type="button"
+                            className="subtle"
+                            onClick={() => {
+                              setPriorityNonRenewalId(null)
+                              setPriorityNonRenewalDraft('')
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="priority-item-actions">
+                    {student.renewalState === 'Recuperado' ? (
+                      <>
+                        <em className="badge-recovered">Recuperado</em>
+                        <button
+                          type="button"
+                          className="danger-btn"
+                          onClick={() => {
+                            setPriorityNonRenewalId(
+                              priorityNonRenewalId === student.id ? null : student.id,
+                            )
+                            setPriorityNonRenewalDraft(student.nonRenewalReason ?? '')
+                          }}
+                        >
+                          Não renovou
+                        </button>
+                      </>
+                    ) : student.renewalState === 'Não renovou' ? (
+                      <>
+                        <em className="badge-lost">Não renovou</em>
+                        <button
+                          type="button"
+                          className="subtle"
+                          onClick={() => recoverStudentPlan(student.id)}
+                        >
+                          Renovar
+                        </button>
+                        <button
+                          type="button"
+                          className="danger-btn"
+                          onClick={() => {
+                            setPriorityNonRenewalId(
+                              priorityNonRenewalId === student.id ? null : student.id,
+                            )
+                            setPriorityNonRenewalDraft(student.nonRenewalReason ?? '')
+                          }}
+                        >
+                          Motivo
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" onClick={() => recoverStudentPlan(student.id)}>
+                          Renovar
+                        </button>
+                        <button
+                          type="button"
+                          className="danger-btn"
+                          onClick={() => {
+                            setPriorityNonRenewalId(
+                              priorityNonRenewalId === student.id ? null : student.id,
+                            )
+                            setPriorityNonRenewalDraft(student.nonRenewalReason ?? '')
+                          }}
+                        >
+                          Não renovou
+                        </button>
+                      </>
+                    )}
+                    <a
+                      href={buildWhatsAppUrl(student.whatsapp, student.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="whatsapp-action-link"
+                      title={`Conversar com ${student.name} no WhatsApp`}
+                      aria-label={`Conversar com ${student.name} no WhatsApp`}
+                    >
+                      <WhatsAppIcon />
+                    </a>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="students-directory-full">
+        <div className="students-directory-card">
+          {generatedKeyBanner && (
+            <div className="generated-key-alert" role="status">
+              <div>
+                <span>CHAVE DE ACESSO GERADA COM SUCESSO</span>
+                <strong>
+                  Aluno: {generatedKeyBanner.studentName} · Chave:{' '}
+                  <code>{generatedKeyBanner.key}</code>
+                </strong>
+                <small>
+                  Envie esta chave ao aluno para que ele crie ou redefina seu login com e-mail.
+                </small>
+              </div>
+              <div className="generated-key-alert-actions">
+                <button
+                  type="button"
+                  onClick={() => openStudentModal(generatedKeyBanner.studentId)}
+                >
+                  Abrir ficha do aluno
+                </button>
+                <button
+                  type="button"
+                  className="subtle"
+                  onClick={() => setGeneratedKeyBanner(null)}
+                >
+                  Fechar aviso
+                </button>
+              </div>
+            </div>
+          )}
+          <header className="students-directory-toolbar">
+            <div>
+              <span>CARTEIRA COMPLETA · CLIQUE EM UM ALUNO PARA VER A FICHA</span>
+              <h2>
+                Acompanhamento de Treino (MFIT), Dieta (WebDiet), Check-in (LiveClin) e Receita
+              </h2>
+            </div>
+            <div className="students-directory-filters">
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar aluno, treino, plano ou fase..."
+                aria-label="Buscar aluno"
+              />
+              <div className="goal-pill-group">
+                {['Todos', 'Emagrecimento', 'Hipertrofia', 'Performance'].map((goal) => (
+                  <button
+                    key={goal}
+                    type="button"
+                    className={goalFilter === goal ? 'active' : ''}
+                    onClick={() => setGoalFilter(goal)}
+                  >
+                    {goal}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          <div
+            className="students-status-filter-bar"
+            role="toolbar"
+            aria-label="Filtrar alunos por status"
+          >
+            <span>Filtrar por status:</span>
+            <div className="status-filter-pills">
+              <button
+                type="button"
+                className={quickFilter === 'todos' ? 'active' : ''}
+                onClick={() => setQuickFilter('todos')}
+              >
+                Todos ({students.length})
+              </button>
+              <button
+                type="button"
+                className={quickFilter === 'pendentes' ? 'active' : ''}
+                onClick={() =>
+                  setQuickFilter((current) => (current === 'pendentes' ? 'todos' : 'pendentes'))
+                }
+              >
+                LiveClin Pendente ({onlyPendingCount})
+              </button>
+              <button
+                type="button"
+                className={quickFilter === 'atrasados' ? 'active' : ''}
+                onClick={() =>
+                  setQuickFilter((current) => (current === 'atrasados' ? 'todos' : 'atrasados'))
+                }
+              >
+                Check-in Atrasado ({delayedCheckinsCount})
+              </button>
+              <button
+                type="button"
+                className={quickFilter === 'realizados' ? 'active' : ''}
+                onClick={() =>
+                  setQuickFilter((current) => (current === 'realizados' ? 'todos' : 'realizados'))
+                }
+              >
+                Check-in Realizado ({completedCheckinsCount})
+              </button>
+              <button
+                type="button"
+                className={quickFilter === 'vencendo' ? 'active' : ''}
+                onClick={() =>
+                  setQuickFilter((current) => (current === 'vencendo' ? 'todos' : 'vencendo'))
+                }
+              >
+                Perto do vencimento ({expiringSoonCount})
+              </button>
+              <button
+                type="button"
+                className={quickFilter === 'recuperados' ? 'active' : ''}
+                onClick={() =>
+                  setQuickFilter((current) => (current === 'recuperados' ? 'todos' : 'recuperados'))
+                }
+              >
+                Recuperados ({recoveredCount})
+              </button>
+              <button
+                type="button"
+                className={quickFilter === 'nao-renovaram' ? 'active' : ''}
+                onClick={() =>
+                  setQuickFilter((current) =>
+                    current === 'nao-renovaram' ? 'todos' : 'nao-renovaram',
+                  )
+                }
+              >
+                Não renovaram ({nonRenewedCount})
+              </button>
+              <button
+                type="button"
+                className={quickFilter === 'sem-login' ? 'active' : ''}
+                onClick={() =>
+                  setQuickFilter((current) => (current === 'sem-login' ? 'todos' : 'sem-login'))
+                }
+              >
+                Sem login ({noLoginCount})
+              </button>
+            </div>
+          </div>
+
+          <div className="students-roster-table">
+            <div className="students-roster-head" aria-hidden="true">
+              <span>Aluno / Receita</span>
+              <span>Objetivo / Fase</span>
+              <span>Última atividade (Treino no MFIT)</span>
+              <span>Check-in LiveClin & Obs.</span>
+              <span>Vencimento / Status</span>
+              <span>Ações rápidas</span>
+            </div>
+
+            {filteredStudents.map((student) => {
+              const accessInfo = getStudentAccessInfo(student, generatedKeysByStudent)
+              return (
+                <article
+                  key={student.id}
+                  className={`students-roster-row ${modalStudent?.id === student.id ? 'selected' : ''}`}
+                  onClick={() => openStudentModal(student.id)}
+                >
+                  <div className="roster-student-cell">
+                    <img src={student.avatar} alt={`Foto de ${student.name}`} />
+                    <div>
+                      <strong>{student.name}</strong>
+                      <small>
+                        Plano {student.plan} · <b>R$ {student.monthlyRevenue}/mês</b>
+                      </small>
+                      <small
+                        className={`roster-login-status ${accessInfo.hasLogin ? 'has-login' : 'no-login'}`}
+                      >
+                        {accessInfo.hasLogin
+                          ? `Login: ${accessInfo.loginEmail}`
+                          : accessInfo.accessKey
+                            ? `Sem login · Chave: ${accessInfo.accessKey}`
+                            : 'Sem login cadastrado'}
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="roster-goal-cell">
+                    <strong>{student.goal}</strong>
+                    <small>{student.phase}</small>
+                  </div>
+
+                  <div className="roster-workout-cell">
+                    <span className="workout-live-badge">{student.lastWorkoutActivity}</span>
+                    <strong>{student.lastWorkoutTitle}</strong>
+                    <small className="roster-subtext">
+                      {student.weeklyWorkoutsCompleted} (via MFIT)
+                    </small>
+                  </div>
+
+                  <div>
+                    <span className={`checkin-pill state-${student.checkinState.toLowerCase()}`}>
+                      LiveClin: {student.checkinState}
+                    </span>
+                    <small className="roster-subtext">
+                      {student.lastCheckin} · {student.appObservations.length} obs. MFIT/WebDiet
+                    </small>
+                  </div>
+
+                  <div>
+                    <strong className="roster-exp-date">{student.expirationDate}</strong>
+                    <small
+                      className={`renewal-tag ${
+                        student.renewalState === 'Perto de vencer'
+                          ? 'expiring'
+                          : student.renewalState === 'Recuperado'
+                            ? 'recovered'
+                            : student.renewalState === 'Não renovou'
+                              ? 'lost'
+                              : ''
+                      }`}
+                    >
+                      {student.renewalState}
+                    </small>
+                    {student.renewalState === 'Não renovou' && student.nonRenewalReason && (
+                      <small className="roster-lost-reason" title={student.nonRenewalReason}>
+                        Motivo: {student.nonRenewalReason}
+                      </small>
+                    )}
+                  </div>
+
+                  <div className="roster-actions-cell" onClick={(event) => event.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="open-modal-btn"
+                      onClick={() => openStudentModal(student.id)}
+                    >
+                      Ver ficha
+                    </button>
+                    <button
+                      type="button"
+                      className="compare-photos-quick-btn"
+                      onClick={() => openStudentModal(student.id, 'fotos')}
+                      title={`Ver e comparar fotos enviadas por ${student.name} no app`}
+                    >
+                      Fotos & Comparar ({getStudentDefaultAppPhotos(student).length})
+                    </button>
+                    <button
+                      type="button"
+                      className="key-gen-btn"
+                      onClick={() => generateAccessKeyForStudent(student)}
+                      title={`Gerar chave de acesso para ${student.name}`}
+                    >
+                      Gerar chave de acesso
+                    </button>
+                    <a
+                      href={buildWhatsAppUrl(student.whatsapp, student.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="whatsapp-btn"
+                      title={`Chamar ${student.name} no WhatsApp`}
+                      aria-label={`Chamar ${student.name} no WhatsApp`}
+                    >
+                      <WhatsAppIcon />
+                    </a>
+                    {student.checkinState !== 'Realizado' && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => completeCheckin(student.id)}
+                      >
+                        Concluir
+                      </button>
+                    )}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {modalStudent && modalLiveClin && modalWorkoutPlan && modalDietPlan && modalAccessInfo && (
+        <div
+          className="student-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Ficha completa de acompanhamento de ${modalStudent.name}`}
+          onClick={() => setModalStudentId(null)}
+        >
+          <div className="student-modal-dialog" onClick={(event) => event.stopPropagation()}>
+            <header className="student-modal-header">
+              <div className="student-modal-identity">
+                <img src={modalStudent.avatar} alt={`Foto de ${modalStudent.name}`} />
+                <div>
+                  <span>FICHA COMPLETA DE ACOMPANHAMENTO · LIVECLIN + MFIT + WEBDIET</span>
+                  <h2>{modalStudent.name}</h2>
+                  <p>
+                    {modalStudent.goal} ({modalStudent.phase}) · Plano {modalStudent.plan} ·{' '}
+                    <strong>R$ {modalStudent.monthlyRevenue}/mês</strong>
+                  </p>
+                </div>
+              </div>
+              <div className="student-modal-top-actions">
+                <button
+                  type="button"
+                  className="modal-generate-key-btn"
+                  onClick={() => generateAccessKeyForStudent(modalStudent)}
+                >
+                  Gerar chave de acesso
+                </button>
+                <a
+                  href={buildWhatsAppUrl(modalStudent.whatsapp, modalStudent.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="modal-whatsapp-cta"
+                  title={`Conversar com ${modalStudent.name} no WhatsApp`}
+                  aria-label={`Conversar com ${modalStudent.name} no WhatsApp`}
+                >
+                  <WhatsAppIcon />
+                </a>
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  onClick={() => setModalStudentId(null)}
+                  aria-label="Fechar ficha de acompanhamento"
+                >
+                  ✕ Fechar
+                </button>
+              </div>
+            </header>
+
+            <section
+              className={`student-access-panel ${modalAccessInfo.hasLogin ? 'has-login' : 'no-login'}`}
+              aria-label="Credenciais e status de login do aluno"
+            >
+              <div className="student-access-status">
+                <span>STATUS DE ACESSO & LOGIN DO ALUNO</span>
+                <div>
+                  <em className={modalAccessInfo.hasLogin ? 'login-active' : 'login-missing'}>
+                    {modalAccessInfo.hasLogin ? 'Possui login ativo' : 'Não possui login'}
+                  </em>
+                  <strong>
+                    {modalAccessInfo.hasLogin
+                      ? `E-mail cadastrado: ${modalAccessInfo.loginEmail}`
+                      : 'Aluno ainda não possui login com e-mail cadastrado'}
+                  </strong>
+                </div>
+                <small>
+                  {modalAccessInfo.accessKey
+                    ? `Chave de acesso atual: ${modalAccessInfo.accessKey} (${modalAccessInfo.accessKeyGeneratedAt || 'Ativa'})`
+                    : 'Nenhuma chave de acesso gerada para este aluno ainda.'}
+                </small>
+              </div>
+
+              <div className="student-access-actions">
+                <div className="student-access-key-box">
+                  <span>CHAVE DE ACESSO</span>
+                  <code>{modalAccessInfo.accessKey ?? 'Não gerada'}</code>
+                </div>
+                <button
+                  type="button"
+                  className="generate-key-primary"
+                  onClick={() => generateAccessKeyForStudent(modalStudent)}
+                >
+                  Gerar chave de acesso
+                </button>
+                {!modalAccessInfo.hasLogin && (
+                  <form
+                    className="student-link-email-form"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      saveStudentLoginEmail(modalStudent.id, loginEmailDraft)
+                    }}
+                  >
+                    <input
+                      type="email"
+                      value={loginEmailDraft}
+                      onChange={(event) => setLoginEmailDraft(event.target.value)}
+                      placeholder="Cadastrar e-mail de login..."
+                      aria-label="E-mail de login do aluno"
+                    />
+                    <button type="submit">Ativar login</button>
+                  </form>
+                )}
+              </div>
+            </section>
+
+            <section className="student-modal-highlights">
+              <div>
+                <span>ÚLTIMA ATIVIDADE DE TREINO (MFIT)</span>
+                <strong>{modalStudent.lastWorkoutActivity}</strong>
+                <small>
+                  {modalStudent.lastWorkoutTitle} ({modalStudent.weeklyWorkoutsCompleted})
+                </small>
+              </div>
+              <div>
+                <span>CHECK-IN SEMANAL (LIVECLIN)</span>
+                <strong>{modalStudent.checkinState}</strong>
+                <small>{modalLiveClin.submittedAt}</small>
+              </div>
+              <div>
+                <span>PESO EM JEJUM (LIVECLIN)</span>
+                <strong>{modalLiveClin.fastingWeight}</strong>
+                <small>Dedicação: {modalLiveClin.dedicationLevel}</small>
+              </div>
+              <div>
+                <span>STATUS DE RENOVAÇÃO</span>
+                <strong>{modalStudent.renewalState}</strong>
+                <small>Vencimento: {modalStudent.expirationDate}</small>
+              </div>
+            </section>
+
+            <nav className="modal-section-tabs" aria-label="Navegação da ficha do aluno">
+              <button
+                type="button"
+                className={modalTab === 'checkin' ? 'active' : ''}
+                onClick={() => setModalTab('checkin')}
+              >
+                <span>01</span>
+                <div>
+                  <strong>Check-in LiveClin & Conduta</strong>
+                  <small>14 respostas da semana + registros MFIT e WebDiet</small>
+                </div>
+              </button>
+              <button
+                type="button"
+                className={modalTab === 'treino' ? 'active' : ''}
+                onClick={() => setModalTab('treino')}
+              >
+                <span>02</span>
+                <div>
+                  <strong>Treino do Aluno (MFIT)</strong>
+                  <small>{modalWorkoutPlan.splitName}</small>
+                </div>
+              </button>
+              <button
+                type="button"
+                className={modalTab === 'dieta' ? 'active' : ''}
+                onClick={() => setModalTab('dieta')}
+              >
+                <span>03</span>
+                <div>
+                  <strong>Dieta do Aluno (WebDiet)</strong>
+                  <small>{modalDietPlan.dailyCalories}</small>
+                </div>
+              </button>
+              <button
+                type="button"
+                className={modalTab === 'fotos' ? 'active' : ''}
+                onClick={() => setModalTab('fotos')}
+              >
+                <span>04</span>
+                <div>
+                  <strong>Fotos do App & Comparador</strong>
+                  <small>{modalAppPhotos.length} fotos enviadas · Antes × Depois</small>
+                </div>
+              </button>
+            </nav>
+
+            {modalTab === 'fotos' && (
+              <section
+                className="student-photos-comparator-view"
+                aria-label={`Fotos enviadas pelo aplicativo e comparador de ${modalStudent.name}`}
+              >
+                <header className="photos-view-banner">
+                  <div>
+                    <span>GALERIA DE EVOLUÇÃO SINCRONIZADA COM O APLICATIVO DO ALUNO</span>
+                    <h3>Fotos Enviadas no App & Comparador Antes × Depois</h3>
+                    <p>
+                      Compare lado a lado ou com controle deslizante qualquer foto enviada por{' '}
+                      <strong>{modalStudent.name}</strong> no aplicativo para avaliar a evolução de
+                      shape, linha de cintura e densidade muscular.
+                    </p>
+                  </div>
+
+                  <div className="photos-banner-actions">
+                    <div className="compare-mode-switch">
+                      <button
+                        type="button"
+                        className={compareMode === 'side-by-side' ? 'active' : ''}
+                        onClick={() => setCompareMode('side-by-side')}
+                      >
+                        Lado a Lado
+                      </button>
+                      <button
+                        type="button"
+                        className={compareMode === 'slider' ? 'active' : ''}
+                        onClick={() => setCompareMode('slider')}
+                      >
+                        Slider (Sobreposição)
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="add-app-photo-btn"
+                      onClick={() => setAddPhotoFormOpen((open) => !open)}
+                    >
+                      + Cadastrar / Simular Foto do App
+                    </button>
+                  </div>
+                </header>
+
+                {addPhotoFormOpen && (
+                  <form className="add-app-photo-form" onSubmit={handleAddStudentAppPhoto}>
+                    <div className="add-app-photo-head">
+                      <strong>Adicionar nova foto de evolução do aluno (App Elevn)</strong>
+                      <button type="button" onClick={() => setAddPhotoFormOpen(false)}>
+                        Fechar
+                      </button>
+                    </div>
+
+                    <div className="add-app-photo-grid">
+                      <label>
+                        <span>Pose / Ângulo</span>
+                        <select
+                          value={newPhotoAngle}
+                          onChange={(e) => setNewPhotoAngle(e.target.value as StudentPhotoAngle)}
+                        >
+                          <option value="Frente">Frente</option>
+                          <option value="Costas">Costas</option>
+                          <option value="Perfil Direito">Perfil Direito</option>
+                          <option value="Pós-Treino">Pós-Treino</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>Etapa / Ciclo</span>
+                        <input
+                          type="text"
+                          value={newPhotoCycle}
+                          onChange={(e) => setNewPhotoCycle(e.target.value)}
+                          placeholder="Ex.: Check-in Semana 14"
+                        />
+                      </label>
+                      <label>
+                        <span>Peso no dia da foto</span>
+                        <input
+                          type="text"
+                          value={newPhotoWeight}
+                          onChange={(e) => setNewPhotoWeight(e.target.value)}
+                          placeholder="Ex.: 77,2 kg"
+                        />
+                      </label>
+                      <label>
+                        <span>Cintura (opcional)</span>
+                        <input
+                          type="text"
+                          value={newPhotoWaist}
+                          onChange={(e) => setNewPhotoWaist(e.target.value)}
+                          placeholder="Ex.: 77 cm"
+                        />
+                      </label>
+                      <label className="upload-file-label">
+                        <span>Subir foto do dispositivo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleNewPhotoFileUpload}
+                        />
+                      </label>
+                    </div>
+
+                    <label className="add-app-photo-note">
+                      <span>Observação enviada pelo aluno junto com a foto</span>
+                      <input
+                        type="text"
+                        value={newPhotoNote}
+                        onChange={(e) => setNewPhotoNote(e.target.value)}
+                        placeholder="Ex.: Foto tirada em jejum pela manhã após concluir a semana 14..."
+                      />
+                    </label>
+
+                    <div className="add-app-photo-foot">
+                      <button type="submit">Salvar foto na galeria do aluno e comparar</button>
+                    </div>
+                  </form>
+                )}
+
+                {/* BARRA DE SELEÇÃO RÁPIDA DE ÂNGULO E SELETORES DE FOTO A (ANTES) E FOTO B (DEPOIS) */}
+                <div className="comparator-controls-bar">
+                  <div className="comparator-angle-shortcuts">
+                    <span>Comparar pose rápido:</span>
+                    {(['Frente', 'Costas', 'Perfil Direito', 'Pós-Treino'] as const).map(
+                      (angle) => (
+                        <button
+                          key={angle}
+                          type="button"
+                          onClick={() => pairSameAngleForComparison(angle)}
+                        >
+                          Comparar {angle}
+                        </button>
+                      ),
+                    )}
+                  </div>
+
+                  <div className="comparator-select-pair">
+                    <label>
+                      <span>FOTO A (ANTES / REFERÊNCIA)</span>
+                      <select
+                        value={photoBefore?.id ?? ''}
+                        onChange={(e) => setCompareBeforeId(e.target.value)}
+                      >
+                        {modalAppPhotos.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            [{p.angle}] {p.cycleLabel} — {p.dateLabel} ({p.weightKg})
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      className="swap-photos-btn"
+                      title="Inverter Foto A e Foto B"
+                      onClick={() => {
+                        if (!photoBefore || !photoAfter) return
+                        const prevBefore = photoBefore.id
+                        setCompareBeforeId(photoAfter.id)
+                        setCompareAfterId(prevBefore)
+                      }}
+                    >
+                      ⇄ Inverter
+                    </button>
+
+                    <label>
+                      <span>FOTO B (DEPOIS / ATUAL)</span>
+                      <select
+                        value={photoAfter?.id ?? ''}
+                        onChange={(e) => setCompareAfterId(e.target.value)}
+                      >
+                        {modalAppPhotos.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            [{p.angle}] {p.cycleLabel} — {p.dateLabel} ({p.weightKg})
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+
+                {/* PALCO DO COMPARADOR DE FOTOS (LADO A LADO OU SLIDER) */}
+                {photoBefore && photoAfter && (
+                  <div className="comparator-stage-card">
+                    {compareMode === 'side-by-side' ? (
+                      <div className="comparator-side-by-side-grid">
+                        <article className="comparator-photo-pane before">
+                          <div className="pane-top-badges">
+                            <span className="pane-tag before-tag">FOTO A · ANTES</span>
+                            <span className="pane-angle">{photoBefore.angle}</span>
+                            <span className="pane-weight">{photoBefore.weightKg}</span>
+                            {photoBefore.waistCm && (
+                              <span className="pane-waist">Cintura: {photoBefore.waistCm}</span>
+                            )}
+                          </div>
+                          <div className="pane-image-frame">
+                            <img
+                              src={photoBefore.imageUrl}
+                              alt={`Foto Antes (${photoBefore.angle}) de ${modalStudent.name}`}
+                            />
+                          </div>
+                          <div className="pane-footer-meta">
+                            <strong>{photoBefore.cycleLabel}</strong>
+                            <time>Enviada no App em {photoBefore.dateLabel}</time>
+                            <p>“{photoBefore.studentNote}”</p>
+                          </div>
+                        </article>
+
+                        <article className="comparator-photo-pane after">
+                          <div className="pane-top-badges">
+                            <span className="pane-tag after-tag">FOTO B · DEPOIS (ATUAL)</span>
+                            <span className="pane-angle">{photoAfter.angle}</span>
+                            <span className="pane-weight">{photoAfter.weightKg}</span>
+                            {photoAfter.waistCm && (
+                              <span className="pane-waist">Cintura: {photoAfter.waistCm}</span>
+                            )}
+                          </div>
+                          <div className="pane-image-frame">
+                            <img
+                              src={photoAfter.imageUrl}
+                              alt={`Foto Depois (${photoAfter.angle}) de ${modalStudent.name}`}
+                            />
+                          </div>
+                          <div className="pane-footer-meta">
+                            <strong>{photoAfter.cycleLabel}</strong>
+                            <time>Enviada no App em {photoAfter.dateLabel}</time>
+                            <p>“{photoAfter.studentNote}”</p>
+                          </div>
+                        </article>
+                      </div>
+                    ) : (
+                      <div className="comparator-slider-stage">
+                        <div className="slider-instructions-bar">
+                          <span>
+                            Clique e arraste o botão <strong>↔</strong> diretamente sobre a foto
+                            para revelar o <strong>Antes</strong> e o <strong>Depois</strong>:
+                          </span>
+                          <div className="slider-quick-positions">
+                            {[
+                              { label: 'Só Depois (0%)', val: 2 },
+                              { label: '25%', val: 25 },
+                              { label: 'Meio a Meio (50%)', val: 50 },
+                              { label: '75%', val: 75 },
+                              { label: 'Só Antes (100%)', val: 98 },
+                            ].map((preset) => (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                className={
+                                  Math.abs(sliderPosition - preset.val) <= 3 ? 'active' : ''
+                                }
+                                onClick={() => setSliderPosition(preset.val)}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div
+                          ref={sliderViewportRef}
+                          className={`slider-viewport ${isDraggingSlider ? 'is-dragging' : ''}`}
+                          onPointerDown={handleSliderPointerDown}
+                          onPointerMove={handleSliderPointerMove}
+                          onPointerUp={handleSliderPointerUp}
+                          onPointerCancel={handleSliderPointerUp}
+                          role="slider"
+                          aria-label="Comparador deslizante Antes e Depois"
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={sliderPosition}
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'ArrowLeft') {
+                              e.preventDefault()
+                              setSliderPosition((p) => Math.max(2, p - 5))
+                            } else if (e.key === 'ArrowRight') {
+                              e.preventDefault()
+                              setSliderPosition((p) => Math.min(98, p + 5))
+                            }
+                          }}
+                        >
+                          {/* CAMADA DE FUNDO: FOTO B (DEPOIS / ATUAL) EM TAMANHO 100% FIXO */}
+                          <img
+                            src={photoAfter.imageUrl}
+                            alt="Foto Depois"
+                            className="slider-img-after"
+                            draggable={false}
+                          />
+
+                          {/* CAMADA DE RECORTE CORTINA: FOTO A (ANTES) EM TAMANHO 100% IDÊNTICO COM CLIP-PATH */}
+                          <div
+                            className="slider-before-clip"
+                            style={{
+                              clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
+                              WebkitClipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
+                            }}
+                          >
+                            <img
+                              src={photoBefore.imageUrl}
+                              alt="Foto Antes"
+                              className="slider-img-before"
+                              draggable={false}
+                            />
+                          </div>
+
+                          {/* CAMADA OPCIONAL DE TRANSPARÊNCIA FANTASMA (SE O ADMIN QUISER SOBREPOR COM OPACIDADE) */}
+                          {overlayBlendOpacity > 0 && (
+                            <img
+                              src={photoBefore.imageUrl}
+                              alt=""
+                              aria-hidden="true"
+                              className="slider-img-ghost"
+                              style={{ opacity: overlayBlendOpacity / 100 }}
+                              draggable={false}
+                            />
+                          )}
+
+                          <div
+                            className="slider-divider-line"
+                            style={{ left: `${sliderPosition}%` }}
+                          >
+                            <span className="slider-handle-circle">
+                              ↔
+                              <small>{sliderPosition}%</small>
+                            </span>
+                          </div>
+
+                          <span className="slider-corner-badge left">
+                            FOTO A (ANTES) · {photoBefore.dateLabel} · {photoBefore.weightKg}
+                          </span>
+                          <span className="slider-corner-badge right">
+                            FOTO B (DEPOIS) · {photoAfter.dateLabel} · {photoAfter.weightKg}
+                          </span>
+                        </div>
+
+                        <div className="slider-dual-controls-grid">
+                          <div className="slider-range-control">
+                            <span>Posição da Cortina (Antes × Depois):</span>
+                            <input
+                              type="range"
+                              min={2}
+                              max={98}
+                              value={sliderPosition}
+                              onChange={(e) => setSliderPosition(Number(e.target.value))}
+                              aria-label="Controle deslizante de comparação entre Foto A e Foto B"
+                            />
+                            <strong>{sliderPosition}%</strong>
+                          </div>
+
+                          <div className="slider-range-control">
+                            <span>Transparência Fantasma (Sobrepor Foto A sobre B):</span>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={overlayBlendOpacity}
+                              onChange={(e) => setOverlayBlendOpacity(Number(e.target.value))}
+                              aria-label="Opacidade de sobreposição fantasma"
+                            />
+                            <strong>{overlayBlendOpacity}%</strong>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* GALERIA COMPLETA DE TODAS AS FOTOS ENVIADAS PELO ALUNO NO APLICATIVO */}
+                <div className="student-all-photos-section">
+                  <header className="all-photos-header">
+                    <div>
+                      <span>HISTÓRICO COMPLETO DE FOTOS NO APLICATIVO</span>
+                      <h4>
+                        Todas as fotos enviadas por {modalStudent.name} ({filteredModalPhotos.length}
+                        )
+                      </h4>
+                    </div>
+
+                    <div className="all-photos-filter-pills">
+                      {(
+                        ['Todos', 'Frente', 'Costas', 'Perfil Direito', 'Pós-Treino'] as const
+                      ).map((angle) => (
+                        <button
+                          key={angle}
+                          type="button"
+                          className={photoAngleFilter === angle ? 'active' : ''}
+                          onClick={() => setPhotoAngleFilter(angle)}
+                        >
+                          {angle}
+                        </button>
+                      ))}
+                    </div>
+                  </header>
+
+                  <div className="student-photos-gallery-grid">
+                    {filteredModalPhotos.map((photo) => {
+                      const isBefore = photoBefore?.id === photo.id
+                      const isAfter = photoAfter?.id === photo.id
+                      return (
+                        <article
+                          key={photo.id}
+                          className={`student-photo-card ${isBefore ? 'selected-before' : ''} ${
+                            isAfter ? 'selected-after' : ''
+                          }`}
+                        >
+                          <div className="photo-card-thumb">
+                            <img src={photo.imageUrl} alt={`${photo.angle} - ${photo.dateLabel}`} />
+                            <span className="angle-badge">{photo.angle}</span>
+                            <span className="weight-badge">{photo.weightKg}</span>
+                          </div>
+
+                          <div className="photo-card-body">
+                            <strong>{photo.cycleLabel}</strong>
+                            <time>Enviada em {photo.dateLabel}</time>
+                            <p>“{photo.studentNote}”</p>
+                            {photo.adminObservation && (
+                              <small className="admin-obs">
+                                Nota do Admin: {photo.adminObservation}
+                              </small>
+                            )}
+                          </div>
+
+                          <footer className="photo-card-compare-actions">
+                            <button
+                              type="button"
+                              className={isBefore ? 'active-before' : ''}
+                              onClick={() => setCompareBeforeId(photo.id)}
+                            >
+                              {isBefore ? '✓ Na Foto A (Antes)' : 'Usar como Foto A'}
+                            </button>
+                            <button
+                              type="button"
+                              className={isAfter ? 'active-after' : ''}
+                              onClick={() => setCompareAfterId(photo.id)}
+                            >
+                              {isAfter ? '✓ Na Foto B (Depois)' : 'Usar como Foto B'}
+                            </button>
+                          </footer>
+                        </article>
+                      )
+                    })}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {modalTab === 'treino' && (
+              <section className="modal-plan-view" aria-label="Treino atual do aluno">
+                <header className="modal-plan-banner">
+                  <div>
+                    <span>PRESCRIÇÃO DE TREINO ATIVA NO MFIT</span>
+                    <h3>{modalWorkoutPlan.splitName}</h3>
+                    <p>{modalWorkoutPlan.technicalGuideline}</p>
+                  </div>
+                  <div className="modal-plan-kpis">
+                    <div>
+                      <span>FREQUÊNCIA SEMANAL</span>
+                      <strong>{modalWorkoutPlan.frequency}</strong>
+                    </div>
+                    <div>
+                      <span>PRESCRIÇÃO DE CARDIO / AERÓBICO</span>
+                      <strong>{modalWorkoutPlan.cardioPrescription}</strong>
+                    </div>
+                  </div>
+                </header>
+
+                <div className="workout-sessions-grid">
+                  {modalWorkoutPlan.sessions.map((session) => (
+                    <article key={session.code} className="workout-session-card">
+                      <header>
+                        <div>
+                          <span>{session.code}</span>
+                          <h4>{session.title}</h4>
+                        </div>
+                        <em>{session.schedule}</em>
+                      </header>
+
+                      <div className="workout-student-comment-box">
+                        <header>
+                          <span>COMENTÁRIO DO ALUNO NO APP ({session.code.toUpperCase()})</span>
+                          <time>{session.commentSentAt}</time>
+                        </header>
+                        <p>“{session.studentAppComment}”</p>
+
+                        {session.adminReply && (
+                          <div className="workout-admin-reply-preview">
+                            <div>
+                              <span>RESPOSTA DO ADMIN (SINCRONIZADA NO INTERNO)</span>
+                              <p>{session.adminReply}</p>
+                            </div>
+                            {onOpenInternalInbox && (
+                              <button type="button" onClick={onOpenInternalInbox}>
+                                Ver no Interno
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        <form
+                          className="workout-comment-inline-form"
+                          onSubmit={(event) => {
+                            event.preventDefault()
+                            const code = session.code as 'Treino A' | 'Treino B' | 'Treino C'
+                            replyToStudentWorkoutComment(
+                              modalStudent,
+                              code,
+                              workoutCommentDrafts[code] || '',
+                            )
+                          }}
+                        >
+                          <input
+                            type="text"
+                            value={
+                              workoutCommentDrafts[
+                                session.code as 'Treino A' | 'Treino B' | 'Treino C'
+                              ] || ''
+                            }
+                            onChange={(event) => {
+                              const code = session.code as 'Treino A' | 'Treino B' | 'Treino C'
+                              setWorkoutCommentDrafts((current) => ({
+                                ...current,
+                                [code]: event.target.value,
+                              }))
+                            }}
+                            placeholder={`Responder ${modalStudent.name} sobre o ${session.code} (cai no Interno)...`}
+                            aria-label={`Responder aluno sobre o ${session.code}`}
+                          />
+                          <button type="submit">Responder aluno</button>
+                        </form>
+                      </div>
+
+                      <div className="workout-exercise-list">
+                        {session.exercises.map((exercise) => (
+                          <div key={exercise.name} className="workout-exercise-row">
+                            <div>
+                              <strong>{exercise.name}</strong>
+                              <small>{exercise.loadNote}</small>
+                            </div>
+                            <div className="workout-exercise-meta">
+                              <span>{exercise.sets}</span>
+                              <em>Descanso: {exercise.rest}</em>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {modalTab === 'dieta' && (
+              <section className="modal-plan-view" aria-label="Dieta atual do aluno">
+                <header className="modal-plan-banner">
+                  <div>
+                    <span>PLANO ALIMENTAR ATIVO NO WEBDIET</span>
+                    <h3>{modalDietPlan.strategyName}</h3>
+                    <p>Suplementação: {modalDietPlan.supplements}</p>
+                  </div>
+                  <div className="diet-macros-strip">
+                    <div>
+                      <span>META CALÓRICA</span>
+                      <strong>{modalDietPlan.dailyCalories}</strong>
+                    </div>
+                    <div>
+                      <span>PROTEÍNAS</span>
+                      <strong>{modalDietPlan.proteinTarget}</strong>
+                    </div>
+                    <div>
+                      <span>CARBOIDRATOS</span>
+                      <strong>{modalDietPlan.carbsTarget}</strong>
+                    </div>
+                    <div>
+                      <span>GORDURAS & ÁGUA</span>
+                      <strong>
+                        {modalDietPlan.fatTarget} · {modalDietPlan.waterTarget}
+                      </strong>
+                    </div>
+                  </div>
+                </header>
+
+                <div className="diet-meals-grid">
+                  {modalDietPlan.meals.map((meal) => (
+                    <article key={meal.title} className="diet-meal-card">
+                      <header>
+                        <div>
+                          <span>{meal.time}</span>
+                          <h4>{meal.title}</h4>
+                        </div>
+                        <em>{meal.macros}</em>
+                      </header>
+                      <ul>
+                        {meal.items.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                      <footer>
+                        <strong>Opções de substituição:</strong> {meal.substitutions}
+                      </footer>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {modalTab === 'checkin' && (
+              <div className="student-modal-columns">
+                <section className="modal-liveclin-section">
+                  <header>
+                    <div>
+                      <span>CHECK-IN SEMANAL LIVECLIN · 14 PERGUNTAS</span>
+                      <h3>Respostas do Check-in no LiveClin</h3>
+                    </div>
+                    <em>{modalLiveClin.protocolName}</em>
+                  </header>
+
+                  <div className="liveclin-answers-grid">
+                    <div>
+                      <span>Peso corporal</span>
+                      <small>Qual foi o seu último peso em jejum?</small>
+                      <strong>Resposta: {modalLiveClin.fastingWeight}</strong>
+                    </div>
+                    <div>
+                      <span>Refeições fora do plano alimentar</span>
+                      <small>Quantas refeições fora do planejado você fez na última semana?</small>
+                      <strong>Resposta: {modalLiveClin.offPlanMeals}</strong>
+                    </div>
+                    <div>
+                      <span>Níveis de fome</span>
+                      <small>
+                        Como você considera que está o seu nível de fome e apetite atualmente?
+                      </small>
+                      <strong>Resposta: {modalLiveClin.hungerLevels}</strong>
+                    </div>
+                    <div>
+                      <span>Ingestão de líquidos</span>
+                      <small>Quantos litros de água você está bebendo por dia em média?</small>
+                      <strong>Resposta: {modalLiveClin.waterIntake}</strong>
+                    </div>
+                    <div>
+                      <span>Frequência intestinal</span>
+                      <small>Você tem ido ao banheiro diariamente?</small>
+                      <strong>Resposta: {modalLiveClin.bowelFrequency}</strong>
+                    </div>
+                    <div>
+                      <span>Desconforto Abdominal</span>
+                      <small>
+                        Você sentiu desconforto abdominal, como gases ou inchaço nos últimos dias?
+                      </small>
+                      <strong>Resposta: {modalLiveClin.abdominalDiscomfort}</strong>
+                    </div>
+                    <div>
+                      <span>Treinos de Força</span>
+                      <small>
+                        Quantas sessões de treinos com pesos você realizou nos últimos 7 dias?
+                        Exemplo: Musculação, Pilates, Crossfit, Calistenia.
+                      </small>
+                      <strong>Resposta: {modalLiveClin.strengthWorkouts}</strong>
+                    </div>
+                    <div>
+                      <span>Desempenho em exercícios</span>
+                      <small>
+                        Você sente que seu desempenho em exercícios físicos está melhorando?
+                      </small>
+                      <strong>Resposta: {modalLiveClin.exercisePerformance}</strong>
+                    </div>
+                    <div>
+                      <span>Frequência de Aeróbico</span>
+                      <small>
+                        Você fez quantas sessões de atividade aeróbica (cardio) na semana anterior?
+                        Exemplo: Corrida, ciclismo, natação, caminhada.
+                      </small>
+                      <strong>Resposta: {modalLiveClin.aerobicSessions}</strong>
+                    </div>
+                    <div>
+                      <span>Horas de Sono</span>
+                      <small>Quantas horas de sono você está dormindo por noite, em média?</small>
+                      <strong>Resposta: {modalLiveClin.sleepHours}</strong>
+                    </div>
+                    <div>
+                      <span>Dedicação</span>
+                      <small>O quanto você se dedicou na última semana?</small>
+                      <strong>Resposta: {modalLiveClin.dedicationLevel}</strong>
+                    </div>
+                    <div>
+                      <span>Percepção corporal</span>
+                      <small>
+                        Você consegue notar evolução corporal em direção ao seu objetivo?
+                      </small>
+                      <strong>Resposta: {modalLiveClin.bodyPerception}</strong>
+                    </div>
+                    <div className="full-width-question">
+                      <span>Alterações no cardápio</span>
+                      <small>
+                        Você gostaria de fazer alguma alteração no seu planejamento alimentar? Por
+                        exemplo, incluir um novo alimento, adicionar ou modificar uma refeição.
+                      </small>
+                      <strong>Resposta: {modalLiveClin.menuChangesRequest}</strong>
+                    </div>
+                    <div className="full-width-question">
+                      <span>Feedback Aberto</span>
+                      <small>O que mais você gostaria de compartilhar sobre sua experiência?</small>
+                      <strong>Resposta: {modalLiveClin.openFeedback}</strong>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="modal-app-and-coach-section">
+                  <div className="modal-quick-plans-card">
+                    <header>
+                      <span>PROTOCOLO ATUAL DO ALUNO</span>
+                      <h3>Treino (MFIT) & Dieta (WebDiet)</h3>
+                    </header>
+                    <div className="modal-quick-plans-grid">
+                      <div>
+                        <span>TREINO PRESCRITO (MFIT)</span>
+                        <strong>{modalWorkoutPlan.splitName}</strong>
+                        <small>{modalWorkoutPlan.frequency}</small>
+                        <button type="button" onClick={() => setModalTab('treino')}>
+                          Ver treino no MFIT
+                        </button>
+                      </div>
+                      <div>
+                        <span>DIETA PRESCRITA (WEBDIET)</span>
+                        <strong>{modalDietPlan.strategyName}</strong>
+                        <small>{modalDietPlan.dailyCalories}</small>
+                        <button type="button" onClick={() => setModalTab('dieta')}>
+                          Ver dieta no WebDiet
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="app-observations-card">
+                    <header>
+                      <div>
+                        <span>COMENTÁRIOS DO ALUNO POR TREINO NO APP (MFIT)</span>
+                        <h3>Comentários recebidos: Treino A, Treino B e Treino C</h3>
+                      </div>
+                      <small>Responda aqui e a conversa vai direto para a página Interno</small>
+                    </header>
+                    <div className="app-observations-list">
+                      {modalWorkoutComments.map((wc) => (
+                        <article key={wc.workoutCode} className="workout-comment-item">
+                          <header>
+                            <span className="obs-tag tag-treino">
+                              {wc.workoutCode} · {wc.workoutTitle}
+                            </span>
+                            <time>{wc.sentAt}</time>
+                          </header>
+                          <p>{wc.comment}</p>
+
+                          {wc.adminReply && (
+                            <div className="workout-admin-reply-preview">
+                              <div>
+                                <span>SUA RESPOSTA AO ALUNO (ENVIADA PARA O INTERNO)</span>
+                                <p>{wc.adminReply}</p>
+                              </div>
+                              {onOpenInternalInbox && (
+                                <button type="button" onClick={onOpenInternalInbox}>
+                                  Abrir no Interno
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          <form
+                            className="workout-comment-inline-form"
+                            onSubmit={(event) => {
+                              event.preventDefault()
+                              replyToStudentWorkoutComment(
+                                modalStudent,
+                                wc.workoutCode,
+                                workoutCommentDrafts[wc.workoutCode] || '',
+                              )
+                            }}
+                          >
+                            <input
+                              type="text"
+                              value={workoutCommentDrafts[wc.workoutCode] || ''}
+                              onChange={(event) =>
+                                setWorkoutCommentDrafts((current) => ({
+                                  ...current,
+                                  [wc.workoutCode]: event.target.value,
+                                }))
+                              }
+                              placeholder={`Responder comentário do ${wc.workoutCode} (vai p/ Interno)...`}
+                              aria-label={`Responder comentário do ${wc.workoutCode}`}
+                            />
+                            <button type="submit">Responder aluno</button>
+                          </form>
+
+                          {lastRepliedWorkout === `${modalStudent.id}-${wc.workoutCode}` &&
+                            onOpenInternalInbox && (
+                              <div className="workout-reply-sent-notice">
+                                <span>
+                                  Resposta enviada ao aluno e registrada na página Interno!
+                                </span>
+                                <button type="button" onClick={onOpenInternalInbox}>
+                                  Ver na página Interno →
+                                </button>
+                              </div>
+                            )}
+                        </article>
+                      ))}
+                      {modalStudent.appObservations.map((obs) => (
+                        <article key={obs.id}>
+                          <header>
+                            <span className={`obs-tag tag-${obs.category.toLowerCase()}`}>
+                              {obs.category}
+                            </span>
+                            <time>{obs.when}</time>
+                          </header>
+                          <p>{obs.note}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+
+                  {modalStudent.coachFeedback && (
+                    <div className="inspector-feedback-box">
+                      <span>CONDUTA ATUAL REGISTRADA PELA EQUIPE</span>
+                      <p>{modalStudent.coachFeedback}</p>
+                    </div>
+                  )}
+
+                  {modalStudent.renewalState === 'Não renovou' && modalStudent.nonRenewalReason && (
+                    <div className="inspector-nonrenewal-box">
+                      <span>MOTIVO DA NÃO RENOVAÇÃO (REGISTRADO PELO ADMIN)</span>
+                      <p>{modalStudent.nonRenewalReason}</p>
+                    </div>
+                  )}
+
+                  <form
+                    className="inspector-checkin-form"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      completeCheckin(modalStudent.id, feedbackDraft)
+                    }}
+                  >
+                    <label>
+                      <span>Conduta do Treinador / Nutricionista (Retorno do Check-in)</span>
+                      <textarea
+                        rows={3}
+                        value={feedbackDraft}
+                        onChange={(event) => setFeedbackDraft(event.target.value)}
+                        placeholder={`Escreva os ajustes de treino e dieta para ${modalStudent.name}...`}
+                      />
+                    </label>
+                    <div className="inspector-form-buttons">
+                      <button type="submit">Salvar retorno e dar baixa no Check-in</button>
+                      {modalStudent.renewalState !== 'Recuperado' && (
+                        <button
+                          type="button"
+                          className="recover-btn"
+                          onClick={() => recoverStudentPlan(modalStudent.id)}
+                        >
+                          Confirmar renovação
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="non-renew-btn"
+                        onClick={() => {
+                          setNonRenewalOpenForId(
+                            nonRenewalOpenForId === modalStudent.id ? null : modalStudent.id,
+                          )
+                          setNonRenewalDraft(modalStudent.nonRenewalReason ?? '')
+                        }}
+                      >
+                        {modalStudent.renewalState === 'Não renovou'
+                          ? 'Editar motivo de não renovação'
+                          : 'Não renovou (escrever motivo)'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {nonRenewalOpenForId === modalStudent.id && (
+                    <div className="modal-non-renewal-box">
+                      <label>
+                        <span>Motivo da não renovação (preenchido pelo Admin)</span>
+                        <textarea
+                          rows={2}
+                          value={nonRenewalDraft}
+                          onChange={(event) => setNonRenewalDraft(event.target.value)}
+                          placeholder="Ex.: Pausa financeira, mudança para consultoria presencial, viagem..."
+                          autoFocus
+                        />
+                      </label>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => markNonRenewed(modalStudent.id, nonRenewalDraft)}
+                        >
+                          Salvar motivo da não renovação
+                        </button>
+                        <button
+                          type="button"
+                          className="cancel"
+                          onClick={() => setNonRenewalOpenForId(null)}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}

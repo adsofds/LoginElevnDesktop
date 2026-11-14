@@ -1,0 +1,2276 @@
+/* ELEVN CLUB EM LAYOUT DESKTOP COMPLETO NAS CORES OFICIAIS DA ELEVN */
+.elevn-club-desktop-shell {
+  padding-bottom: 36px;
+}
+
+.elevn-club-canvas {
+  border-radius: 16px;
+  background: var(--elevn-sidebar-bg);
+  color: var(--sand-95);
+  border: 1px solid var(--night-19);
+  overflow: hidden;
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--elevn-sidebar-bg) 16%, transparent);
+}
+
+/* NAVBAR INTERNA DO ELEVN CLUB */
+.elevn-club-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 14px 24px;
+  background: var(--night-12);
+  border-bottom: 1px solid color-mix(in srgb, var(--gold-70) 16%, transparent);
+}
+
+.elevn-club-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.elevn-club-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.elevn-club-logo img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.elevn-club-logo strong {
+  display: block;
+  color: var(--gold-88);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.elevn-club-logo small {
+  display: block;
+  color: var(--gold-50);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.elevn-club-main-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.elevn-club-main-tabs button {
+  height: 33px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--slate-74);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.elevn-club-main-tabs button.active {
+  border-color: var(--gold-70);
+  background: var(--elevn-accent);
+  color: var(--sand-95);
+}
+
+.elevn-club-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.elevn-club-searchbox input {
+  width: 240px;
+  height: 33px;
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 22%, transparent);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--sand-95);
+  font-size: 12px;
+}
+
+.elevn-club-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.elevn-club-admin-actions button {
+  height: 33px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 35%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--gold-88) 8%, transparent);
+  color: var(--gold-88);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-club-admin-actions button.gold-solid {
+  border-color: var(--gold-70);
+  background: var(--gold-88);
+  color: var(--ink-08);
+}
+
+.elevn-club-admin-actions button.sage-solid {
+  border-color: var(--green-33);
+  background: var(--green-28);
+  color: var(--sand-100);
+}
+
+.elevn-club-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 24px;
+  background: var(--green-28);
+  color: var(--sand-100);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.elevn-club-toast button {
+  height: 25px;
+  padding: 0 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--sand-100);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* BANNER DE ANÚNCIO CURTO E INTEGRADO (FOTO LADO A LADO COM O TEXTO E FUNDO INTEGRADO) */
+.elevn-compact-ad-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, var(--sand-95) 0%, var(--gold-90) 58%, var(--gold-79) 100%);
+  color: var(--ink-08);
+  border-bottom: 1px solid var(--gold-70);
+}
+
+.elevn-compact-ad-integrated-art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 56%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.elevn-compact-ad-integrated-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.42;
+  display: block;
+}
+
+.elevn-compact-ad-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    var(--sand-93) 0%,
+    rgba(245, 241, 230, 0.85) 32%,
+    rgba(245, 241, 230, 0.25) 100%
+  );
+}
+
+/* MODO SÓ A FOTO (ARTE OCUPA 100% DO ESPAÇO DA PUBLICIDADE SEM TEXTO) */
+.elevn-full-bleed-ad-image {
+  position: relative;
+  width: 100%;
+  height: 185px;
+  overflow: hidden;
+  background: var(--elevn-sidebar-bg);
+}
+
+.elevn-full-bleed-ad-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.elevn-full-bleed-floating-controls {
+  position: absolute;
+  top: 12px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.image-only-nav {
+  padding: 8px 20px 10px;
+  background: var(--night-12);
+}
+
+.elevn-compact-ad-content {
+  position: relative;
+  z-index: 1;
+  padding: 14px 26px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.elevn-compact-ad-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.elevn-compact-tag-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.elevn-ad-pill {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--elevn-accent);
+  color: var(--sand-95);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.elevn-compact-tag-wrap small {
+  color: var(--gold-29);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-compact-admin-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.elevn-compact-admin-btns button {
+  height: 25px;
+  padding: 0 10px;
+  border: 1px solid var(--night-12);
+  border-radius: 6px;
+  background: var(--night-12);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-compact-ad-mainrow {
+  max-width: 720px;
+}
+
+.elevn-compact-ad-text h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--ink-08);
+}
+
+.elevn-compact-ad-text h2 strong {
+  color: var(--elevn-accent);
+  font-weight: 800;
+}
+
+.elevn-compact-presenter {
+  margin: 4px 0 10px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--gold-21);
+}
+
+.elevn-compact-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.elevn-compact-cta-row .cta-main {
+  padding: 7px 14px;
+  border-radius: 7px;
+  background: var(--night-12);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.elevn-compact-cta-row .cta-date {
+  padding: 6px 12px;
+  border: 1.5px solid var(--elevn-accent);
+  border-radius: 999px;
+  background: var(--sand-100);
+  color: var(--ink-08);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.elevn-compact-cta-row .cta-secondary {
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: var(--elevn-accent);
+  color: var(--sand-100);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.elevn-compact-ad-side-thumb {
+  position: relative;
+  width: 156px;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid var(--elevn-accent);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--elevn-sidebar-bg) 16%, transparent);
+  background: var(--night-12);
+}
+
+.elevn-compact-ad-side-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.elevn-compact-ad-side-thumb span {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 88%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.elevn-compact-ad-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 2px;
+}
+
+.elevn-compact-ad-nav .dots {
+  display: flex;
+  gap: 5px;
+}
+
+.elevn-compact-ad-nav .dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 25%, transparent);
+  cursor: pointer;
+}
+
+.elevn-compact-ad-nav .dots button.active {
+  width: 18px;
+  border-radius: 999px;
+  background: var(--elevn-accent);
+}
+
+.elevn-compact-ad-nav .arrows {
+  display: flex;
+  gap: 6px;
+}
+
+.elevn-compact-ad-nav .arrows button {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--elevn-sidebar-bg) 25%, transparent);
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 8%, transparent);
+  color: var(--ink-08);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* CATÁLOGO DE TRILHAS E PLAYLISTS (DESKTOP) */
+.elevn-catalog-container {
+  padding: 20px 26px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.elevn-track-filters-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.elevn-track-filters-bar .pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.elevn-track-filters-bar .pills button {
+  height: 31px;
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 22%, transparent);
+  border-radius: 7px;
+  background: var(--night-15);
+  color: var(--slate-85);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-track-filters-bar .pills button.active {
+  border-color: var(--gold-70);
+  background: var(--elevn-accent);
+  color: var(--sand-95);
+}
+
+.inline-Explore-link {
+  border: 0;
+  background: transparent;
+  color: var(--gold-70);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-welcome-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.elevn-welcome-header h2 {
+  margin: 0;
+  color: var(--gold-88);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.elevn-welcome-header span {
+  color: var(--gold-50);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.elevn-track-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.elevn-track-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.elevn-track-group-head h3 {
+  margin: 0;
+  color: var(--sand-100);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.elevn-track-group-head button {
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 32%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--gold-88) 8%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-posters-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.elevn-poster-card {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 13px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 24%, transparent);
+  padding: 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.elevn-poster-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold-88);
+}
+
+.elevn-poster-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.elevn-poster-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--elevn-sidebar-bg) 25%, transparent) 0%,
+    color-mix(in srgb, var(--elevn-sidebar-bg) 65%, transparent) 45%,
+    var(--poster-tone, var(--elevn-accent)) 100%
+  );
+  opacity: 0.92;
+  z-index: 1;
+}
+
+.elevn-poster-top,
+.elevn-poster-bottom {
+  position: relative;
+  z-index: 2;
+}
+
+.elevn-poster-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.elevn-poster-top span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 78%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-poster-top i {
+  font-style: normal;
+  color: var(--gold-88);
+  font-size: 12px;
+}
+
+.elevn-poster-bottom strong {
+  display: block;
+  color: var(--sand-100);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.elevn-poster-bottom small {
+  display: block;
+  color: var(--gold-86);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.elevn-poster-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.elevn-poster-actions button {
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--gold-88) 40%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 78%, transparent);
+  color: var(--sand-100);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-poster-actions button.gold {
+  background: var(--gold-88);
+  color: var(--ink-08);
+}
+
+.elevn-add-poster-card {
+  aspect-ratio: 4 / 3;
+  border: 1.5px dashed color-mix(in srgb, var(--gold-70) 35%, transparent);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--gold-88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.elevn-add-poster-card span {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gold-88) 14%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.elevn-add-poster-card strong {
+  font-size: 12px;
+  color: var(--sand-100);
+}
+
+.elevn-add-poster-card small {
+  font-size: 11px;
+  color: var(--slate-66-2);
+}
+
+/* VISÃO INTERNA DA PLAYLIST (DESKTOP) */
+.elevn-pl-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  min-height: 240px;
+  background: var(--elevn-sidebar-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--gold-70) 16%, transparent);
+}
+
+.elevn-pl-detail-left {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.elevn-back-btn {
+  align-self: flex-start;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 35%, transparent);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-pl-track-badge {
+  color: var(--gold-50);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.elevn-pl-detail-left h1 {
+  margin: 0;
+  color: var(--sand-100);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.elevn-pl-featured-text {
+  margin: 0;
+  color: var(--gold-88);
+  font-size: 12px;
+}
+
+.elevn-pl-subdesc {
+  margin: 0;
+  color: var(--slate-66-2);
+  font-size: 12px;
+}
+
+.elevn-primary-gold-btn {
+  margin-top: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--gold-70);
+  border-radius: 8px;
+  background: var(--elevn-accent);
+  color: var(--sand-95);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.elevn-pl-detail-art {
+  position: relative;
+  overflow: hidden;
+}
+
+.elevn-pl-detail-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.elevn-pl-detail-fade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, var(--elevn-sidebar-bg) 0%, color-mix(in srgb, var(--elevn-sidebar-bg) 35%, transparent) 55%, color-mix(in srgb, var(--elevn-sidebar-bg) 75%, transparent) 100%),
+    linear-gradient(180deg, transparent 40%, var(--pl-accent, var(--elevn-accent)) 100%);
+}
+
+.elevn-pl-watermark {
+  position: absolute;
+  right: 20px;
+  bottom: 14px;
+  color: color-mix(in srgb, var(--gold-88) 25%, transparent);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.elevn-pl-detail-body {
+  padding: 22px 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.elevn-pl-content-head h2 {
+  margin: 0;
+  color: var(--sand-100);
+  font-size: 20px;
+}
+
+.elevn-pl-content-head span {
+  color: var(--slate-66-2);
+  font-size: 12px;
+}
+
+.elevn-pl-split-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.65fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.elevn-pl-lessons-card,
+.elevn-pl-progress-card {
+  border: 1px solid color-mix(in srgb, var(--gold-70) 18%, transparent);
+  border-radius: 12px;
+  background: var(--night-12);
+  overflow: hidden;
+}
+
+.elevn-pl-box-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--gold-70) 14%, transparent);
+}
+
+.elevn-pl-box-head h3 {
+  margin: 0;
+  color: var(--sand-100);
+  font-size: 14px;
+}
+
+.elevn-pl-box-head span {
+  color: var(--slate-66-2);
+  font-size: 12px;
+}
+
+.elevn-pl-box-head button {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
+  background: var(--gold-88);
+  color: var(--ink-08);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.elevn-pl-lesson-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--gold-70) 10%, transparent);
+}
+
+.elevn-pl-lesson-row:last-child {
+  border-bottom: 0;
+}
+
+.elevn-pl-lesson-thumb-4x3 {
+  position: relative;
+  width: 110px;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 25%, transparent);
+}
+
+.elevn-pl-lesson-thumb-4x3 img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.elevn-pl-lesson-thumb-4x3 span {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 88%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-pl-lesson-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.elevn-pl-lesson-copy h4 {
+  margin: 0;
+  color: var(--sand-100);
+  font-size: 13px;
+}
+
+.elevn-pl-lesson-copy small {
+  display: block;
+  margin: 3px 0;
+  color: var(--gold-70);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-pl-lesson-copy p {
+  margin: 0;
+  color: var(--slate-66-2);
+  font-size: 12px;
+}
+
+.elevn-lesson-delete-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid rgba(217, 139, 132, 0.35);
+  border-radius: 6px;
+  background: rgba(217, 139, 132, 0.12);
+  color: var(--red-82);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-pl-progress-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.elevn-pl-progress-card h3 {
+  margin: 0;
+  color: var(--sand-100);
+  font-size: 14px;
+}
+
+.elevn-pl-progress-nums {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.elevn-pl-progress-nums strong {
+  color: var(--gold-88);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.elevn-pl-progress-nums span {
+  color: var(--slate-74);
+  font-size: 12px;
+}
+
+.elevn-pl-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.elevn-pl-progress-bar i {
+  display: block;
+  height: 100%;
+  background: var(--gold-50);
+}
+
+.elevn-pl-progress-card small {
+  color: var(--gold-50);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.elevn-pl-progress-card p {
+  margin: 0;
+  color: var(--slate-66-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* ABA 2: EXPLORAR PLAYLISTS (DESKTOP) */
+.elevn-explorar-view {
+  padding: 22px 26px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.elevn-explore-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.elevn-explore-block-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.elevn-explore-block-head span {
+  color: var(--gold-50);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.elevn-explore-block-head h2 {
+  margin: 2px 0 0;
+  color: var(--gold-88);
+  font-size: 16px;
+}
+
+.elevn-explore-block-head small {
+  color: var(--slate-66-2);
+  font-size: 12px;
+}
+
+.elevn-continue-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.elevn-continue-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 11px;
+  background: var(--night-12);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 22%, transparent);
+  cursor: pointer;
+}
+
+.elevn-continue-thumb {
+  position: relative;
+  width: 112px;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.elevn-continue-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.elevn-continue-thumb .play-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 8px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 86%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-continue-thumb .progress-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.elevn-continue-thumb .progress-line i {
+  display: block;
+  height: 100%;
+  background: var(--gold-50);
+}
+
+.elevn-continue-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.elevn-continue-meta small {
+  color: var(--gold-70);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-continue-meta strong {
+  color: var(--sand-100);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.elevn-continue-meta span {
+  color: var(--green-61);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.elevn-recent-card {
+  padding: 10px;
+  border-radius: 11px;
+  background: var(--night-12);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 16%, transparent);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.elevn-recent-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.elevn-recent-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.elevn-recent-thumb span {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 88%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-recent-body small {
+  color: var(--gold-50);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-recent-body strong {
+  display: block;
+  margin: 2px 0;
+  color: var(--sand-100);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.elevn-recent-body span {
+  color: var(--slate-66-2);
+  font-size: 11px;
+}
+
+.elevn-explore-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.elevn-explore-toolbar-right select {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 28%, transparent);
+  border-radius: 8px;
+  background: var(--night-12);
+  color: var(--gold-88);
+  font-size: 12px;
+}
+
+.elevn-explore-toolbar-right button {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--gold-88);
+  color: var(--ink-08);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.elevn-all-videos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.elevn-all-video-card {
+  border-radius: 11px;
+  background: var(--night-12);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 16%, transparent);
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.elevn-all-video-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+}
+
+.elevn-all-video-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.elevn-all-video-thumb .ratio {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 85%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.elevn-all-video-thumb time {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 88%, transparent);
+  color: var(--sand-100);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-all-video-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.elevn-all-video-body .pl-chip {
+  color: var(--gold-70);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.elevn-all-video-body h4 {
+  margin: 0;
+  color: var(--sand-100);
+  font-size: 13px;
+}
+
+.elevn-all-video-body p {
+  margin: 0;
+  color: var(--slate-66-2);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* ABA 3: COMUNIDADE GYMRATS (DESAFIOS, PREMIAÇÕES, REGRAS E PONTUAÇÃO) */
+.elevn-comunidade-view {
+  padding: 20px 26px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.elevn-challenges-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--night-12);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 20%, transparent);
+}
+
+.challenges-strip-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.challenges-strip-left > span {
+  color: var(--gold-50);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.challenge-pills-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.challenge-pills-row button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 24%, transparent);
+  border-radius: 8px;
+  background: var(--elevn-sidebar-bg);
+  color: var(--slate-85);
+  cursor: pointer;
+}
+
+.challenge-pills-row button.active {
+  border-color: var(--gold-70);
+  background: var(--night-20);
+  color: var(--sand-100);
+}
+
+.challenge-pills-row button strong {
+  font-size: 12px;
+}
+
+.challenge-pills-row button small {
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.challenge-pills-row button small.pub {
+  background: rgba(47, 94, 72, 0.35);
+  color: var(--green-74);
+}
+
+.challenge-pills-row button small.priv {
+  background: color-mix(in srgb, var(--gold-48) 30%, transparent);
+  color: var(--gold-88);
+}
+
+.challenges-strip-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.challenges-strip-actions button {
+  height: 31px;
+  padding: 0 12px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.challenges-strip-actions button.outline {
+  border: 1px solid color-mix(in srgb, var(--gold-70) 35%, transparent);
+  background: transparent;
+  color: var(--gold-88);
+}
+
+.challenges-strip-actions button.gold {
+  border: 1px solid var(--gold-70);
+  background: var(--gold-88);
+  color: var(--ink-08);
+}
+
+.elevn-challenge-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) 240px;
+  gap: 20px;
+  align-items: center;
+  padding: 18px 22px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--night-15) 0%, var(--night-12) 100%);
+  border: 1px solid var(--elevn-accent);
+}
+
+.challenge-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.club-tag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--elevn-accent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.visibility-pill {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.visibility-pill.public {
+  background: rgba(47, 94, 72, 0.35);
+  color: var(--green-74);
+}
+
+.visibility-pill.private {
+  background: color-mix(in srgb, var(--gold-70) 20%, transparent);
+  color: var(--gold-88);
+}
+
+.toggle-public-btn {
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 35%, transparent);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.challenge-banner-main h2 {
+  margin: 0 0 6px;
+  color: var(--gold-88);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.challenge-banner-main p {
+  margin: 0 0 12px;
+  color: var(--slate-79);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.challenge-quick-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.challenge-quick-stats span {
+  display: block;
+  color: var(--gold-50);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.challenge-quick-stats strong {
+  color: var(--sand-100);
+  font-size: 13px;
+}
+
+.challenge-cta-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.register-activity-btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--gold-88);
+  color: var(--ink-08);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.edit-challenge-btn {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 38%, transparent);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--gold-88);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.challenge-banner-thumb {
+  position: relative;
+  width: 240px;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid var(--gold-70);
+}
+
+.challenge-banner-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.challenge-banner-thumb span {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 88%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* PREMIAÇÕES 1º/2º/3º + TABELA DE PONTOS + REGRAS */
+.elevn-challenge-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.elevn-prizes-card,
+.elevn-scoring-card,
+.elevn-rules-card {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--night-12);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 20%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.elevn-prizes-card > header,
+.elevn-scoring-card > header,
+.elevn-rules-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.elevn-prizes-card > header span,
+.elevn-scoring-card > header span,
+.elevn-rules-card > header span {
+  display: block;
+  color: var(--gold-50);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.elevn-prizes-card > header h3,
+.elevn-scoring-card > header h3,
+.elevn-rules-card > header h3 {
+  margin: 2px 0 0;
+  color: var(--sand-100);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.elevn-prizes-card > header button,
+.elevn-scoring-card > header button,
+.elevn-rules-card > header button {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 30%, transparent);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.prizes-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prize-item {
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: var(--elevn-sidebar-bg);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 18%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.prize-item.gold {
+  border-color: var(--gold-50);
+  background: color-mix(in srgb, var(--elevn-accent) 22%, transparent);
+}
+
+.prize-item .medal {
+  color: var(--gold-70);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.prize-item strong {
+  color: var(--sand-100);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.scoring-items-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.score-pill-box {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--elevn-sidebar-bg);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 16%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.score-pill-box.highlight {
+  border-color: var(--green-33);
+  background: rgba(47, 94, 72, 0.22);
+}
+
+.score-pill-box span {
+  color: var(--slate-75);
+  font-size: 11px;
+}
+
+.score-pill-box strong {
+  color: var(--gold-88);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.rules-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rules-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--elevn-sidebar-bg);
+}
+
+.rules-list li span {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--elevn-accent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.rules-list li p {
+  margin: 0;
+  color: var(--slate-85);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* RANKING + FEED DE CHECK-INS */
+.elevn-gymrats-bottom-split {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.45fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.elevn-leaderboard-card,
+.elevn-community-feed-card {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--night-12);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 20%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.elevn-leaderboard-card > header span,
+.elevn-community-feed-card > header span {
+  display: block;
+  color: var(--gold-50);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.elevn-leaderboard-card > header h3,
+.elevn-community-feed-card > header h3 {
+  margin: 2px 0 0;
+  color: var(--sand-100);
+  font-size: 14px;
+}
+
+.elevn-community-feed-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.elevn-community-feed-card > header button {
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 7px;
+  background: var(--gold-88);
+  color: var(--ink-08);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.leaderboard-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: var(--elevn-sidebar-bg);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 16%, transparent);
+}
+
+.pos-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--night-19);
+  color: var(--gold-70);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.pos-badge.pos-1 {
+  background: var(--gold-50);
+  color: var(--ink-08);
+}
+
+.leaderboard-row img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.member-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-copy strong {
+  display: block;
+  color: var(--sand-100);
+  font-size: 12px;
+}
+
+.member-copy small {
+  color: var(--slate-66-2);
+  font-size: 11px;
+}
+
+.member-points {
+  text-align: right;
+}
+
+.member-points strong {
+  display: block;
+  color: var(--gold-88);
+  font-size: 13px;
+}
+
+.member-points span {
+  color: var(--green-61);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.community-feed-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.community-post-card {
+  border-radius: 10px;
+  background: var(--elevn-sidebar-bg);
+  border: 1px solid color-mix(in srgb, var(--gold-70) 18%, transparent);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.post-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+}
+
+.post-top img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.post-top > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.post-top strong {
+  display: block;
+  color: var(--sand-100);
+  font-size: 12px;
+}
+
+.post-top small {
+  color: var(--slate-66-2);
+  font-size: 11px;
+}
+
+.points-earned-pill {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--green-28);
+  color: var(--sand-100);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.post-photo-4x3 {
+  position: relative;
+  aspect-ratio: 4 / 3;
+}
+
+.post-photo-4x3 img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.post-photo-4x3 .kind-chip {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 86%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.post-photo-4x3 .tag-chip {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--elevn-accent) 92%, transparent);
+  color: var(--sand-100);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.post-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.post-body h4 {
+  margin: 0;
+  color: var(--gold-88);
+  font-size: 12px;
+}
+
+.post-body p {
+  margin: 0;
+  color: var(--slate-74);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.post-body button {
+  align-self: flex-start;
+  margin-top: 3px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--gold-70) 30%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gold-88) 8%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.post-body button.active {
+  background: var(--elevn-accent);
+  color: var(--sand-100);
+}
+
+/* MODAIS NAS CORES DA ELEVN */
+.elevn-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 74%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.elevn-modal-card {
+  width: 100%;
+  max-width: 740px;
+  max-height: 92vh;
+  overflow-y: auto;
+  border-radius: 15px;
+  background: var(--sand-100);
+  border: 1px solid var(--sand-85);
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--elevn-sidebar-bg) 38%, transparent);
+}
+
+.elevn-modal-card.wide {
+  max-width: 860px;
+}
+
+.elevn-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--sand-90);
+  background: var(--sand-95);
+}
+
+.elevn-modal-header span {
+  color: var(--gold-48);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.elevn-modal-header h2 {
+  margin: 2px 0 0;
+  color: var(--ink-08);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.elevn-modal-header button {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid var(--sand-85);
+  background: var(--sand-100);
+  color: var(--ink-08);
+  cursor: pointer;
+}
+
+.elevn-modal-form {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.elevn-modal-split {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.4fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.elevn-modal-cover-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.elevn-field-title {
+  color: var(--ink-08);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.elevn-cover-4x3-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--elevn-sidebar-bg);
+  border: 2px solid var(--gold-70);
+}
+
+.elevn-cover-4x3-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.elevn-cover-4x3-box span {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--elevn-sidebar-bg) 88%, transparent);
+  color: var(--gold-88);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.elevn-upload-trigger {
+  height: 32px;
+  border-radius: 7px;
+  background: var(--night-12);
+  color: var(--gold-88);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-upload-trigger input {
+  display: none;
+}
+
+.elevn-public-toggle-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--sand-85);
+  border-radius: 8px;
+  background: var(--sand-95);
+  cursor: pointer;
+}
+
+.elevn-public-toggle-box strong {
+  display: block;
+  color: var(--ink-08);
+  font-size: 12px;
+}
+
+.elevn-public-toggle-box small {
+  color: var(--slate-43);
+  font-size: 11px;
+}
+
+.elevn-presets-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.elevn-presets-row button {
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 5px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.elevn-presets-row button.active {
+  border-color: var(--elevn-accent);
+}
+
+.elevn-presets-row img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.elevn-modal-fields-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.elevn-modal-subbox {
+  padding: 10px 12px;
+  border: 1px solid var(--sand-87);
+  border-radius: 9px;
+  background: var(--sand-95);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.elevn-modal-subbox > strong {
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.elevn-input-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.elevn-input-block > span {
+  color: var(--ink-19);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-input-block input,
+.elevn-input-block select,
+.elevn-input-block textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--sand-80);
+  border-radius: 7px;
+  background: var(--sand-100);
+  color: var(--ink-08);
+  font-size: 12px;
+}
+
+.elevn-input-block input,
+.elevn-input-block select {
+  height: 33px;
+}
+
+.elevn-two-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.elevn-three-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.elevn-file-input {
+  height: 33px;
+  padding: 0 9px;
+  border: 1px solid var(--sand-80);
+  border-radius: 7px;
+  background: var(--sand-95);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.elevn-file-input input {
+  display: none;
+}
+
+.elevn-file-input span {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--gold-88);
+  color: var(--gold-17);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.elevn-file-input small {
+  color: var(--slate-43);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elevn-modal-footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--sand-90);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.elevn-modal-footer button {
+  height: 35px;
+  padding: 0 15px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.elevn-modal-footer button.cancel {
+  border: 1px solid var(--sand-80);
+  background: var(--sand-100);
+  color: var(--slate-32);
+}
+
+.elevn-modal-footer button.confirm {
+  border: 0;
+  background: var(--night-12);
+  color: var(--gold-88);
+}
+
+@media (max-width: 1100px) {
+  .elevn-continue-grid,
+  .elevn-recent-grid,
+  .elevn-all-videos-grid,
+  .elevn-challenge-details-grid,
+  .elevn-gymrats-bottom-split,
+  .community-feed-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .elevn-compact-ad-mainrow,
+  .elevn-challenge-banner,
+  .elevn-pl-detail-hero,
+  .elevn-pl-split-grid,
+  .elevn-modal-split,
+  .elevn-three-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.elevn-dimension-note {
+  padding: 8px 10px;
+  border: 1px solid var(--gold-79);
+  border-radius: 8px;
+  background: var(--sand-95);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.elevn-dimension-note strong {
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.elevn-dimension-note span {
+  color: var(--slate-26);
+  font-size: 11px;
+  line-height: 1.35;
+}

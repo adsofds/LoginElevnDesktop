@@ -1,0 +1,194 @@
+/* Elevn design tokens. Generated from the original palette; edit here, not in workspace CSS. */
+
+:root {
+  /* Theme inputs: AdminShell overrides these per preset */
+  --elevn-accent: #6b6133;
+  --elevn-accent-light: #c5bb83;
+  --elevn-sidebar-bg: #0d0a21;
+  --elevn-canvas-bg: #f7f5f0;
+}
+
+/* Declared on .admin-shell too, so color-mix() re-resolves with the active theme */
+:root,
+.admin-shell {
+  /* Text roles (WCAG AA on --elevn-canvas-bg and white) */
+  --text-primary: #0d0a21;   /* 17:1 */
+  --text-secondary: #5e5a66; /* 6,2:1 */
+  --text-tertiary: #6f6a76;  /* 4,8:1, minimum for small text */
+  --text-on-dark: #f3ecce;
+
+  /* Accent family (follows --elevn-accent / --elevn-accent-light) */
+  --gold-17: color-mix(in srgb, var(--elevn-accent) 55%, #000);
+  --gold-21: color-mix(in srgb, var(--elevn-accent) 69%, #000);
+  --gold-24: oklch(from var(--elevn-accent) 0.431 0.071 calc(h - 0.3));
+  --gold-25: color-mix(in srgb, var(--elevn-accent) 80%, #000);
+  --gold-25-2: color-mix(in srgb, var(--elevn-accent) 81%, #000);
+  --gold-27: color-mix(in srgb, var(--elevn-accent) 83%, var(--elevn-sidebar-bg));
+  --gold-29: color-mix(in srgb, var(--elevn-accent) 92%, var(--elevn-sidebar-bg));
+  --gold-31: color-mix(in srgb, var(--elevn-accent-light) 49%, #000);
+  --gold-32: color-mix(in srgb, var(--elevn-accent-light) 42%, var(--elevn-sidebar-bg));
+  --gold-34: color-mix(in srgb, var(--elevn-accent) 91%, var(--elevn-accent-light));
+  --gold-35: oklch(from var(--elevn-accent) 0.540 0.083 calc(h - 5.5));
+  --gold-38: color-mix(in srgb, var(--elevn-accent) 77%, var(--elevn-accent-light));
+  --gold-39: color-mix(in srgb, var(--elevn-accent-light) 54%, var(--elevn-sidebar-bg));
+  --gold-42: var(--elevn-accent); /* was mix(accent 66%, light): 3,6:1 as text */
+  --gold-44: color-mix(in srgb, var(--elevn-accent) 60%, var(--elevn-accent-light));
+  --gold-48: color-mix(in srgb, var(--elevn-accent) 50%, var(--elevn-accent-light));
+  --gold-49: oklch(from var(--elevn-accent-light) 0.695 0.111 calc(h - 8.5));
+  --gold-50: oklch(from var(--elevn-accent-light) 0.686 0.091 calc(h - 1.1));
+  --gold-51: color-mix(in srgb, color-mix(in srgb, var(--elevn-accent) 50%, #fff) 78%, #000);
+  --gold-54: color-mix(in srgb, var(--elevn-accent) 32%, var(--elevn-accent-light));
+  --gold-56: color-mix(in srgb, var(--elevn-accent-light) 85%, var(--elevn-sidebar-bg));
+  --gold-57: color-mix(in srgb, color-mix(in srgb, var(--elevn-accent) 15%, var(--elevn-accent-light)) 93%, var(--elevn-accent));
+  --gold-59: color-mix(in srgb, var(--elevn-accent) 15%, var(--elevn-accent-light));
+  --gold-62: color-mix(in srgb, var(--elevn-accent) 55%, #fff);
+  --gold-62-2: color-mix(in srgb, color-mix(in srgb, var(--elevn-accent) 35%, var(--elevn-accent-light)) 80%, #fff);
+  --gold-70: color-mix(in srgb, var(--elevn-accent-light) 85%, #fff);
+  --gold-71: oklch(from var(--elevn-accent-light) 0.840 0.074 h);
+  --gold-71-2: color-mix(in srgb, color-mix(in srgb, var(--elevn-accent) 40%, var(--elevn-accent-light)) 60%, #fff);
+  --gold-72: oklch(from var(--elevn-accent-light) 0.867 0.094 calc(h - 1.9));
+  --gold-73: color-mix(in srgb, var(--elevn-accent-light) 76%, #fff);
+  --gold-75: color-mix(in srgb, var(--elevn-accent-light) 69%, #fff);
+  --gold-76: color-mix(in srgb, color-mix(in srgb, var(--elevn-accent) 25%, #fff) 60%, var(--elevn-accent-light));
+  --gold-79: color-mix(in srgb, var(--elevn-accent-light) 57%, #fff);
+  --gold-79-2: color-mix(in srgb, var(--elevn-accent) 31%, #fff);
+  --gold-81: color-mix(in srgb, var(--elevn-accent-light) 54%, #fff);
+  --gold-83: color-mix(in srgb, var(--elevn-accent-light) 48%, #fff);
+  --gold-84: color-mix(in srgb, var(--elevn-accent) 24%, #fff);
+  --gold-86: color-mix(in srgb, var(--elevn-accent-light) 39%, #fff);
+  --gold-87: color-mix(in srgb, var(--elevn-accent-light) 37%, #fff);
+  --gold-88: oklch(from var(--elevn-accent-light) 0.941 0.040 calc(h - 3.0));
+  --gold-88-2: oklch(from var(--elevn-accent-light) 0.956 0.061 calc(h - 7.1));
+  --gold-90: color-mix(in srgb, var(--elevn-accent-light) 28%, #fff);
+  --gold-92: color-mix(in srgb, var(--elevn-accent-light) 21%, #fff);
+
+  /* Dark surfaces (follow --elevn-sidebar-bg) */
+  --night-06: color-mix(in srgb, var(--elevn-sidebar-bg) 72%, #000);
+  --night-12: color-mix(in srgb, var(--elevn-sidebar-bg) 94%, var(--elevn-accent-light));
+  --night-15: color-mix(in srgb, var(--elevn-sidebar-bg) 93%, #fff);
+  --night-19: color-mix(in srgb, var(--elevn-sidebar-bg) 89%, #fff);
+  --night-20: oklch(from var(--elevn-sidebar-bg) 0.269 0.065 calc(h + 1.5));
+
+  /* Ink text (fixed, readable on every theme) */
+  --ink-08: #0d0a21;
+  --ink-12: #171427;
+  --ink-14: #1f1b2c;
+  --ink-16: #282331;
+  --ink-19: #2d2938;
+  --ink-22: #35313f;
+
+  /* Warm neutrals */
+  --sand-100: #ffffff;
+  --sand-26: #4e5630;
+  --sand-29: #596034;
+  --sand-34: #68703c;
+  --sand-35: #657044;
+  --sand-37: #66714d;
+  --sand-44: #8b6f55;
+  --sand-77: #cfc8bc;
+  --sand-80: #d5cfc1;
+  --sand-83: #dcd6ca;
+  --sand-85: #dfdbd2;
+  --sand-85-2: #cfe0d6;
+  --sand-87: #e7e2d6;
+  --sand-87-2: #e8d8d3;
+  --sand-88: #f3e8cf;
+  --sand-90: #ebe6de;
+  --sand-91: #f3dedb;
+  --sand-92: #f3efe2;
+  --sand-92-2: #e3f0e8;
+  --sand-93: #f3f0e9;
+  --sand-93-2: #f4e6e4;
+  --sand-94: #e7f7ed;
+  --sand-95: #f7f5f0;
+  --sand-95-2: #eef6f1;
+  --sand-96: #fdeceb;
+  --sand-98: #fbfaf7;
+
+  /* Text greys */
+  --slate-26: #413d49;
+  --slate-28: #3d3756;
+  --slate-29: #463f54;
+  --slate-32: #4f4a57;
+  --slate-33: #483d6b;
+  --slate-34: #55515d;
+  --slate-36: #5b5664;
+  --slate-37: #55506f;
+  --slate-39: #625e68;
+  --slate-43: #6b6673;
+  --slate-45: #6c6681;
+  --slate-47: var(--text-tertiary);
+  --slate-49: var(--text-tertiary);
+  --slate-53: var(--text-tertiary);
+  --slate-55: var(--text-tertiary);
+  --slate-59: var(--text-tertiary);
+  --slate-61: var(--text-tertiary);
+  --slate-66: var(--text-tertiary);
+  --slate-66-2: #a39db2;
+  --slate-72: #b7b2bb;
+  --slate-74: #b8b3c4;
+  --slate-75: #b9b2cb;
+  --slate-79: #c8c3ce;
+  --slate-85: #d6d1de;
+  --slate-87: #dcd6e8;
+  --slate-90: #e4e0ec;
+  --slate-92: #e9e7ef;
+  --slate-96: #f3f9f5;
+
+  /* Semantic: success */
+  --green-16: #1f3329;
+  --green-23: #1f5438;
+  --green-27: #197343;
+  --green-28: #2f5e48;
+  --green-29: #375d4b;
+  --green-31: #198746;
+  --green-33: #416854;
+  --green-35: #56654d;
+  --green-37: #53704e;
+  --green-38: #4f7462;
+  --green-40: #61715a;
+  --green-42: #5d786b;
+  --green-49: #6e9368;
+  --green-61: #84b59c;
+  --green-65: #82cca0;
+  --green-69: #a9bba3;
+  --green-73: #9fd4b2;
+  --green-74: #9be0bc;
+  --green-78: #9ef0c0;
+  --green-81: #bde0c9;
+  --green-82: #c6ddd0;
+  --green-89: #d3f2df;
+
+  /* Semantic: danger */
+  --red-27: #523b39;
+  --red-32: #5f4745;
+  --red-38: #9e2a22;
+  --red-39: #8d433b;
+  --red-39-2: #a8251d;
+  --red-40: #b81d13;
+  --red-43: #8d5550;
+  --red-43-2: #954f48;
+  --red-47: #a05a52;
+  --red-49: #a85c54;
+  --red-52: #b55f56;
+  --red-73: #d7a39d;
+  --red-79: #dfb9b4;
+  --red-82: #f2b8b2;
+  --red-82-2: #e4c4bf;
+  --red-84: #e6cbc8;
+  --red-84-2: #ffb3ae;
+  --red-87: #ebd4d1;
+
+  /* Semantic: warning */
+  --amber-31: #7c5c23;
+  --amber-32: #855e1f;
+  --amber-36: #8c6a2b;
+  --amber-39: #8a5a00;
+  --amber-46: #b58938;
+  --amber-50: #d99b26;
+
+  /* Semantic: info */
+  --blue-11: #111827;
+  --blue-32: #1c4587;
+  --blue-88: #c9daf8;
+}

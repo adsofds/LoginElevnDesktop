@@ -1,0 +1,1141 @@
+.settings-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 40px;
+}
+
+.settings-workspace-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.settings-workspace-header p {
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+.settings-workspace-header h1 {
+  margin: 6px 0;
+  font-size: clamp(28px, 2.8vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-08);
+}
+
+.settings-workspace-header > div > span {
+  color: var(--slate-43);
+  font-size: 13px;
+}
+
+.settings-header-badge {
+  padding: 12px 18px;
+  border: 1px solid var(--sand-85);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+
+.settings-header-badge small {
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.settings-header-badge strong {
+  font-size: 14px;
+  color: var(--ink-08);
+}
+
+.settings-header-badge span {
+  font-size: 12px;
+  color: var(--slate-47);
+}
+
+.settings-toast-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 11px;
+  background: var(--elevn-sidebar-bg);
+  color: var(--gold-90);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--elevn-sidebar-bg) 14%, transparent);
+}
+
+.settings-toast-banner button {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--sand-100);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ABAS DE CONFIGURAÇÕES */
+.settings-tabs-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 5px;
+  border: 1px solid var(--sand-85);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.settings-tabs-nav > button {
+  min-height: 58px;
+  padding: 10px 16px;
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  text-align: left;
+  color: var(--slate-36);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.settings-tabs-nav > button strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-tabs-nav > button small {
+  font-size: 11px;
+  color: var(--slate-59);
+}
+
+.settings-tabs-nav > button.active {
+  background: var(--elevn-sidebar-bg);
+  color: var(--sand-100);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--elevn-sidebar-bg) 14%, transparent);
+}
+
+.settings-tabs-nav > button.active small {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+/* BOTÕES PADRÃO */
+.settings-primary-btn {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 9px;
+  background: var(--elevn-accent);
+  color: var(--sand-100);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-outline-btn {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--sand-80);
+  border-radius: 8px;
+  background: var(--sand-100);
+  color: var(--ink-16);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* SEÇÃO 1: FUNCIONÁRIOS E PERMISSÕES */
+.settings-employees-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-emp-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 24px;
+  border: 1px solid var(--sand-85);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  flex-wrap: wrap;
+}
+
+.settings-emp-topbar span {
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.settings-emp-topbar h2 {
+  margin: 4px 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-08);
+}
+
+.settings-emp-topbar p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--slate-43);
+  max-width: 680px;
+}
+
+/* FORMULÁRIO NOVO FUNCIONÁRIO */
+.settings-new-emp-card {
+  padding: 22px 24px;
+  border: 1px solid var(--gold-76);
+  border-radius: 14px;
+  background: var(--sand-95);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-new-emp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-new-emp-head span {
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.settings-new-emp-head h3 {
+  margin: 3px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-08);
+}
+
+.settings-new-emp-head button {
+  font-size: 12px;
+  color: var(--slate-43);
+  cursor: pointer;
+}
+
+.settings-new-emp-fields {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-new-emp-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.settings-new-emp-fields label span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--slate-26);
+}
+
+.settings-new-emp-fields input,
+.settings-new-emp-fields select {
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--sand-80);
+  border-radius: 8px;
+  background: var(--sand-100);
+  font-size: 12px;
+  color: var(--ink-08);
+}
+
+.settings-new-emp-perms-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-new-emp-perms-box > strong {
+  font-size: 12px;
+  color: var(--ink-08);
+}
+
+.settings-new-emp-perms-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.perm-checkbox-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--sand-85);
+  border-radius: 10px;
+  background: var(--sand-100);
+  cursor: pointer;
+}
+
+.perm-checkbox-tile input {
+  margin-top: 3px;
+  accent-color: var(--elevn-accent);
+}
+
+.perm-checkbox-tile div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.perm-checkbox-tile .area-pill {
+  align-self: flex-start;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--sand-93);
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.perm-checkbox-tile strong {
+  font-size: 12px;
+  color: var(--ink-08);
+}
+
+.perm-checkbox-tile small {
+  font-size: 11px;
+  color: var(--slate-47);
+  line-height: 1.35;
+}
+
+.settings-new-emp-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.settings-new-emp-footer button.ghost {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--sand-80);
+  background: var(--sand-100);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-new-emp-footer button.solid {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 8px;
+  background: var(--elevn-sidebar-bg);
+  color: var(--sand-100);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* SPLIT DE FUNCIONÁRIOS E PERMISSÕES */
+.settings-employees-split {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.settings-employees-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.employee-card-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--sand-85);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.employee-card-item:hover {
+  border-color: var(--elevn-accent);
+}
+
+.employee-card-item.selected {
+  border-color: var(--elevn-accent);
+  background: var(--sand-100);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--elevn-sidebar-bg) 6%, transparent);
+}
+
+.employee-card-item.paused {
+  opacity: 0.68;
+}
+
+.emp-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.emp-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.emp-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.emp-card-title-row strong {
+  font-size: 13px;
+  color: var(--ink-08);
+}
+
+.emp-status-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.emp-status-pill.ativo {
+  background: var(--sand-92-2);
+  color: var(--green-27);
+}
+
+.emp-status-pill.pausado {
+  background: var(--sand-93-2);
+  color: var(--red-39-2);
+}
+
+.emp-role-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--elevn-accent);
+}
+
+.emp-email-label {
+  font-size: 11px;
+  color: var(--slate-49);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emp-perm-meter {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.emp-perm-meter span {
+  font-size: 11px;
+  color: var(--slate-43);
+  font-weight: 600;
+}
+
+.emp-perm-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--sand-90);
+  overflow: hidden;
+}
+
+.emp-perm-bar i {
+  display: block;
+  height: 100%;
+  background: var(--elevn-accent);
+}
+
+/* PAINEL DE PERMISSÕES DO FUNCIONÁRIO SELECIONADO */
+.settings-employee-permissions-panel {
+  border: 1px solid var(--sand-85);
+  border-radius: 14px;
+  background: var(--sand-100);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.emp-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--sand-90);
+  flex-wrap: wrap;
+}
+
+.emp-detail-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.emp-detail-profile img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.emp-detail-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.code-badge {
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--sand-93);
+  color: var(--gold-27);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.emp-detail-profile h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-08);
+}
+
+.emp-detail-profile p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--slate-43);
+}
+
+.emp-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.emp-action-btn {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--gold-84);
+  border-radius: 8px;
+  background: var(--sand-100);
+  color: var(--ink-19);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.emp-action-btn.danger {
+  border-color: var(--red-87);
+  color: var(--red-40);
+  background: var(--sand-100);
+}
+
+.emp-presets-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--sand-95);
+  flex-wrap: wrap;
+}
+
+.emp-presets-bar > span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--elevn-accent);
+  letter-spacing: 0.06em;
+}
+
+.emp-presets-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.emp-presets-buttons button {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--gold-84);
+  border-radius: 6px;
+  background: var(--sand-100);
+  color: var(--ink-19);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.emp-presets-buttons button:hover {
+  border-color: var(--elevn-accent);
+}
+
+.emp-permissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.emp-permission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--sand-90);
+  border-radius: 11px;
+  transition: all 0.14s ease;
+}
+
+.emp-permission-row.is-allowed {
+  background: var(--sand-100);
+  border-left: 4px solid var(--green-27);
+}
+
+.emp-permission-row.is-blocked {
+  background: var(--sand-100);
+  border-left: 4px solid var(--slate-79);
+  opacity: 0.84;
+}
+
+.emp-perm-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.emp-perm-topline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.emp-perm-topline .area-tag {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--sand-90);
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.emp-perm-topline .critical-tag {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--sand-96);
+  color: var(--red-40);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.emp-perm-topline .state-badge {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.emp-perm-topline .state-badge.allowed {
+  color: var(--green-27);
+}
+
+.emp-perm-topline .state-badge.blocked {
+  color: var(--red-38);
+}
+
+.emp-perm-info strong {
+  font-size: 13px;
+  color: var(--ink-08);
+}
+
+.emp-perm-info p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--slate-43);
+}
+
+.perm-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  min-width: 114px;
+}
+
+.perm-toggle-btn .knob {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.perm-toggle-btn.on {
+  background: var(--green-27);
+  color: var(--sand-100);
+}
+
+.perm-toggle-btn.on .knob {
+  background: var(--green-78);
+}
+
+.perm-toggle-btn.off {
+  background: var(--sand-90);
+  color: var(--slate-36);
+  border-color: var(--sand-83);
+}
+
+.perm-toggle-btn.off .knob {
+  background: var(--slate-59);
+}
+
+/* SEÇÃO 2: TEMA E CORES */
+.settings-theme-card {
+  padding: 24px;
+  border: 1px solid var(--sand-85);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.settings-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.settings-card-head span {
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.settings-card-head h2 {
+  margin: 4px 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-08);
+}
+
+.settings-card-head p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--slate-43);
+  max-width: 680px;
+}
+
+.theme-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.theme-preset-card {
+  padding: 14px;
+  border: 2px solid var(--sand-85);
+  border-radius: 13px;
+  background: var(--sand-100);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.theme-preset-card.active {
+  border-color: var(--elevn-accent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--elevn-sidebar-bg) 8%, transparent);
+}
+
+.theme-swatch-preview {
+  height: 76px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--elevn-sidebar-bg) 10%, transparent);
+  display: flex;
+  overflow: hidden;
+}
+
+.swatch-sidebar {
+  width: 32%;
+  height: 100%;
+  display: block;
+}
+
+.swatch-content {
+  flex: 1;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.swatch-accent-bar {
+  height: 12px;
+  width: 75%;
+  border-radius: 4px;
+  display: block;
+}
+
+.swatch-accent-pill {
+  height: 8px;
+  width: 45%;
+  border-radius: 999px;
+  display: block;
+}
+
+.theme-preset-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.theme-preset-title strong {
+  font-size: 13px;
+  color: var(--ink-08);
+}
+
+.theme-preset-title .active-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--elevn-accent);
+  color: var(--sand-100);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.theme-preset-meta small {
+  font-size: 12px;
+  color: var(--slate-47);
+}
+
+.theme-customizer-box {
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: var(--sand-95);
+  border: 1px solid var(--sand-85);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.theme-customizer-box h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-08);
+}
+
+.theme-customizer-box p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--slate-43);
+}
+
+.theme-color-pickers-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.color-picker-tile {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--sand-100);
+  border: 1px solid var(--sand-85);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-picker-tile span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-22);
+}
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.picker-row input[type='color'] {
+  width: 38px;
+  height: 32px;
+  border: 1px solid var(--sand-80);
+  border-radius: 6px;
+  cursor: pointer;
+  background: none;
+}
+
+.picker-row code {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-08);
+}
+
+/* SEÇÃO 3: SEGURANÇA E ALTERAR SENHA */
+.settings-security-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.9fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.settings-password-card,
+.settings-security-sidecard {
+  padding: 24px;
+  border: 1px solid var(--sand-85);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-error-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--sand-96);
+  color: var(--red-40);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.password-fields-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.password-fields-stack label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.password-fields-stack label span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-22);
+}
+
+.password-fields-stack input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--sand-80);
+  border-radius: 9px;
+  background: var(--sand-100);
+  font-size: 13px;
+  color: var(--ink-08);
+}
+
+.password-rules-box {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--sand-95);
+  border: 1px solid var(--sand-85);
+}
+
+.password-rules-box strong {
+  font-size: 12px;
+  color: var(--ink-08);
+}
+
+.password-rules-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.password-rules-box li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--slate-47);
+}
+
+.password-rules-box li.met {
+  color: var(--green-27);
+  font-weight: 700;
+}
+
+.password-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--sand-90);
+  flex-wrap: wrap;
+}
+
+.password-card-footer small {
+  font-size: 12px;
+  color: var(--slate-47);
+}
+
+.settings-security-sidecard > span {
+  color: var(--elevn-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.settings-security-sidecard h3 {
+  margin: -10px 0 0;
+  font-size: 16px;
+  color: var(--ink-08);
+}
+
+.security-toggle-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--sand-95);
+  border: 1px solid var(--sand-85);
+}
+
+.security-toggle-box strong {
+  font-size: 12px;
+  color: var(--ink-08);
+}
+
+.security-toggle-box p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--slate-43);
+}
+
+.active-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.active-sessions-list > strong {
+  font-size: 12px;
+  color: var(--ink-08);
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--sand-90);
+  border-radius: 9px;
+  background: var(--sand-100);
+}
+
+.session-item strong {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-08);
+}
+
+.session-item small {
+  font-size: 11px;
+  color: var(--slate-47);
+}
+
+.session-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--sand-92-2);
+  color: var(--green-27);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.session-item button {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--red-87);
+  background: var(--sand-98);
+  color: var(--red-40);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 1080px) {
+  .settings-employees-split,
+  .settings-security-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-new-emp-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-new-emp-perms-grid,
+  .theme-presets-grid,
+  .theme-color-pickers-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .settings-tabs-nav,
+  .settings-new-emp-fields,
+  .settings-new-emp-perms-grid,
+  .theme-presets-grid,
+  .theme-color-pickers-grid,
+  .password-rules-box ul {
+    grid-template-columns: 1fr;
+  }
+}
