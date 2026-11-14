@@ -12,6 +12,21 @@ import {
   type LeadTemperature,
   type SiteFormSubmission,
 } from '@/lib/demo-internal'
+import {
+  builtInLayouts,
+  isCustomizedBuiltIn,
+  makeLayoutId,
+  mergeLayouts,
+  readLayoutState,
+  writeLayoutState,
+  type SavedDashboardLayout,
+  type WidgetSizes,
+} from '@/lib/dashboardLayouts'
+import { Button } from './ui/Button'
+import { Icon } from './ui/icons'
+import { Menu } from './ui/Menu'
+import { NameDialog } from './ui/NameDialog'
+import { Tabs } from './ui/Tabs'
 
 type WidgetDefinition = {
   id: WidgetId
@@ -95,21 +110,18 @@ const widgets: WidgetDefinition[] = [
     title: 'Check-ins pendentes',
     description: 'Alunos aguardando sua avaliação.',
     category: 'Gestão',
-    legacy: true,
   },
   {
     id: 'workout-adherence',
     title: 'Adesão aos treinos',
     description: 'Frequência e conclusão dos treinos.',
     category: 'Treino',
-    legacy: true,
   },
   {
     id: 'nutrition-adherence',
     title: 'Adesão nutricional',
     description: 'Acompanhamento do plano alimentar.',
     category: 'Nutrição',
-    legacy: true,
   },
   {
     id: 'recent-activity',
@@ -130,7 +142,6 @@ const widgets: WidgetDefinition[] = [
     title: 'Evolução dos alunos',
     description: 'Tendência de evolução geral.',
     category: 'Treino',
-    legacy: true,
   },
   {
     id: 'appointments',
@@ -140,13 +151,6 @@ const widgets: WidgetDefinition[] = [
     legacy: true,
   },
 ]
-
-type WidgetSize = {
-  columns: number
-  height: number
-}
-
-type WidgetSizes = Partial<Record<WidgetId, WidgetSize>>
 
 type ResizeSession = {
   widget: WidgetId
@@ -1507,20 +1511,95 @@ export default function CustomDashboard({
   const draggedWidgetRef = useRef<WidgetId | null>(null)
   const resizeSessionRef = useRef<ResizeSession | null>(null)
 
+  /* ---- Saved layouts (Operacional, Treino, Dieta, Comercial + the user's own) ---- */
+  const [storedLayouts, setStoredLayouts] = useState<SavedDashboardLayout[]>([])
+  const [activeLayoutId, setActiveLayoutId] = useState('operacional')
+  const [defaultLayoutId, setDefaultLayoutId] = useState('operacional')
+  const [nameDialog, setNameDialog] = useState<null | { mode: 'save-as' | 'rename'; value: string }>(null)
+  const allLayouts = mergeLayouts(storedLayouts)
+  const activeLayout = allLayouts.find((item) => item.id === activeLayoutId) ?? allLayouts[0]
+
+  const persist = (layouts: SavedDashboardLayout[], activeId: string, defaultId: string) => {
+    setStoredLayouts(layouts)
+    setActiveLayoutId(activeId)
+    setDefaultLayoutId(defaultId)
+    writeLayoutState({ layouts, activeId, defaultId })
+  }
+
+  const applyLayout = (target: SavedDashboardLayout) => {
+    const items = [...target.items]
+      .sort((a, b) => a.order - b.order)
+      .map((item, order) => ({ ...item, order }))
+    const sizes = { ...createWidgetSizes(items), ...target.sizes }
+    setLayout(items)
+    setSavedLayout(items)
+    setWidgetSizes(sizes)
+    setSavedWidgetSizes(sizes)
+    setEditing(false)
+    setCatalogOpen(false)
+  }
+
+  // Restore this browser's layouts after hydration (localStorage is client-only)
   useEffect(() => {
-    setLayout((current) => ensureRenewalsWidget(current))
-    setSavedLayout((current) => ensureRenewalsWidget(current))
-    setWidgetSizes((current) => ({
-      ...current,
-      'renewals-overview': current['renewals-overview'] ?? { columns: 4, height: 380 },
-      'site-forms': current['site-forms'] ?? { columns: 8, height: 420 },
-    }))
-    setSavedWidgetSizes((current) => ({
-      ...current,
-      'renewals-overview': current['renewals-overview'] ?? { columns: 4, height: 380 },
-      'site-forms': current['site-forms'] ?? { columns: 8, height: 420 },
-    }))
+    const state = readLayoutState()
+    const merged = mergeLayouts(state.layouts)
+    const defaultId = merged.some((item) => item.id === state.defaultId) ? state.defaultId! : 'operacional'
+    const activeId = merged.some((item) => item.id === state.activeId) ? state.activeId! : defaultId
+    setStoredLayouts(state.layouts)
+    setDefaultLayoutId(defaultId)
+    setActiveLayoutId(activeId)
+    const target = merged.find((item) => item.id === activeId)
+    if (target) applyLayout(target)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const switchLayout = (id: string) => {
+    const target = allLayouts.find((item) => item.id === id)
+    if (!target) return
+    applyLayout(target)
+    persist(storedLayouts, id, defaultLayoutId)
+    setFeedback('')
+  }
+
+  const currentSnapshot = () => ({
+    items: [...layout].sort((a, b) => a.order - b.order).map((item, order) => ({ ...item, order })),
+    sizes: widgetSizes,
+  })
+
+  const saveAsNewLayout = (name: string) => {
+    const created: SavedDashboardLayout = { id: makeLayoutId(name), name, ...currentSnapshot() }
+    persist([...storedLayouts, created], created.id, defaultLayoutId)
+    applyLayout(created)
+    setFeedback(`Layout “${name}” criado.`)
+  }
+
+  const renameLayout = (name: string) => {
+    const exists = storedLayouts.some((item) => item.id === activeLayout.id)
+    const updated = exists
+      ? storedLayouts.map((item) => (item.id === activeLayout.id ? { ...item, name } : item))
+      : [...storedLayouts, { ...activeLayout, name }]
+    persist(updated, activeLayout.id, defaultLayoutId)
+    setFeedback(`Layout renomeado para “${name}”.`)
+  }
+
+  const deleteLayout = () => {
+    if (activeLayout.builtIn) return
+    const remaining = storedLayouts.filter((item) => item.id !== activeLayout.id)
+    const nextDefault = defaultLayoutId === activeLayout.id ? 'operacional' : defaultLayoutId
+    const target = mergeLayouts(remaining).find((item) => item.id === nextDefault) ?? builtInLayouts[0]
+    persist(remaining, target.id, nextDefault)
+    applyLayout(target)
+    setFeedback(`Layout “${activeLayout.name}” excluído.`)
+  }
+
+  const restoreBuiltIn = () => {
+    const original = builtInLayouts.find((item) => item.id === activeLayout.id)
+    if (!original) return
+    const remaining = storedLayouts.filter((item) => item.id !== original.id)
+    persist(remaining, original.id, defaultLayoutId)
+    applyLayout(original)
+    setFeedback(`Layout “${original.name}” restaurado.`)
+  }
 
   const orderedLayout = [...layout].sort((a, b) => a.order - b.order)
   const activeIds = new Set(layout.map((item) => item.widget))
@@ -1645,16 +1724,20 @@ export default function CustomDashboard({
     if (key === 'ArrowDown') updateWidgetSize(widget, size.columns, size.height + 24)
   }
 
+  /** "Salvar layout": stores the edits in the active layout (a built-in keeps a customized copy). */
   const saveLayout = () => {
-    const normalized = orderedLayout.map((item, order) => ({
-      ...item,
-      order,
-    }))
-    setLayout(normalized)
-    setSavedLayout(normalized)
+    const snapshot = currentSnapshot()
+    setLayout(snapshot.items)
+    setSavedLayout(snapshot.items)
     setSavedWidgetSizes(widgetSizes)
     setEditing(false)
-    setFeedback('Ajustes aplicados nesta demonstração.')
+    const exists = storedLayouts.some((item) => item.id === activeLayout.id)
+    const updatedEntry: SavedDashboardLayout = { ...activeLayout, ...snapshot }
+    const updated = exists
+      ? storedLayouts.map((item) => (item.id === activeLayout.id ? updatedEntry : item))
+      : [...storedLayouts, updatedEntry]
+    persist(updated, activeLayout.id, defaultLayoutId)
+    setFeedback(`Layout “${activeLayout.name}” salvo.`)
   }
 
   const cancelEditing = () => {
@@ -1667,57 +1750,129 @@ export default function CustomDashboard({
 
   return (
     <>
-      <div className="dashboard-toolbar">
-        <div>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <Tabs
+          label="Layouts do dashboard"
+          className="min-w-0 flex-1 border-b-0"
+          value={activeLayout.id}
+          onChange={switchLayout}
+          items={allLayouts.map((item) => ({ id: item.id, label: item.name }))}
+        />
+        <div className="flex items-center gap-2 pb-1">
           {feedback && (
-            <span className="save-success" role="status">
+            <span className="mr-2 text-xs font-medium text-success" role="status">
               {feedback}
             </span>
           )}
-        </div>
-        <div>
           {editing ? (
             <>
-              <button className="toolbar-button subtle" type="button" onClick={cancelEditing}>
+              <Button size="sm" variant="ghost" onClick={cancelEditing}>
                 Cancelar
-              </button>
-              <button
-                className="toolbar-button add-widget"
-                type="button"
-                onClick={() => setCatalogOpen(true)}
-              >
-                <span>+</span> Adicionar widget
-              </button>
-              <button className="toolbar-button save-layout" type="button" onClick={saveLayout}>
-                Aplicar layout
-              </button>
+              </Button>
+              <Button size="sm" onClick={() => setCatalogOpen(true)}>
+                <Icon name="plus" className="size-4" /> Adicionar widget
+              </Button>
+              <Button size="sm" onClick={() => setNameDialog({ mode: 'save-as', value: '' })}>
+                Salvar como novo…
+              </Button>
+              <Button size="sm" variant="accent" onClick={saveLayout}>
+                Salvar layout
+              </Button>
             </>
           ) : (
-            <button
-              className="toolbar-button edit-layout"
-              type="button"
-              onClick={() => setEditing(true)}
-            >
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M4 20h4l11-11-4-4L4 16v4ZM13.5 6.5l4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Personalizar Dashboard
-            </button>
+            <>
+              <Menu
+                label="Opções do layout"
+                header={
+                  <p className="mb-1 border-b border-line px-2.5 pt-1.5 pb-2 text-xs text-ink-3">
+                    {activeLayout.description ?? 'Layout personalizado'}
+                    {activeLayout.id === defaultLayoutId && ' · padrão ao abrir'}
+                  </p>
+                }
+                items={[
+                  {
+                    id: 'save-as',
+                    label: 'Salvar como novo layout…',
+                    onSelect: () => setNameDialog({ mode: 'save-as', value: '' }),
+                  },
+                  {
+                    id: 'rename',
+                    label: 'Renomear',
+                    onSelect: () => setNameDialog({ mode: 'rename', value: activeLayout.name }),
+                  },
+                  ...(activeLayout.id !== defaultLayoutId
+                    ? [
+                        {
+                          id: 'default',
+                          label: 'Abrir sempre neste layout',
+                          onSelect: () => {
+                            persist(storedLayouts, activeLayout.id, activeLayout.id)
+                            setFeedback(`“${activeLayout.name}” agora abre por padrão.`)
+                          },
+                        },
+                      ]
+                    : []),
+                  ...(isCustomizedBuiltIn(activeLayout.id, storedLayouts)
+                    ? [{ id: 'restore', label: 'Restaurar original', onSelect: restoreBuiltIn }]
+                    : []),
+                  ...(!activeLayout.builtIn
+                    ? [{ id: 'delete', label: 'Excluir layout', danger: true, onSelect: deleteLayout }]
+                    : []),
+                ]}
+                trigger={({ open, toggle, id }) => (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={toggle}
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                    aria-controls={open ? id : undefined}
+                    aria-label="Opções do layout"
+                    className="size-8"
+                  >
+                    <span aria-hidden="true" className="text-base leading-none">⋯</span>
+                  </Button>
+                )}
+              />
+              <Button size="sm" onClick={() => setEditing(true)}>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+                  <path
+                    d="M4 20h4l11-11-4-4L4 16v4ZM13.5 6.5l4 4"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Personalizar
+              </Button>
+            </>
           )}
         </div>
       </div>
+
+      {nameDialog && (
+        <NameDialog
+          title={nameDialog.mode === 'save-as' ? 'Salvar como novo layout' : 'Renomear layout'}
+          description="Ex.: Layout Avaliações, Layout Segunda-feira."
+          label="Nome do layout"
+          confirmLabel={nameDialog.mode === 'save-as' ? 'Criar layout' : 'Renomear'}
+          initialValue={nameDialog.value}
+          takenNames={allLayouts.filter((item) => item.id !== (nameDialog.mode === 'rename' ? activeLayout.id : '')).map((item) => item.name)}
+          onCancel={() => setNameDialog(null)}
+          onConfirm={(name) => {
+            if (nameDialog.mode === 'save-as') saveAsNewLayout(name)
+            else renameLayout(name)
+            setNameDialog(null)
+          }}
+        />
+      )}
 
       {editing && (
         <div className="edit-dashboard-note">
           <span>Modo de edição</span>
           Arraste pelo puxador superior para mover. Puxe o canto inferior direito para ajustar
-          livremente largura e altura. Os ajustes ficam ativos até recarregar a página.
+          largura e altura. Clique em “Salvar layout” para guardar neste navegador.
         </div>
       )}
 
@@ -1926,3 +2081,4 @@ export default function CustomDashboard({
     </>
   )
 }
+
