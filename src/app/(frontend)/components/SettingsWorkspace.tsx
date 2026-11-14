@@ -5,6 +5,7 @@ import TeamPermissions from './settings/TeamPermissions'
 import ThemeCustomizer from './settings/ThemeCustomizer'
 import TwoFactorSetup from './settings/TwoFactorSetup'
 import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 import { Switch } from './ui/Switch'
 import { cx } from './ui/cx'
 import { Icon } from './ui/icons'
@@ -233,6 +234,9 @@ export const rolePresetPermissions: Record<string, EmployeePermissions> = {
   },
 }
 
+const employeeField =
+  'mt-1 h-10 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-3 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20 focus-visible:outline-none'
+
 export const initialEmployees: EmployeeMember[] = [
   {
     id: 'emp-1',
@@ -333,9 +337,27 @@ export default function SettingsWorkspace({
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [twoFactorSetupOpen, setTwoFactorSetupOpen] = useState(false)
   const [sessions, setSessions] = useState([
-    { id: 'mac', device: 'MacBook Pro · Chrome', place: 'Natal, RN', last: 'Ativo agora', current: true },
-    { id: 'iphone', device: 'iPhone 16 Pro · App Elevn Admin', place: 'Natal, RN', last: 'Hoje às 08:15', current: false },
-    { id: 'win', device: 'Windows · Edge', place: 'Fortaleza, CE', last: 'Ontem às 19:42', current: false },
+    {
+      id: 'mac',
+      device: 'MacBook Pro · Chrome',
+      place: 'Natal, RN',
+      last: 'Ativo agora',
+      current: true,
+    },
+    {
+      id: 'iphone',
+      device: 'iPhone 16 Pro · App Elevn Admin',
+      place: 'Natal, RN',
+      last: 'Hoje às 08:15',
+      current: false,
+    },
+    {
+      id: 'win',
+      device: 'Windows · Edge',
+      place: 'Fortaleza, CE',
+      last: 'Ontem às 19:42',
+      current: false,
+    },
   ])
 
   const selectedEmployee =
@@ -521,7 +543,9 @@ export default function SettingsWorkspace({
 
   return (
     <section className="settings-workspace">
-      <h1 className="mb-6 text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-ink">Configurações</h1>
+      <h1 className="mb-6 text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-ink">
+        Configurações
+      </h1>
 
       {toastFeedback && (
         <div
@@ -529,14 +553,21 @@ export default function SettingsWorkspace({
           className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full bg-night py-2 pr-2 pl-4 text-sm text-on-dark shadow-pop"
         >
           <span>{toastFeedback}</span>
-          <button type="button" onClick={() => setToastFeedback(null)} className="rounded-full px-3 py-1 text-brand-light hover:bg-white/10">
+          <button
+            type="button"
+            onClick={() => setToastFeedback(null)}
+            className="rounded-full px-3 py-1 text-brand-light hover:bg-white/10"
+          >
             Fechar
           </button>
         </div>
       )}
 
       <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
-        <nav aria-label="Seções de Configurações" className="flex gap-1 overflow-x-auto lg:sticky lg:top-24 lg:flex-col lg:self-start">
+        <nav
+          aria-label="Seções de Configurações"
+          className="flex gap-1 overflow-x-auto lg:sticky lg:top-24 lg:flex-col lg:self-start"
+        >
           {(
             [
               ['employees', 'Equipe e permissões', 'team'],
@@ -551,362 +582,449 @@ export default function SettingsWorkspace({
               onClick={() => setActiveTab(id)}
               className={cx(
                 'flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors',
-                activeTab === id ? 'bg-surface font-medium text-ink shadow-[0_0_0_1px_var(--border-default)]' : 'text-ink-2 hover:bg-surface/60 hover:text-ink',
+                activeTab === id
+                  ? 'bg-surface font-medium text-ink shadow-[0_0_0_1px_var(--border-default)]'
+                  : 'text-ink-2 hover:bg-surface/60 hover:text-ink',
               )}
             >
               <Icon name={icon} className="size-4" />
               {label}
             </button>
           ))}
-          <span className="flex shrink-0 items-center gap-2.5 px-3 py-2 text-sm text-ink-3" title="Em breve">
+          <span
+            className="flex shrink-0 items-center gap-2.5 px-3 py-2 text-sm text-ink-3"
+            title="Em breve"
+          >
             <Icon name="swap" className="size-4" />
             Integrações
             <span className="rounded-full border border-line px-1.5 text-[10px]">em breve</span>
           </span>
         </nav>
         <div className="min-w-0">
-
-      {/* ABA 1: FUNCIONÁRIOS E PERMISSÕES (O QUE PODE OU NÃO FAZER) */}
-      {activeTab === 'employees' && (
-        <div className="settings-employees-section">
-          {newEmpModalOpen && (
-            <form className="settings-new-emp-card" onSubmit={handleCreateEmployee}>
-              <header className="settings-new-emp-head">
-                <div>
-                  <span>NOVO MEMBRO DA EQUIPE</span>
-                  <h3>Cadastrar Funcionário e Definir Permissões Iniciais</h3>
-                </div>
-                <button type="button" onClick={() => setNewEmpModalOpen(false)}>
-                  Cancelar
-                </button>
-              </header>
-
-              <div className="settings-new-emp-fields">
-                <label>
-                  <span>Nome completo do funcionário *</span>
-                  <input
-                    type="text"
-                    value={empName}
-                    onChange={(e) => setEmpName(e.target.value)}
-                    placeholder="Ex.: Dr. Lucas Almeida"
-                    required
-                  />
-                </label>
-                <label>
-                  <span>Cargo / Função na Consultoria *</span>
-                  <select value={empRole} onChange={(e) => handleRolePresetChange(e.target.value)}>
-                    <option value="Nutricionista Esportiva">Nutricionista Esportiva</option>
-                    <option value="Treinador Assistente">Treinador Assistente</option>
-                    <option value="Comercial & Closer (SDR)">Comercial & Closer (SDR)</option>
-                    <option value="Social Media & Conteúdo">Social Media & Conteúdo</option>
-                    <option value="Coordenador Geral">Coordenador Geral</option>
-                  </select>
-                </label>
-                <label>
-                  <span>E-mail de Login *</span>
-                  <input
-                    type="email"
-                    value={empEmail}
-                    onChange={(e) => setEmpEmail(e.target.value)}
-                    placeholder="lucas.almeida@elevn.com.br"
-                    required
-                  />
-                </label>
-                <label>
-                  <span>WhatsApp / Telefone</span>
-                  <input
-                    type="text"
-                    value={empPhone}
-                    onChange={(e) => setEmpPhone(e.target.value)}
-                    placeholder="(85) 99988-7766"
-                  />
-                </label>
-                <label>
-                  <span>Senha Provisória de Acesso</span>
-                  <input
-                    type="text"
-                    value={empPassword}
-                    onChange={(e) => setEmpPassword(e.target.value)}
-                  />
-                </label>
-              </div>
-
-              <div className="settings-new-emp-perms-box">
-                <strong>
-                  Selecione o que este funcionário poderá fazer desde o primeiro acesso:
-                </strong>
-                <div className="settings-new-emp-perms-grid">
-                  {permissionDefinitions.map((perm) => (
-                    <label key={perm.key} className="perm-checkbox-tile">
-                      <input
-                        type="checkbox"
-                        checked={empDraftPerms[perm.key]}
-                        onChange={(e) =>
-                          setEmpDraftPerms((curr) => ({
-                            ...curr,
-                            [perm.key]: e.target.checked,
-                          }))
-                        }
-                      />
-                      <div>
-                        <span className="area-pill">{perm.area}</span>
-                        <strong>{perm.title}</strong>
-                        <small>{perm.description}</small>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <footer className="settings-new-emp-footer">
-                <button type="button" className="ghost" onClick={() => setNewEmpModalOpen(false)}>
-                  Fechar
-                </button>
-                <button type="submit" className="solid">
-                  Concluir Cadastro e Liberar Acesso
-                </button>
-              </footer>
-            </form>
+          {/* ABA 1: FUNCIONÁRIOS E PERMISSÕES (O QUE PODE OU NÃO FAZER) */}
+          {activeTab === 'employees' && (
+            <div className="settings-employees-section">
+              <TeamPermissions
+                employees={employees}
+                selectedId={selectedEmployee?.id ?? ''}
+                onSelect={setSelectedEmpId}
+                onSave={(id, permissions) => {
+                  setEmployees((current) =>
+                    current.map((emp) => (emp.id === id ? { ...emp, permissions } : emp)),
+                  )
+                  const target = employees.find((emp) => emp.id === id)
+                  if (target) showToast(`Permissões de ${target.name} salvas.`)
+                }}
+                onToggleStatus={toggleEmployeeStatus}
+                onRemove={removeEmployee}
+                onNewEmployee={() => setNewEmpModalOpen(true)}
+                adminName={adminUser.name}
+              />
+            </div>
           )}
 
-          <TeamPermissions
-            employees={employees}
-            selectedId={selectedEmployee?.id ?? ''}
-            onSelect={setSelectedEmpId}
-            onSave={(id, permissions) => {
-              setEmployees((current) => current.map((emp) => (emp.id === id ? { ...emp, permissions } : emp)))
-              const target = employees.find((emp) => emp.id === id)
-              if (target) showToast(`Permissões de ${target.name} salvas.`)
-            }}
-            onToggleStatus={toggleEmployeeStatus}
-            onRemove={removeEmployee}
-            onNewEmployee={() => setNewEmpModalOpen((open) => !open)}
-            adminName={adminUser.name}
-          />
-        </div>
-      )}
-
-      {/* ABA 2: MUDAR A COR DO TEMA */}
-      {activeTab === 'theme' && (
-        <div className="settings-theme-section">
-          <div className="settings-theme-card">
-            <header className="settings-card-head">
-              <div>
-                <h2>Aparência</h2>
-                <p>Escolha uma paleta pronta ou ajuste cada cor. Vale para todo o painel na hora.</p>
-              </div>
-              <button
-                type="button"
-                className="settings-outline-btn"
-                onClick={() => {
-                  onSelectTheme(presetThemes[0])
-                  showToast('Tema padrão Elevn Classic restaurado!')
-                }}
-              >
-                Restaurar padrão Elevn
-              </button>
-            </header>
-
-            <div className="theme-presets-grid">
-              {presetThemes.map((preset) => {
-                const isSelected = activeTheme.id === preset.id
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    className={`theme-preset-card ${isSelected ? 'active' : ''}`}
-                    onClick={() => {
-                      onSelectTheme(preset)
-                      showToast(`Tema "${preset.name}" aplicado em todo o painel!`)
-                    }}
-                  >
-                    <div className="theme-swatch-preview" style={{ background: preset.canvasBg }}>
-                      <span className="swatch-sidebar" style={{ background: preset.sidebarBg }} />
-                      <div className="swatch-content">
-                        <span
-                          className="swatch-accent-bar"
-                          style={{ background: preset.accentColor }}
-                        />
-                        <span
-                          className="swatch-accent-pill"
-                          style={{ background: preset.accentLight }}
-                        />
-                      </div>
-                    </div>
-                    <div className="theme-preset-meta">
-                      <div className="theme-preset-title">
-                        <strong>{preset.name}</strong>
-                        {isSelected && <span className="active-tag">Ativo</span>}
-                      </div>
-                      <small>{preset.subtitle}</small>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="mt-6 border-t border-line pt-6">
-              <ThemeCustomizer theme={activeTheme} onChange={onSelectTheme} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ABA 3: ALTERAR SENHA DO ADMIN E SEGURANÇA */}
-      {activeTab === 'security' && (
-        <div className="settings-security-section">
-          <div className="settings-security-grid">
-            <form className="settings-password-card" onSubmit={handleUpdatePassword}>
-              <header className="settings-card-head">
+          <Sheet
+            open={newEmpModalOpen}
+            onClose={() => setNewEmpModalOpen(false)}
+            label="Cadastrar funcionário"
+            className="w-[min(560px,100vw)] bg-surface"
+          >
+            <form onSubmit={handleCreateEmployee} className="flex min-h-0 flex-1 flex-col">
+              <header className="flex items-start justify-between gap-3 border-b border-line px-6 py-5">
                 <div>
-                  <h2>Senha</h2>
-                  <p>A senha que você usa para entrar no painel.</p>
+                  <h2 className="text-lg font-semibold text-ink">Cadastrar funcionário</h2>
+                  <p className="mt-0.5 text-sm text-ink-2">
+                    Ele recebe uma credencial de acesso e começa com as permissões abaixo.
+                  </p>
                 </div>
-                <button
+                <Button
+                  size="icon"
+                  variant="ghost"
                   type="button"
-                  className="settings-outline-btn"
-                  onClick={() => setShowPasswords((prev) => !prev)}
+                  aria-label="Fechar"
+                  onClick={() => setNewEmpModalOpen(false)}
                 >
-                  {showPasswords ? 'Ocultar senhas' : 'Mostrar senhas'}
-                </button>
+                  <Icon name="close" className="size-4" />
+                </Button>
               </header>
-
-              {passwordError && (
-                <div className="settings-error-alert" role="alert">
-                  {passwordError}
+              <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block sm:col-span-2">
+                    <span className="text-xs font-medium text-ink-2">Nome completo</span>
+                    <input
+                      type="text"
+                      value={empName}
+                      onChange={(e) => setEmpName(e.target.value)}
+                      placeholder="Ex.: Lucas Almeida"
+                      required
+                      autoComplete="off"
+                      className={employeeField}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-ink-2">Função</span>
+                    <select
+                      value={empRole}
+                      onChange={(e) => handleRolePresetChange(e.target.value)}
+                      className={employeeField}
+                    >
+                      {Object.keys(rolePresetPermissions).map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="mt-1 block text-[11px] text-ink-3">
+                      Aplica as permissões padrão da função.
+                    </span>
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-ink-2">WhatsApp</span>
+                    <input
+                      type="tel"
+                      value={empPhone}
+                      onChange={(e) => setEmpPhone(e.target.value)}
+                      placeholder="(85) 99988-7766"
+                      className={employeeField}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-ink-2">E-mail de login</span>
+                    <input
+                      type="email"
+                      value={empEmail}
+                      onChange={(e) => setEmpEmail(e.target.value)}
+                      placeholder="lucas@elevn.com.br"
+                      required
+                      autoComplete="off"
+                      className={employeeField}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-ink-2">Senha provisória</span>
+                    <input
+                      type="text"
+                      value={empPassword}
+                      onChange={(e) => setEmpPassword(e.target.value)}
+                      autoComplete="off"
+                      className={cx(employeeField, 'font-mono')}
+                    />
+                    <span className="mt-1 block text-[11px] text-ink-3">
+                      Será pedida a troca no primeiro acesso.
+                    </span>
+                  </label>
                 </div>
-              )}
 
-              <div className="password-fields-stack">
-                <label>
-                  <span>Senha atual</span>
-                  <input
-                    type={showPasswords ? 'text' : 'password'}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Digite sua senha atual"
-                    required
-                  />
-                </label>
-
-                <label>
-                  <span>Nova senha</span>
-                  <input
-                    type={showPasswords ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Crie uma nova senha forte"
-                    required
-                  />
-                </label>
-
-                <label>
-                  <span>Confirmar nova senha</span>
-                  <input
-                    type={showPasswords ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repita a nova senha"
-                    required
-                  />
-                </label>
+                <fieldset>
+                  <legend className="text-sm font-semibold text-ink">
+                    Permissões iniciais{' '}
+                    <span className="text-xs font-normal text-ink-3 tabular-nums">
+                      {Object.values(empDraftPerms).filter(Boolean).length} de{' '}
+                      {permissionDefinitions.length}
+                    </span>
+                  </legend>
+                  <div className="mt-2 space-y-4">
+                    {Array.from(new Set(permissionDefinitions.map((perm) => perm.area))).map(
+                      (area) => (
+                        <div key={area}>
+                          <p className="text-xs font-semibold text-ink-3">{area}</p>
+                          <ul className="mt-1 divide-y divide-line-subtle rounded-lg border border-line">
+                            {permissionDefinitions
+                              .filter((perm) => perm.area === area)
+                              .map((perm) => (
+                                <li key={perm.key} className="flex items-center gap-3 px-3 py-2.5">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                                      {perm.title}
+                                      {perm.critical && (
+                                        <span className="rounded-full bg-warning-soft px-1.5 text-[10px] font-semibold text-warning">
+                                          sensível
+                                        </span>
+                                      )}
+                                    </p>
+                                    <p className="text-xs text-ink-3">{perm.description}</p>
+                                  </div>
+                                  <Switch
+                                    checked={empDraftPerms[perm.key]}
+                                    label={perm.title}
+                                    onChange={(next) =>
+                                      setEmpDraftPerms((curr) => ({ ...curr, [perm.key]: next }))
+                                    }
+                                  />
+                                </li>
+                              ))}
+                          </ul>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </fieldset>
               </div>
-
-              <PasswordStrength value={newPassword} className="mt-3" />
-              {confirmPassword && (
-                <p className={cx('mt-2 text-xs font-medium', confirmPassword === newPassword ? 'text-success' : 'text-danger')} role="status">
-                  {confirmPassword === newPassword ? '✓ As senhas coincidem' : 'As senhas ainda não coincidem'}
-                </p>
-              )}
-
-              <footer className="password-card-footer">
-                <small>Última alteração de senha: {lastPasswordUpdate}</small>
-                <button type="submit" className="settings-primary-btn">
-                  Salvar nova senha
-                </button>
+              <footer className="flex justify-end gap-2 border-t border-line px-6 py-4">
+                <Button type="button" variant="ghost" onClick={() => setNewEmpModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={!empName.trim() || !empEmail.trim()}
+                >
+                  Cadastrar e liberar acesso
+                </Button>
               </footer>
             </form>
+          </Sheet>
 
-            <aside className="space-y-5 rounded-card border border-line bg-surface p-5">
-              <section>
-                <div className="flex items-start gap-4">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-[15px] font-semibold text-ink">Verificação em duas etapas</h3>
-                    <p className="mt-0.5 text-[13px] leading-5 text-ink-2">
-                      Pede um código do aplicativo autenticador ao entrar em um computador novo.
+          {/* ABA 2: MUDAR A COR DO TEMA */}
+          {activeTab === 'theme' && (
+            <div className="settings-theme-section">
+              <div className="settings-theme-card">
+                <header className="settings-card-head">
+                  <div>
+                    <h2>Aparência</h2>
+                    <p>
+                      Escolha uma paleta pronta ou ajuste cada cor. Vale para todo o painel na hora.
                     </p>
                   </div>
-                  <Switch
-                    checked={twoFactorEnabled}
-                    label="Verificação em duas etapas"
-                    onChange={(next) => {
-                      if (next) {
-                        setTwoFactorSetupOpen(true)
-                        return
-                      }
-                      if (!window.confirm('Desativar a verificação em duas etapas? A conta fica menos protegida.')) return
-                      setTwoFactorEnabled(false)
-                      showToast('Verificação em duas etapas desativada.')
-                    }}
-                  />
-                </div>
-                {twoFactorSetupOpen && !twoFactorEnabled && (
-                  <TwoFactorSetup
-                    onCancel={() => setTwoFactorSetupOpen(false)}
-                    onDone={() => {
-                      setTwoFactorEnabled(true)
-                      setTwoFactorSetupOpen(false)
-                      showToast('Verificação em duas etapas ativada.')
-                    }}
-                  />
-                )}
-              </section>
-
-              <section className="border-t border-line pt-5">
-                <h3 className="text-[15px] font-semibold text-ink">Sessões ativas</h3>
-                <ul className="mt-2 divide-y divide-line-subtle">
-                  {sessions.map((session) => (
-                    <li key={session.id} className="flex items-center gap-3 py-2.5">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-ink">{session.device}</p>
-                        <p className="text-xs text-ink-3">
-                          {session.place} · {session.last}
-                        </p>
-                      </div>
-                      {session.current ? (
-                        <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Este dispositivo</span>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            setSessions((current) => current.filter((item) => item.id !== session.id))
-                            showToast(`Sessão encerrada: ${session.device}.`)
-                          }}
-                        >
-                          Encerrar
-                        </Button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                {sessions.length > 1 && (
                   <button
                     type="button"
-                    className="mt-1 text-xs font-medium text-danger hover:underline"
+                    className="settings-outline-btn"
                     onClick={() => {
-                      setSessions((current) => current.filter((item) => item.current))
-                      showToast('Todas as outras sessões foram encerradas.')
+                      onSelectTheme(presetThemes[0])
+                      showToast('Tema padrão Elevn Classic restaurado!')
                     }}
                   >
-                    Encerrar todas as outras
+                    Restaurar padrão Elevn
                   </button>
-                )}
-              </section>
-            </aside>
-          </div>
-        </div>
-      )}
+                </header>
+
+                <div className="theme-presets-grid">
+                  {presetThemes.map((preset) => {
+                    const isSelected = activeTheme.id === preset.id
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        className={`theme-preset-card ${isSelected ? 'active' : ''}`}
+                        onClick={() => {
+                          onSelectTheme(preset)
+                          showToast(`Tema "${preset.name}" aplicado em todo o painel!`)
+                        }}
+                      >
+                        <div
+                          className="theme-swatch-preview"
+                          style={{ background: preset.canvasBg }}
+                        >
+                          <span
+                            className="swatch-sidebar"
+                            style={{ background: preset.sidebarBg }}
+                          />
+                          <div className="swatch-content">
+                            <span
+                              className="swatch-accent-bar"
+                              style={{ background: preset.accentColor }}
+                            />
+                            <span
+                              className="swatch-accent-pill"
+                              style={{ background: preset.accentLight }}
+                            />
+                          </div>
+                        </div>
+                        <div className="theme-preset-meta">
+                          <div className="theme-preset-title">
+                            <strong>{preset.name}</strong>
+                            {isSelected && <span className="active-tag">Ativo</span>}
+                          </div>
+                          <small>{preset.subtitle}</small>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="mt-6 border-t border-line pt-6">
+                  <ThemeCustomizer theme={activeTheme} onChange={onSelectTheme} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ABA 3: ALTERAR SENHA DO ADMIN E SEGURANÇA */}
+          {activeTab === 'security' && (
+            <div className="settings-security-section">
+              <div className="settings-security-grid">
+                <form className="settings-password-card" onSubmit={handleUpdatePassword}>
+                  <header className="settings-card-head">
+                    <div>
+                      <h2>Senha</h2>
+                      <p>A senha que você usa para entrar no painel.</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="settings-outline-btn"
+                      onClick={() => setShowPasswords((prev) => !prev)}
+                    >
+                      {showPasswords ? 'Ocultar senhas' : 'Mostrar senhas'}
+                    </button>
+                  </header>
+
+                  {passwordError && (
+                    <div className="settings-error-alert" role="alert">
+                      {passwordError}
+                    </div>
+                  )}
+
+                  <div className="password-fields-stack">
+                    <label>
+                      <span>Senha atual</span>
+                      <input
+                        type={showPasswords ? 'text' : 'password'}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Digite sua senha atual"
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      <span>Nova senha</span>
+                      <input
+                        type={showPasswords ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Crie uma nova senha forte"
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      <span>Confirmar nova senha</span>
+                      <input
+                        type={showPasswords ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Repita a nova senha"
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <PasswordStrength value={newPassword} className="mt-3" />
+                  {confirmPassword && (
+                    <p
+                      className={cx(
+                        'mt-2 text-xs font-medium',
+                        confirmPassword === newPassword ? 'text-success' : 'text-danger',
+                      )}
+                      role="status"
+                    >
+                      {confirmPassword === newPassword
+                        ? '✓ As senhas coincidem'
+                        : 'As senhas ainda não coincidem'}
+                    </p>
+                  )}
+
+                  <footer className="password-card-footer">
+                    <small>Última alteração de senha: {lastPasswordUpdate}</small>
+                    <button type="submit" className="settings-primary-btn">
+                      Salvar nova senha
+                    </button>
+                  </footer>
+                </form>
+
+                <aside className="space-y-5 rounded-card border border-line bg-surface p-5">
+                  <section>
+                    <div className="flex items-start gap-4">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-[15px] font-semibold text-ink">
+                          Verificação em duas etapas
+                        </h3>
+                        <p className="mt-0.5 text-[13px] leading-5 text-ink-2">
+                          Pede um código do aplicativo autenticador ao entrar em um computador novo.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={twoFactorEnabled}
+                        label="Verificação em duas etapas"
+                        onChange={(next) => {
+                          if (next) {
+                            setTwoFactorSetupOpen(true)
+                            return
+                          }
+                          if (
+                            !window.confirm(
+                              'Desativar a verificação em duas etapas? A conta fica menos protegida.',
+                            )
+                          )
+                            return
+                          setTwoFactorEnabled(false)
+                          showToast('Verificação em duas etapas desativada.')
+                        }}
+                      />
+                    </div>
+                    {twoFactorSetupOpen && !twoFactorEnabled && (
+                      <TwoFactorSetup
+                        onCancel={() => setTwoFactorSetupOpen(false)}
+                        onDone={() => {
+                          setTwoFactorEnabled(true)
+                          setTwoFactorSetupOpen(false)
+                          showToast('Verificação em duas etapas ativada.')
+                        }}
+                      />
+                    )}
+                  </section>
+
+                  <section className="border-t border-line pt-5">
+                    <h3 className="text-[15px] font-semibold text-ink">Sessões ativas</h3>
+                    <ul className="mt-2 divide-y divide-line-subtle">
+                      {sessions.map((session) => (
+                        <li key={session.id} className="flex items-center gap-3 py-2.5">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-ink">
+                              {session.device}
+                            </p>
+                            <p className="text-xs text-ink-3">
+                              {session.place} · {session.last}
+                            </p>
+                          </div>
+                          {session.current ? (
+                            <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">
+                              Este dispositivo
+                            </span>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                setSessions((current) =>
+                                  current.filter((item) => item.id !== session.id),
+                                )
+                                showToast(`Sessão encerrada: ${session.device}.`)
+                              }}
+                            >
+                              Encerrar
+                            </Button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    {sessions.length > 1 && (
+                      <button
+                        type="button"
+                        className="mt-1 text-xs font-medium text-danger hover:underline"
+                        onClick={() => {
+                          setSessions((current) => current.filter((item) => item.current))
+                          showToast('Todas as outras sessões foram encerradas.')
+                        }}
+                      >
+                        Encerrar todas as outras
+                      </button>
+                    )}
+                  </section>
+                </aside>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

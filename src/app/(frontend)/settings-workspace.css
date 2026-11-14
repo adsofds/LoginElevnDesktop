@@ -40,160 +40,6 @@
 }
 
 /* FORMULÁRIO NOVO FUNCIONÁRIO */
-.settings-new-emp-card {
-  padding: 22px 24px;
-  border: 1px solid var(--gold-76);
-  border-radius: 14px;
-  background: var(--sand-95);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.settings-new-emp-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.settings-new-emp-head span {
-  color: var(--elevn-accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.settings-new-emp-head h3 {
-  margin: 3px 0 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--ink-08);
-}
-
-.settings-new-emp-head button {
-  font-size: 12px;
-  color: var(--slate-43);
-  cursor: pointer;
-}
-
-.settings-new-emp-fields {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.settings-new-emp-fields label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.settings-new-emp-fields label span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--slate-26);
-}
-
-.settings-new-emp-fields input,
-.settings-new-emp-fields select {
-  height: 38px;
-  padding: 0 11px;
-  border: 1px solid var(--sand-80);
-  border-radius: 8px;
-  background: var(--sand-100);
-  font-size: 12px;
-  color: var(--ink-08);
-}
-
-.settings-new-emp-perms-box {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.settings-new-emp-perms-box > strong {
-  font-size: 12px;
-  color: var(--ink-08);
-}
-
-.settings-new-emp-perms-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.perm-checkbox-tile {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 11px 12px;
-  border: 1px solid var(--sand-85);
-  border-radius: 10px;
-  background: var(--sand-100);
-  cursor: pointer;
-}
-
-.perm-checkbox-tile input {
-  margin-top: 3px;
-  accent-color: var(--elevn-accent);
-}
-
-.perm-checkbox-tile div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.perm-checkbox-tile .area-pill {
-  align-self: flex-start;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--sand-93);
-  color: var(--elevn-accent);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.perm-checkbox-tile strong {
-  font-size: 12px;
-  color: var(--ink-08);
-}
-
-.perm-checkbox-tile small {
-  font-size: 11px;
-  color: var(--slate-47);
-  line-height: 1.35;
-}
-
-.settings-new-emp-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.settings-new-emp-footer button.ghost {
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 8px;
-  border: 1px solid var(--sand-80);
-  background: var(--sand-100);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.settings-new-emp-footer button.solid {
-  height: 38px;
-  padding: 0 18px;
-  border-radius: 8px;
-  background: var(--elevn-sidebar-bg);
-  color: var(--sand-100);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
 
 /* SPLIT DE FUNCIONÁRIOS E PERMISSÕES */
 
@@ -402,11 +248,7 @@
     grid-template-columns: 1fr;
   }
 
-  .settings-new-emp-fields {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .settings-new-emp-perms-grid,
+  
   .theme-presets-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -414,8 +256,7 @@
 
 @media (max-width: 680px) {
   
-  .settings-new-emp-fields,
-  .settings-new-emp-perms-grid,
+  
   .theme-presets-grid {
     grid-template-columns: 1fr;
   }

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CountUp } from './CountUp'
 import { cx } from './cx'
 
 export type KpiTone = 'neutral' | 'success' | 'danger' | 'warning'
@@ -87,7 +88,11 @@ export function KpiStrip({
           <>
             <span className="block text-xs font-medium text-ink-3">{item.label}</span>
             <span className="mt-1.5 block text-[28px] leading-8 font-semibold tracking-[-0.02em] text-ink tabular-nums">
-              {item.value}
+              {typeof item.value === 'string' || typeof item.value === 'number' ? (
+                <CountUp value={String(item.value)} />
+              ) : (
+                item.value
+              )}
             </span>
             {item.delta && (
               <span

@@ -61,8 +61,7 @@
   border-left: 1px solid var(--border-default);
 }
 
-.appointment-form header span,
-.appointment-list > header > div > span {
+.appointment-form header span {
   color: var(--gold-42);
   font-size: 11px;
   font-weight: 700;
@@ -469,161 +468,6 @@
 .appointment-form-actions button[type='button'] {
   color: var(--slate-47);
   background: var(--sand-90);
-}
-
-.appointment-list {
-  padding: 16px;
-  border-top: 1px solid var(--sand-90);
-  background: var(--sand-100);
-}
-
-.appointment-list > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.appointment-list > header > div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.appointment-list > header p {
-  color: var(--slate-59);
-  font-size: 11px;
-}
-
-.appointment-list > header > strong {
-  min-width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--elevn-accent);
-  background: var(--gold-90);
-  font-size: 11px;
-}
-
-.appointment-list > .appointment-table {
-  max-height: 320px;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  border: 1px solid var(--sand-85);
-  border-radius: 9px;
-  overscroll-behavior: contain;
-  scrollbar-color: var(--gold-62-2) var(--sand-93);
-  scrollbar-width: thin;
-}
-
-.appointment-list > .appointment-table::-webkit-scrollbar {
-  width: 7px;
-}
-
-.appointment-list > .appointment-table::-webkit-scrollbar-track {
-  background: var(--sand-93);
-}
-
-.appointment-list > .appointment-table::-webkit-scrollbar-thumb {
-  border: 2px solid var(--sand-93);
-  border-radius: 999px;
-  background: var(--gold-62-2);
-}
-
-.appointment-list article {
-  min-width: 0;
-  display: grid;
-  flex: 0 0 auto;
-  grid-template-columns: 106px minmax(0, 1fr);
-  align-items: start;
-  gap: 8px 10px;
-  padding: 12px;
-  border-bottom: 1px solid var(--sand-90);
-}
-
-.appointment-list article:last-child {
-  border-bottom: 0;
-}
-
-.appointment-list time,
-.appointment-list article > div:nth-child(2) {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.appointment-list time strong,
-.appointment-list article > div:nth-child(2) > strong {
-  overflow: hidden;
-  color: var(--slate-26);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.appointment-list time strong {
-  overflow: visible;
-  color: var(--elevn-accent);
-  letter-spacing: -0.02em;
-  text-overflow: clip;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.appointment-list time span,
-.appointment-list article > div:nth-child(2) > span {
-  overflow: hidden;
-  color: var(--slate-59);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.appointment-actions {
-  display: flex;
-  grid-column: 2;
-  gap: 5px;
-  justify-content: flex-start;
-}
-
-.appointment-actions button {
-  padding: 3px 6px;
-  border-radius: 4px;
-  color: var(--elevn-accent);
-  background: var(--gold-90);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.appointment-actions button:last-child {
-  color: var(--red-43);
-  background: var(--sand-93-2);
-}
-
-.appointment-actions > span {
-  padding: 3px 5px;
-  border-radius: 999px;
-  color: var(--elevn-accent);
-  background: var(--gold-90);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.appointment-actions > span + button {
-  color: var(--elevn-accent);
-  background: var(--gold-90);
-}
-
-.appointment-empty {
-  padding: 12px 0;
-  color: var(--slate-55);
-  font-size: 11px;
-  line-height: 1.45;
 }
 
 .content-planner-body {
@@ -1534,6 +1378,62 @@
 
 .board-list.receiving {
   border-color: var(--gold-54);
+}
+
+.board-list.drop-target {
+  border-color: var(--item-color);
+  background: color-mix(in srgb, var(--item-color) 8%, var(--sand-93));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--item-color) 18%, transparent);
+}
+
+.board-card.is-dragging {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--elevn-accent) 45%, transparent);
+  background: transparent;
+  box-shadow: none;
+}
+
+.board-card.is-dragging > * {
+  opacity: 0.35;
+}
+
+/* Copy used as the native drag image: tilted and lifted. Rendered offscreen. */
+.board-card-ghost {
+  position: fixed;
+  top: -1000px;
+  left: -1000px;
+  transform: rotate(2.5deg);
+  border-color: color-mix(in srgb, var(--elevn-accent) 40%, var(--border-default));
+  box-shadow: 0 18px 38px rgb(20 16 40 / 0.22), 0 4px 10px rgb(20 16 40 / 0.12);
+}
+
+.board-drop-placeholder {
+  display: grid;
+  height: 64px;
+  margin-bottom: 8px;
+  place-items: center;
+  border: 1.5px dashed color-mix(in srgb, var(--item-color) 60%, transparent);
+  border-radius: 10px;
+  color: var(--slate-47);
+  font-size: 12px;
+  font-weight: 500;
+  animation: drop-in 160ms ease-out;
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-drop-placeholder {
+    animation: none;
+  }
+  .board-card-ghost {
+    transform: none;
+  }
 }
 
 .board-list > header {
@@ -2492,19 +2392,6 @@
     overflow-x: auto;
     border-right: 0;
     border-bottom: 1px solid var(--sand-90);
-  }
-
-  .appointment-list {
-    padding: 14px;
-  }
-
-  .appointment-list article {
-    grid-template-columns: minmax(90px, 0.35fr) minmax(0, 1fr);
-    gap: 8px 12px;
-  }
-
-  .appointment-actions {
-    grid-column: 2;
   }
 
   
