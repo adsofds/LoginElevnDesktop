@@ -32,6 +32,7 @@ import {
   LeadsFunnel,
   TodayAgenda,
 } from './dashboard/DashboardWidgets'
+import { TemperaturePicker } from './interno/LeadsSpreadsheet'
 import { Button } from './ui/Button'
 import { Icon } from './ui/icons'
 import { Menu } from './ui/Menu'
@@ -777,7 +778,6 @@ function SiteFormsDashboardWidget({
               .slice(0, 8)
               .map((item) => {
                 const ts = formatFormTimestamp(item.submittedAtIso)
-                const tempSlug = item.temperature.toLowerCase()
                 const { referral } = splitReferralOrBirth(item.referralOrBirth)
                 return (
                   <tr key={item.id}>
@@ -798,21 +798,11 @@ function SiteFormsDashboardWidget({
                       </div>
                     </td>
                     <td>
-                      <div className={`dash-temp-pill temp-${tempSlug}`}>
-                        <span className="dot" aria-hidden="true" />
-                        <select
-                          aria-label={`Temperatura de ${item.name}`}
-                          value={item.temperature}
-                          onChange={(e) =>
-                            onUpdateFormTemperature(item.id, e.target.value as LeadTemperature)
-                          }
-                        >
-                          <option value="Fechado">Fechado</option>
-                          <option value="Quente">Quente</option>
-                          <option value="Morno">Morno</option>
-                          <option value="Frio">Frio</option>
-                        </select>
-                      </div>
+                      <TemperaturePicker
+                        value={item.temperature}
+                        name={formatPersonName(item.name)}
+                        onChange={(next) => onUpdateFormTemperature(item.id, next)}
+                      />
                     </td>
                   </tr>
                 )

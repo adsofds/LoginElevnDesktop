@@ -1674,6 +1674,8 @@ type StudentsWorkspaceProps = {
   onFichaChange?: (next: { studentId: string; tab: FichaTab } | null) => void
   /** Opens the "Cadastrar aluno" form once (from "+ Novo" or ⌘K). */
   startNew?: boolean
+  /** Pre-fills the cadastro when converting a lead (?nome=&whatsapp=). */
+  newStudentPrefill?: { name?: string | null; whatsapp?: string | null }
   onStartNewHandled?: () => void
 }
 
@@ -2069,6 +2071,7 @@ export default function StudentsWorkspace({
   onFichaChange,
   startNew,
   onStartNewHandled,
+  newStudentPrefill,
   initialView,
   onInitialViewHandled,
 }: StudentsWorkspaceProps = {}) {
@@ -2211,8 +2214,12 @@ export default function StudentsWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fichaStateKey])
 
+  const [prefillWhatsapp, setPrefillWhatsapp] = useState('')
+
   useEffect(() => {
     if (!startNew) return
+    if (newStudentPrefill?.name) setNewStudentNameQuery(newStudentPrefill.name)
+    setPrefillWhatsapp(newStudentPrefill?.whatsapp ?? '')
     setNewStudentOpen(true)
     onStartNewHandled?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2852,7 +2859,12 @@ export default function StudentsWorkspace({
             </label>
             <label>
               <span>WhatsApp (com DDD)</span>
-              <input name="student-whatsapp" placeholder="Ex.: 5511998887766" />
+              <input
+                key={prefillWhatsapp}
+                name="student-whatsapp"
+                defaultValue={prefillWhatsapp}
+                placeholder="Ex.: 5511998887766"
+              />
             </label>
             <label>
               <span>Objetivo</span>
