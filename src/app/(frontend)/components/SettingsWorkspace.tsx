@@ -1,7 +1,14 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
-import { Tabs } from './ui/Tabs'
+import { useEffect, useState, type FormEvent } from 'react'
+import TeamPermissions from './settings/TeamPermissions'
+import ThemeCustomizer from './settings/ThemeCustomizer'
+import TwoFactorSetup from './settings/TwoFactorSetup'
+import { Button } from './ui/Button'
+import { Switch } from './ui/Switch'
+import { cx } from './ui/cx'
+import { Icon } from './ui/icons'
+import { PasswordStrength } from './ui/PasswordStrength'
 
 export type ThemeConfig = {
   id: string
@@ -168,7 +175,7 @@ export const permissionDefinitions: {
   },
 ]
 
-const rolePresetPermissions: Record<string, EmployeePermissions> = {
+export const rolePresetPermissions: Record<string, EmployeePermissions> = {
   'Nutricionista Esportiva': {
     viewDashboard: true,
     viewFinancials: false,
@@ -324,6 +331,12 @@ export default function SettingsWorkspace({
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true)
   const [lastPasswordUpdate, setLastPasswordUpdate] = useState('12/03/2026 às 18:40')
   const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [twoFactorSetupOpen, setTwoFactorSetupOpen] = useState(false)
+  const [sessions, setSessions] = useState([
+    { id: 'mac', device: 'MacBook Pro · Chrome', place: 'Natal, RN', last: 'Ativo agora', current: true },
+    { id: 'iphone', device: 'iPhone 16 Pro · App Elevn Admin', place: 'Natal, RN', last: 'Hoje às 08:15', current: false },
+    { id: 'win', device: 'Windows · Edge', place: 'Fortaleza, CE', last: 'Ontem às 19:42', current: false },
+  ])
 
   const selectedEmployee =
     employees.find((item) => item.id === selectedEmpId) ?? employees[0] ?? null
@@ -331,6 +344,12 @@ export default function SettingsWorkspace({
   const showToast = (msg: string) => {
     setToastFeedback(msg)
   }
+
+  useEffect(() => {
+    if (!toastFeedback) return
+    const timer = window.setTimeout(() => setToastFeedback(null), 5000)
+    return () => window.clearTimeout(timer)
+  }, [toastFeedback])
 
   const handleRolePresetChange = (roleName: string) => {
     setEmpRole(roleName)
@@ -502,67 +521,54 @@ export default function SettingsWorkspace({
 
   return (
     <section className="settings-workspace">
-      <header className="settings-workspace-header">
-        <div>
-          <p>ADMINISTRAÇÃO, SEGURANÇA E IDENTIDADE VISUAL</p>
-          <h1>Configurações</h1>
-          <span>
-            Gerencie sua equipe e o que cada funcionário pode fazer, personalize a cor do tema da
-            consultoria e atualize sua senha de administrador.
-          </span>
-        </div>
-
-        <div className="settings-header-badge">
-          <small>ADMINISTRADOR MASTER</small>
-          <strong>{adminUser.name}</strong>
-          <span>{adminUser.profession}</span>
-        </div>
-      </header>
+      <h1 className="mb-6 text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-ink">Configurações</h1>
 
       {toastFeedback && (
-        <div className="settings-toast-banner" role="status">
-          <span>✓ {toastFeedback}</span>
-          <button type="button" onClick={() => setToastFeedback(null)}>
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full bg-night py-2 pr-2 pl-4 text-sm text-on-dark shadow-pop"
+        >
+          <span>{toastFeedback}</span>
+          <button type="button" onClick={() => setToastFeedback(null)} className="rounded-full px-3 py-1 text-brand-light hover:bg-white/10">
             Fechar
           </button>
         </div>
       )}
 
-      {/* ABAS DE CONFIGURAÇÕES */}
-      <Tabs
-        label="Seções de Configurações"
-        className="mb-7"
-        value={activeTab}
-        onChange={setActiveTab}
-        items={[
-          { id: 'employees', label: 'Equipe e permissões' },
-          { id: 'theme', label: 'Cor do tema e aparência' },
-          { id: 'security', label: 'Senha e segurança' },
-        ]}
-      />
+      <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
+        <nav aria-label="Seções de Configurações" className="flex gap-1 overflow-x-auto lg:sticky lg:top-24 lg:flex-col lg:self-start">
+          {(
+            [
+              ['employees', 'Equipe e permissões', 'team'],
+              ['theme', 'Aparência', 'palette'],
+              ['security', 'Segurança', 'shield'],
+            ] as const
+          ).map(([id, label, icon]) => (
+            <button
+              key={id}
+              type="button"
+              aria-current={activeTab === id ? 'page' : undefined}
+              onClick={() => setActiveTab(id)}
+              className={cx(
+                'flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap transition-colors',
+                activeTab === id ? 'bg-surface font-medium text-ink shadow-[0_0_0_1px_var(--border-default)]' : 'text-ink-2 hover:bg-surface/60 hover:text-ink',
+              )}
+            >
+              <Icon name={icon} className="size-4" />
+              {label}
+            </button>
+          ))}
+          <span className="flex shrink-0 items-center gap-2.5 px-3 py-2 text-sm text-ink-3" title="Em breve">
+            <Icon name="swap" className="size-4" />
+            Integrações
+            <span className="rounded-full border border-line px-1.5 text-[10px]">em breve</span>
+          </span>
+        </nav>
+        <div className="min-w-0">
 
       {/* ABA 1: FUNCIONÁRIOS E PERMISSÕES (O QUE PODE OU NÃO FAZER) */}
       {activeTab === 'employees' && (
         <div className="settings-employees-section">
-          <div className="settings-emp-topbar">
-            <div>
-              <span>GESTÃO DE ACESSOS DA EQUIPE ({employees.length} FUNCIONÁRIOS)</span>
-              <h2>Funcionários Cadastrados & Controle de Permissões</h2>
-              <p>
-                Selecione qualquer funcionário na lista à esquerda para liberar ou bloquear em tempo
-                real o que ele pode ou não fazer dentro do painel.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="settings-primary-btn"
-              onClick={() => setNewEmpModalOpen((prev) => !prev)}
-            >
-              + Cadastrar Novo Funcionário
-            </button>
-          </div>
-
-          {/* FORMULÁRIO EXPANSÍVEL PARA CADASTRAR NOVO FUNCIONÁRIO */}
           {newEmpModalOpen && (
             <form className="settings-new-emp-card" onSubmit={handleCreateEmployee}>
               <header className="settings-new-emp-head">
@@ -663,150 +669,20 @@ export default function SettingsWorkspace({
             </form>
           )}
 
-          <div className="settings-employees-split">
-            {/* COLUNA ESQUERDA: LISTA DE FUNCIONÁRIOS */}
-            <aside className="settings-employees-list">
-              {employees.map((emp) => {
-                const enabledCount = Object.values(emp.permissions).filter(Boolean).length
-                const totalCount = permissionDefinitions.length
-                const isSelected = selectedEmployee?.id === emp.id
-                return (
-                  <article
-                    key={emp.id}
-                    className={`employee-card-item ${isSelected ? 'selected' : ''} ${
-                      emp.status === 'Pausado' ? 'paused' : ''
-                    }`}
-                    onClick={() => setSelectedEmpId(emp.id)}
-                  >
-                    <img src={emp.avatar} alt={emp.name} className="emp-avatar" />
-                    <div className="emp-card-body">
-                      <div className="emp-card-title-row">
-                        <strong>{emp.name}</strong>
-                        <span className={`emp-status-pill ${emp.status.toLowerCase()}`}>
-                          {emp.status}
-                        </span>
-                      </div>
-                      <span className="emp-role-label">{emp.role}</span>
-                      <small className="emp-email-label">{emp.email}</small>
-                      <div className="emp-perm-meter">
-                        <span>
-                          {enabledCount} de {totalCount} permissões liberadas
-                        </span>
-                        <div className="emp-perm-bar">
-                          <i style={{ width: `${(enabledCount / totalCount) * 100}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                )
-              })}
-            </aside>
-
-            {/* COLUNA DIREITA: MATRIZ DO QUE O FUNCIONÁRIO PODE OU NÃO FAZER */}
-            {selectedEmployee && (
-              <div className="settings-employee-permissions-panel">
-                <header className="emp-detail-header">
-                  <div className="emp-detail-profile">
-                    <img src={selectedEmployee.avatar} alt={selectedEmployee.name} />
-                    <div>
-                      <div className="emp-detail-badges">
-                        <span className="code-badge">
-                          CREDENCIAL: {selectedEmployee.accessCode}
-                        </span>
-                        <span
-                          className={`emp-status-pill ${selectedEmployee.status.toLowerCase()}`}
-                        >
-                          ● {selectedEmployee.status}
-                        </span>
-                      </div>
-                      <h3>{selectedEmployee.name}</h3>
-                      <p>
-                        {selectedEmployee.role} · {selectedEmployee.email} ·{' '}
-                        {selectedEmployee.phone}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="emp-detail-actions">
-                    <button
-                      type="button"
-                      className="emp-action-btn"
-                      onClick={() => toggleEmployeeStatus(selectedEmployee.id)}
-                    >
-                      {selectedEmployee.status === 'Ativo' ? 'Pausar Acesso' : 'Reativar Acesso'}
-                    </button>
-                    <button
-                      type="button"
-                      className="emp-action-btn danger"
-                      onClick={() => removeEmployee(selectedEmployee.id)}
-                    >
-                      Remover Funcionário
-                    </button>
-                  </div>
-                </header>
-
-                <div className="emp-presets-bar">
-                  <span>APLICAR PERFIL RÁPIDO:</span>
-                  <div className="emp-presets-buttons">
-                    <button type="button" onClick={() => applyQuickPresetToSelected('nutrition')}>
-                      Apenas Nutrição
-                    </button>
-                    <button type="button" onClick={() => applyQuickPresetToSelected('training')}>
-                      Apenas Treino
-                    </button>
-                    <button type="button" onClick={() => applyQuickPresetToSelected('commercial')}>
-                      Comercial & Leads
-                    </button>
-                    <button type="button" onClick={() => applyQuickPresetToSelected('readonly')}>
-                      Somente Leitura
-                    </button>
-                    <button type="button" onClick={() => applyQuickPresetToSelected('all')}>
-                      Liberar Tudo
-                    </button>
-                  </div>
-                </div>
-
-                <div className="emp-permissions-list">
-                  {permissionDefinitions.map((perm) => {
-                    const allowed = selectedEmployee.permissions[perm.key]
-                    return (
-                      <div
-                        key={perm.key}
-                        className={`emp-permission-row ${allowed ? 'is-allowed' : 'is-blocked'}`}
-                      >
-                        <div className="emp-perm-info">
-                          <div className="emp-perm-topline">
-                            <span className="area-tag">{perm.area}</span>
-                            {perm.critical && (
-                              <span className="critical-tag">PERMISSÃO SENSÍVEL</span>
-                            )}
-                            <span className={`state-badge ${allowed ? 'allowed' : 'blocked'}`}>
-                              {allowed ? 'PODE FAZER' : 'NÃO PODE FAZER'}
-                            </span>
-                          </div>
-                          <strong>{perm.title}</strong>
-                          <p>{perm.description}</p>
-                        </div>
-
-                        <div className="emp-perm-switch-col">
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={allowed}
-                            className={`perm-toggle-btn ${allowed ? 'on' : 'off'}`}
-                            onClick={() => toggleEmployeePermission(selectedEmployee.id, perm.key)}
-                          >
-                            <span className="knob" />
-                            <span className="label">{allowed ? 'Permitido' : 'Bloqueado'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+          <TeamPermissions
+            employees={employees}
+            selectedId={selectedEmployee?.id ?? ''}
+            onSelect={setSelectedEmpId}
+            onSave={(id, permissions) => {
+              setEmployees((current) => current.map((emp) => (emp.id === id ? { ...emp, permissions } : emp)))
+              const target = employees.find((emp) => emp.id === id)
+              if (target) showToast(`Permissões de ${target.name} salvas.`)
+            }}
+            onToggleStatus={toggleEmployeeStatus}
+            onRemove={removeEmployee}
+            onNewEmployee={() => setNewEmpModalOpen((open) => !open)}
+            adminName={adminUser.name}
+          />
         </div>
       )}
 
@@ -816,13 +692,8 @@ export default function SettingsWorkspace({
           <div className="settings-theme-card">
             <header className="settings-card-head">
               <div>
-                <span>IDENTIDADE VISUAL DO SISTEMA</span>
-                <h2>Cor do Tema & Aparência da Consultoria</h2>
-                <p>
-                  Escolha uma das paletas executivas abaixo ou personalize livremente as cores da
-                  barra lateral, dos botões de destaque e do fundo do painel. A alteração é aplicada
-                  imediatamente em toda a plataforma.
-                </p>
+                <h2>Aparência</h2>
+                <p>Escolha uma paleta pronta ou ajuste cada cor. Vale para todo o painel na hora.</p>
               </div>
               <button
                 type="button"
@@ -832,7 +703,7 @@ export default function SettingsWorkspace({
                   showToast('Tema padrão Elevn Classic restaurado!')
                 }}
               >
-                Restaurar Padrão Elevn
+                Restaurar padrão Elevn
               </button>
             </header>
 
@@ -874,90 +745,8 @@ export default function SettingsWorkspace({
               })}
             </div>
 
-            <div className="theme-customizer-box">
-              <h3>Personalização Livre de Cores (Seletor Hexadecimal)</h3>
-              <p>
-                Ajuste cada cor individualmente caso deseje combinar com uma campanha ou identidade
-                própria:
-              </p>
-
-              <div className="theme-color-pickers-grid">
-                <label className="color-picker-tile">
-                  <span>Cor Principal de Destaque (Botões & Selos)</span>
-                  <div className="picker-row">
-                    <input
-                      type="color"
-                      value={activeTheme.accentColor}
-                      onChange={(e) =>
-                        onSelectTheme({
-                          ...activeTheme,
-                          id: 'custom',
-                          name: 'Tema Personalizado',
-                          accentColor: e.target.value,
-                        })
-                      }
-                    />
-                    <code>{activeTheme.accentColor.toUpperCase()}</code>
-                  </div>
-                </label>
-
-                <label className="color-picker-tile">
-                  <span>Cor da Barra Lateral (Menu Esquerdo)</span>
-                  <div className="picker-row">
-                    <input
-                      type="color"
-                      value={activeTheme.sidebarBg}
-                      onChange={(e) =>
-                        onSelectTheme({
-                          ...activeTheme,
-                          id: 'custom',
-                          name: 'Tema Personalizado',
-                          sidebarBg: e.target.value,
-                        })
-                      }
-                    />
-                    <code>{activeTheme.sidebarBg.toUpperCase()}</code>
-                  </div>
-                </label>
-
-                <label className="color-picker-tile">
-                  <span>Cor de Luz / Indicador Ativo na Sidebar</span>
-                  <div className="picker-row">
-                    <input
-                      type="color"
-                      value={activeTheme.accentLight}
-                      onChange={(e) =>
-                        onSelectTheme({
-                          ...activeTheme,
-                          id: 'custom',
-                          name: 'Tema Personalizado',
-                          accentLight: e.target.value,
-                        })
-                      }
-                    />
-                    <code>{activeTheme.accentLight.toUpperCase()}</code>
-                  </div>
-                </label>
-
-                <label className="color-picker-tile">
-                  <span>Cor de Fundo do Painel Principal</span>
-                  <div className="picker-row">
-                    <input
-                      type="color"
-                      value={activeTheme.canvasBg}
-                      onChange={(e) =>
-                        onSelectTheme({
-                          ...activeTheme,
-                          id: 'custom',
-                          name: 'Tema Personalizado',
-                          canvasBg: e.target.value,
-                        })
-                      }
-                    />
-                    <code>{activeTheme.canvasBg.toUpperCase()}</code>
-                  </div>
-                </label>
-              </div>
+            <div className="mt-6 border-t border-line pt-6">
+              <ThemeCustomizer theme={activeTheme} onChange={onSelectTheme} />
             </div>
           </div>
         </div>
@@ -970,12 +759,8 @@ export default function SettingsWorkspace({
             <form className="settings-password-card" onSubmit={handleUpdatePassword}>
               <header className="settings-card-head">
                 <div>
-                  <span>CREDENCIAIS DO ADMINISTRADOR</span>
-                  <h2>Alterar Senha de Acesso</h2>
-                  <p>
-                    Atualize sua senha master utilizada para entrar no painel administrativo da
-                    Elevn.
-                  </p>
+                  <h2>Senha</h2>
+                  <p>A senha que você usa para entrar no painel.</p>
                 </div>
                 <button
                   type="button"
@@ -994,7 +779,7 @@ export default function SettingsWorkspace({
 
               <div className="password-fields-stack">
                 <label>
-                  <span>Senha Atual do Administrador</span>
+                  <span>Senha atual</span>
                   <input
                     type={showPasswords ? 'text' : 'password'}
                     value={currentPassword}
@@ -1005,7 +790,7 @@ export default function SettingsWorkspace({
                 </label>
 
                 <label>
-                  <span>Nova Senha</span>
+                  <span>Nova senha</span>
                   <input
                     type={showPasswords ? 'text' : 'password'}
                     value={newPassword}
@@ -1016,7 +801,7 @@ export default function SettingsWorkspace({
                 </label>
 
                 <label>
-                  <span>Confirmar Nova Senha</span>
+                  <span>Confirmar nova senha</span>
                   <input
                     type={showPasswords ? 'text' : 'password'}
                     value={confirmPassword}
@@ -1027,82 +812,103 @@ export default function SettingsWorkspace({
                 </label>
               </div>
 
-              <div className="password-rules-box">
-                <strong>Requisitos de segurança da senha:</strong>
-                <ul>
-                  {passRules.map((rule) => (
-                    <li key={rule.label} className={rule.met ? 'met' : ''}>
-                      <span>{rule.met ? '✓' : '○'}</span>
-                      {rule.label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <PasswordStrength value={newPassword} className="mt-3" />
+              {confirmPassword && (
+                <p className={cx('mt-2 text-xs font-medium', confirmPassword === newPassword ? 'text-success' : 'text-danger')} role="status">
+                  {confirmPassword === newPassword ? '✓ As senhas coincidem' : 'As senhas ainda não coincidem'}
+                </p>
+              )}
 
               <footer className="password-card-footer">
                 <small>Última alteração de senha: {lastPasswordUpdate}</small>
                 <button type="submit" className="settings-primary-btn">
-                  Salvar Nova Senha
+                  Salvar nova senha
                 </button>
               </footer>
             </form>
 
-            <aside className="settings-security-sidecard">
-              <span>PROTEÇÃO ADICIONAL DA CONTA</span>
-              <h3>Segurança & Sessões Ativas</h3>
-
-              <div className="security-toggle-box">
-                <div>
-                  <strong>Autenticação em Duas Etapas (2FA)</strong>
-                  <p>
-                    Exigir código de confirmação no WhatsApp/E-mail ao entrar em um novo computador.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className={`perm-toggle-btn ${twoFactorEnabled ? 'on' : 'off'}`}
-                  onClick={() => {
-                    setTwoFactorEnabled((prev) => !prev)
-                    showToast(
-                      !twoFactorEnabled
-                        ? 'Verificação em duas etapas (2FA) ativada!'
-                        : 'Verificação em duas etapas desativada.',
-                    )
-                  }}
-                >
-                  <span className="knob" />
-                  <span className="label">{twoFactorEnabled ? 'Ativo' : 'Inativo'}</span>
-                </button>
-              </div>
-
-              <div className="active-sessions-list">
-                <strong>Dispositivos conectados agora</strong>
-                <div className="session-item">
-                  <div>
-                    <strong>MacBook Pro · Chrome (Fortaleza, BR)</strong>
-                    <small>Sessão atual · Ativo agora</small>
+            <aside className="space-y-5 rounded-card border border-line bg-surface p-5">
+              <section>
+                <div className="flex items-start gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[15px] font-semibold text-ink">Verificação em duas etapas</h3>
+                    <p className="mt-0.5 text-[13px] leading-5 text-ink-2">
+                      Pede um código do aplicativo autenticador ao entrar em um computador novo.
+                    </p>
                   </div>
-                  <span className="session-badge">Atual</span>
+                  <Switch
+                    checked={twoFactorEnabled}
+                    label="Verificação em duas etapas"
+                    onChange={(next) => {
+                      if (next) {
+                        setTwoFactorSetupOpen(true)
+                        return
+                      }
+                      if (!window.confirm('Desativar a verificação em duas etapas? A conta fica menos protegida.')) return
+                      setTwoFactorEnabled(false)
+                      showToast('Verificação em duas etapas desativada.')
+                    }}
+                  />
                 </div>
-                <div className="session-item">
-                  <div>
-                    <strong>iPhone 16 Pro · App Elevn Admin</strong>
-                    <small>Último acesso hoje às 08:15</small>
-                  </div>
+                {twoFactorSetupOpen && !twoFactorEnabled && (
+                  <TwoFactorSetup
+                    onCancel={() => setTwoFactorSetupOpen(false)}
+                    onDone={() => {
+                      setTwoFactorEnabled(true)
+                      setTwoFactorSetupOpen(false)
+                      showToast('Verificação em duas etapas ativada.')
+                    }}
+                  />
+                )}
+              </section>
+
+              <section className="border-t border-line pt-5">
+                <h3 className="text-[15px] font-semibold text-ink">Sessões ativas</h3>
+                <ul className="mt-2 divide-y divide-line-subtle">
+                  {sessions.map((session) => (
+                    <li key={session.id} className="flex items-center gap-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-ink">{session.device}</p>
+                        <p className="text-xs text-ink-3">
+                          {session.place} · {session.last}
+                        </p>
+                      </div>
+                      {session.current ? (
+                        <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Este dispositivo</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setSessions((current) => current.filter((item) => item.id !== session.id))
+                            showToast(`Sessão encerrada: ${session.device}.`)
+                          }}
+                        >
+                          Encerrar
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {sessions.length > 1 && (
                   <button
                     type="button"
-                    onClick={() =>
-                      showToast('Sessão remota encerrada com segurança em outros dispositivos.')
-                    }
+                    className="mt-1 text-xs font-medium text-danger hover:underline"
+                    onClick={() => {
+                      setSessions((current) => current.filter((item) => item.current))
+                      showToast('Todas as outras sessões foram encerradas.')
+                    }}
                   >
-                    Encerrar
+                    Encerrar todas as outras
                   </button>
-                </div>
-              </div>
+                )}
+              </section>
             </aside>
           </div>
         </div>
       )}
+        </div>
+      </div>
     </section>
   )
 }
