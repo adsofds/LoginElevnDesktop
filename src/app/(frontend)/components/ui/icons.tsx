@@ -112,6 +112,35 @@ const paths: Record<string, ReactNode> = {
     </>
   ),
   arrowRight: <path d="M5 12h14M14 7l5 5-5 5" />,
+  key: (
+    <>
+      <circle cx="15" cy="9" r="4.5" />
+      <path d="m11.8 12.2-8.3 8.3M6.5 17.5l2 2M9 15l2 2" />
+    </>
+  ),
+  photo: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="m21 16-5-5-8 8" />
+    </>
+  ),
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  dots: (
+    <>
+      <circle cx="5.5" cy="12" r="1" />
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="18.5" cy="12" r="1" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M3 12s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7Z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </>
+  ),
+  eyeOff: <path d="m4 4 16 16M10.6 10.8a2 2 0 0 0 2.7 2.7M9.9 5.2A10.7 10.7 0 0 1 12 5c5.4 0 9 7 9 7a16 16 0 0 1-2 3M6.2 6.3C4.2 7.7 3 10 3 12c0 0 3.6 7 9 7 1 0 2-.2 2.8-.5" />,
+  swap: <path d="M7 7h12l-3-3M17 17H5l3 3" />,
 }
 
 export type IconName = keyof typeof paths

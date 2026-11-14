@@ -1,98 +1,5 @@
 
 
-.profile-avatar-image {
-  width: 36px;
-  height: 36px;
-  flex: 0 0 auto;
-  border: 2px solid color-mix(in srgb, var(--gold-90) 16%, transparent);
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.dashboard-toolbar {
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin: -12px 0 18px;
-}
-
-.dashboard-toolbar > div:last-child {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.toolbar-button {
-  height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 14px;
-  border: 1px solid var(--sand-85);
-  border-radius: 8px;
-  color: var(--slate-34);
-  background: rgba(255, 255, 255, 0.78);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    border-color 160ms,
-    transform 160ms,
-    background 160ms;
-}
-
-.toolbar-button:hover:not(:disabled) {
-  border-color: var(--gold-54);
-  transform: translateY(-1px);
-}
-
-.toolbar-button svg {
-  width: 15px;
-  height: 15px;
-}
-
-.toolbar-button.save-layout {
-  border-color: var(--elevn-sidebar-bg);
-  color: var(--sand-100);
-  background: var(--elevn-sidebar-bg);
-}
-
-.toolbar-button.add-widget {
-  color: var(--gold-29);
-  background: var(--gold-90);
-}
-
-.toolbar-button.add-widget > span {
-  font-size: 16px;
-  font-weight: 400;
-}
-
-.toolbar-button.subtle {
-  border-color: transparent;
-  background: transparent;
-}
-
-.toolbar-button:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-
-.save-success,
-.save-error {
-  font-size: 12px;
-}
-
-.save-success {
-  color: var(--sand-34);
-}
-
-.save-error {
-  color: var(--red-43-2);
-}
-
 .edit-dashboard-note {
   display: flex;
   align-items: center;
@@ -764,21 +671,6 @@
 }
 
 @media (max-width: 760px) {
-  .dashboard-toolbar {
-    align-items: stretch;
-    flex-direction: column-reverse;
-    margin-top: -4px;
-  }
-
-  .dashboard-toolbar > div:last-child {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dashboard-toolbar .save-layout,
-  .dashboard-toolbar .edit-layout {
-    grid-column: 1 / -1;
-  }
 
   .custom-dashboard-grid {
     gap: 13px;
