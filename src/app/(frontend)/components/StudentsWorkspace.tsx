@@ -1667,6 +1667,9 @@ type StudentsWorkspaceProps = {
   onOpenInternalInbox?: () => void
   /** Student file opened from the URL (?ficha=&aba=). null closes it. */
   ficha?: { studentId: string; tab: FichaTab } | null
+  /** Saved view requested from the URL (?visao=vencendo), e.g. from a Dashboard KPI. */
+  initialView?: string | null
+  onInitialViewHandled?: () => void
   /** Called when the user opens, closes or changes tab in the student file. */
   onFichaChange?: (next: { studentId: string; tab: FichaTab } | null) => void
   /** Opens the "Cadastrar aluno" form once (from "+ Novo" or ⌘K). */
@@ -2066,6 +2069,8 @@ export default function StudentsWorkspace({
   onFichaChange,
   startNew,
   onStartNewHandled,
+  initialView,
+  onInitialViewHandled,
 }: StudentsWorkspaceProps = {}) {
   const [students, setStudents] = useState<StudentRecord[]>(initialStudents)
   const [statusFilters, setStatusFilters] = useState<StatusKey[]>([])
@@ -2306,6 +2311,19 @@ export default function StudentsWorkspace({
     setGoalFilter(view.goal)
     setSearch(view.search)
   }
+
+  useEffect(() => {
+    if (!initialView) return
+    const view = builtInStudentViews.find((item) => item.id === initialView)
+    if (view) {
+      applyView(view)
+      window.requestAnimationFrame(() =>
+        document.getElementById('carteira-alunos')?.scrollIntoView({ block: 'start' }),
+      )
+    }
+    onInitialViewHandled?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialView])
 
   const persistViews = (views: StudentView[]) => {
     setCustomViews(views)

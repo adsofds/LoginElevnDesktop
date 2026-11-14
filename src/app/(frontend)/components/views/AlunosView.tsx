@@ -26,6 +26,8 @@ export default function AlunosView() {
             : { ficha: null, aba: null },
         )
       }
+      initialView={query.get('visao')}
+      onInitialViewHandled={() => query.set({ visao: null }, { replace: true })}
       startNew={query.get('novo') === 'aluno'}
       onStartNewHandled={() => query.set({ novo: null }, { replace: true })}
       onSendWorkoutReplyToInternal={sendWorkoutReplyToInternal}

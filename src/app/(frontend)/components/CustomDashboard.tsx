@@ -22,9 +22,20 @@ import {
   type SavedDashboardLayout,
   type WidgetSizes,
 } from '@/lib/dashboardLayouts'
+import type { DashboardPeriod } from '@/lib/dashboardPeriod'
+import {
+  ActiveStudentsChart,
+  AdherenceChart,
+  AttentionQueue,
+  GoalsChart,
+  KpiOverview,
+  LeadsFunnel,
+  TodayAgenda,
+} from './dashboard/DashboardWidgets'
 import { Button } from './ui/Button'
 import { Icon } from './ui/icons'
 import { Menu } from './ui/Menu'
+import { Sheet } from './ui/Sheet'
 import { NameDialog } from './ui/NameDialog'
 import { Tabs } from './ui/Tabs'
 
@@ -40,7 +51,7 @@ const widgets: WidgetDefinition[] = [
   {
     id: 'kpi-overview',
     title: 'Indicadores executivos',
-    description: 'Números essenciais e tendências do mês.',
+    description: 'Números essenciais com tendência do período.',
     category: 'Gestão',
   },
   {
@@ -57,8 +68,8 @@ const widgets: WidgetDefinition[] = [
   },
   {
     id: 'weekly-agenda',
-    title: 'Agenda da semana',
-    description: 'Próximos compromissos e avaliações.',
+    title: 'Agenda de hoje',
+    description: 'Linha do tempo do dia com os próximos 3 dias recolhidos.',
     category: 'Gestão',
   },
   {
@@ -69,8 +80,8 @@ const widgets: WidgetDefinition[] = [
   },
   {
     id: 'active-students-chart',
-    title: 'Alunos ativos por mês',
-    description: 'Evolução da carteira nos últimos 6 meses.',
+    title: 'Alunos ativos',
+    description: 'Evolução da carteira no período escolhido.',
     category: 'Gestão',
   },
   {
@@ -96,6 +107,12 @@ const widgets: WidgetDefinition[] = [
     title: 'Formulários do site',
     description:
       'Leads preenchidos no site com data e hora exatas e temperatura comercial (Fechado, Quente, Morno e Frio).',
+    category: 'Gestão',
+  },
+  {
+    id: 'leads-funnel',
+    title: 'Funil de leads do site',
+    description: 'Recebidos, quentes e fechados com a taxa de conversão.',
     category: 'Gestão',
   },
   {
@@ -168,8 +185,14 @@ type DashboardWidgetStyle = CSSProperties & {
 
 const presetHeights = {
   compact: 190,
-  medium: 290,
-  tall: 390,
+  medium: 330,
+  tall: 430,
+}
+
+/** Widgets that need more room than their preset (tables). */
+const fixedHeights: Partial<Record<WidgetId, number>> = {
+  'students-table': 590,
+  'site-forms': 430,
 }
 
 function createWidgetSizes(layout: DashboardLayoutItem[]): WidgetSizes {
@@ -178,14 +201,7 @@ function createWidgetSizes(layout: DashboardLayoutItem[]): WidgetSizes {
       item.widget,
       {
         columns: Number(item.width),
-        height:
-          item.widget === 'students-table' || item.widget === 'weekly-agenda'
-            ? 590
-            : item.widget === 'renewals-overview'
-              ? 380
-              : item.widget === 'site-forms'
-                ? 420
-                : presetHeights[item.height],
+        height: fixedHeights[item.widget] ?? presetHeights[item.height],
       },
     ]),
   )
@@ -338,182 +354,6 @@ const students: Student[] = [
   },
 ]
 
-function KpiOverview({
-  siteForms,
-  onOpenSiteForms,
-}: {
-  siteForms: SiteFormSubmission[]
-  onOpenSiteForms: () => void
-}) {
-  const currencyFormatter = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  })
-  const fechadosCount = siteForms.filter((item) => item.temperature === 'Fechado').length
-  const quentesCount = siteForms.filter((item) => item.temperature === 'Quente').length
-
-  const kpis = [
-    {
-      title: 'Alunos ativos',
-      value: '128',
-      detail: '+12 este mês',
-      trend: 'up',
-      path: 'M2 25 C15 27 20 18 32 20 S50 14 61 16 S77 6 94 8',
-    },
-    {
-      title: 'Formulários do site',
-      value: String(siteForms.length).padStart(2, '0'),
-      detail: `${fechadosCount} fechados · ${quentesCount} quentes`,
-      trend: 'up',
-      path: 'M2 22 C18 15 25 23 39 17 S58 20 69 12 S84 14 94 7',
-      onClick: onOpenSiteForms,
-    },
-    {
-      title: 'Planos vencendo',
-      value: '09',
-      detail: 'Nos próximos 7 dias',
-      trend: 'down',
-      path: 'M2 9 C14 13 23 8 35 15 S53 13 65 20 S79 19 94 26',
-    },
-    {
-      title: 'Receita do mês',
-      // Mesmo valor exibido em Alunos (receita da carteira ativa). Em produção, ler da mesma fonte.
-      value: currencyFormatter.format(24200),
-      detail: '+8% no mês',
-      trend: 'up',
-      path: 'M2 27 C17 25 22 19 35 21 S52 14 64 16 S79 7 94 5',
-    },
-    {
-      title: 'Check-ins pendentes',
-      value: '14',
-      detail: '5 novos hoje',
-      trend: 'neutral',
-      path: 'M2 18 C18 16 25 20 38 15 S56 18 68 14 S82 17 94 12',
-    },
-    {
-      title: 'Check-ins respondidos',
-      // 114 de 128 alunos ativos: igual ao gráfico de adesão (Semana 5) e ao KPI de Alunos
-      value: '89%',
-      detail: '114 de 128 nesta semana',
-      trend: 'neutral',
-      path: 'M2 26 C14 24 24 20 36 21 S54 14 67 15 S82 8 94 6',
-    },
-  ]
-
-  return (
-    <div className="kpi-overview">
-      {kpis.map((kpi) => (
-        <article
-          key={kpi.title}
-          className="kpi-card"
-          onClick={kpi.onClick}
-          style={kpi.onClick ? { cursor: 'pointer' } : undefined}
-          title={kpi.onClick ? 'Abrir planilha de Formulários do site em Interno' : undefined}
-        >
-          <span>{kpi.title}</span>
-          <div>
-            <strong>{kpi.value}</strong>
-            <small className={kpi.trend}>
-              {kpi.trend === 'up' ? '↑' : kpi.trend === 'down' ? '↓' : '•'} {kpi.detail}
-            </small>
-          </div>
-          <svg viewBox="0 0 96 32" preserveAspectRatio="none" aria-hidden="true">
-            <path d={kpi.path} />
-          </svg>
-        </article>
-      ))}
-    </div>
-  )
-}
-
-const attentionItems = [
-  {
-    type: 'training',
-    description: 'Sem registrar treino há 5 dias',
-    student: 'Lucas Andrade',
-    action: 'Enviar mensagem',
-  },
-  {
-    type: 'checkin',
-    description: 'Check-in semanal enviado com fotos',
-    student: 'Camila Rocha',
-    action: 'Revisar',
-  },
-  {
-    type: 'nutrition',
-    description: 'Plano de dieta vence em 2 dias',
-    student: 'Rafael Souza',
-    action: 'Renovar',
-  },
-  {
-    type: 'message',
-    description: 'Mensagem sem resposta há 1 dia',
-    student: 'Juliana Costa',
-    action: 'Responder',
-  },
-  {
-    type: 'billing',
-    description: 'Pagamento atrasado',
-    student: 'Pedro Lima',
-    action: 'Ver cobrança',
-  },
-  {
-    type: 'training',
-    description: 'Treino precisa de ajuste de carga',
-    student: 'Sofia Ribeiro',
-    action: 'Ajustar',
-  },
-  {
-    type: 'checkin',
-    description: 'Avaliação mensal ainda não revisada',
-    student: 'Diego Castro',
-    action: 'Revisar',
-  },
-]
-
-function AttentionList() {
-  const [handled, setHandled] = useState<string[]>([])
-  const [expanded, setExpanded] = useState(false)
-  const items = expanded ? attentionItems : attentionItems.slice(0, 5)
-
-  return (
-    <div className="attention-content">
-      <button type="button" className="view-all" onClick={() => setExpanded((value) => !value)}>
-        {expanded ? 'Mostrar menos' : 'Ver todas'}
-      </button>
-      <div className="attention-list">
-        {items.map((item) => {
-          const isHandled = handled.includes(item.student)
-          return (
-            <div key={`${item.student}-${item.description}`} className={isHandled ? 'handled' : ''}>
-              <span className={`attention-icon ${item.type}`} aria-hidden="true">
-                <i />
-              </span>
-              <span>
-                <strong>{item.description}</strong>
-                <small>{item.student}</small>
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  setHandled((current) =>
-                    isHandled
-                      ? current.filter((student) => student !== item.student)
-                      : [...current, item.student],
-                  )
-                }
-              >
-                {isHandled ? 'Concluído' : item.action}
-              </button>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 function StudentsTable() {
   const [status, setStatus] = useState<'Todos' | StudentStatus>('Todos')
   const [goal, setGoal] = useState('Todos')
@@ -634,43 +474,17 @@ function StudentsTable() {
   )
 }
 
-function WeeklyAgenda() {
-  const appointments = [
-    ['05 nov', '09:00', 'Lucas Andrade', 'Reavaliação mensal'],
-    ['05 nov', '14:30', 'Aline Moraes', 'Avaliação inicial'],
-    ['06 nov', '10:00', 'Camila Rocha', 'Reavaliação mensal'],
-    ['07 nov', '16:00', 'Bruno Martins', 'Avaliação inicial'],
-  ]
-
-  return (
-    <div className="weekly-agenda">
-      <p className="widget-context-label">Próximos compromissos</p>
-      {appointments.map(([date, time, name, type]) => (
-        <div key={`${date}-${time}`}>
-          <time>
-            <strong>{date}</strong>
-            <span>{time}</span>
-          </time>
-          <span>
-            <strong>{name}</strong>
-            <small>{type}</small>
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function InternalUpdates({
   updates,
   onToggleUpdate,
+  onOpen,
 }: {
   updates: InternalUpdate[]
   onToggleUpdate: (updateId: string) => void
+  onOpen: () => void
 }) {
   return (
     <div className="internal-updates">
-      <p className="widget-context-label">Área interna</p>
       {updates.slice(0, 6).map((update) => (
         <article key={update.id} className={update.completed ? 'completed' : ''}>
           <img className="update-avatar" src={update.avatar} alt={`Foto de ${update.author}`} />
@@ -693,170 +507,9 @@ function InternalUpdates({
           </div>
         </article>
       ))}
-    </div>
-  )
-}
-
-function ChartHoverDetail({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="chart-hover-detail" role="status">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  )
-}
-
-const activeStudentPoints = [
-  { label: 'Junho', short: 'Jun', value: 116, x: 3, y: 118 },
-  { label: 'Julho', short: 'Jul', value: 118, x: 86, y: 105 },
-  { label: 'Agosto', short: 'Ago', value: 121, x: 172, y: 89 },
-  { label: 'Setembro', short: 'Set', value: 123, x: 258, y: 69 },
-  { label: 'Outubro', short: 'Out', value: 125, x: 344, y: 54 },
-  { label: 'Novembro', short: 'Nov', value: 128, x: 427, y: 30 },
-]
-
-function ActiveStudentsChart() {
-  const [hoveredPoint, setHoveredPoint] = useState<(typeof activeStudentPoints)[number] | null>(
-    null,
-  )
-
-  return (
-    <div className="chart-content line-chart">
-      <div className="chart-summary">
-        <strong>128</strong>
-        <span>+10,3% em 6 meses</span>
-      </div>
-      {hoveredPoint && (
-        <ChartHoverDetail
-          label={hoveredPoint.label}
-          value={`${hoveredPoint.value} alunos ativos`}
-        />
-      )}
-      <svg
-        viewBox="0 0 430 160"
-        preserveAspectRatio="none"
-        aria-label="Alunos ativos por mês"
-        onMouseLeave={() => setHoveredPoint(null)}
-      >
-        <defs>
-          <linearGradient id="active-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" style={{ stopColor: 'var(--gold-34)' }} stopOpacity=".24" />
-            <stop offset="100%" style={{ stopColor: 'var(--gold-34)' }} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <g className="chart-grid">
-          <path d="M0 30H430M0 75H430M0 120H430" />
-        </g>
-        <path
-          className="area"
-          d="M0 118 C45 112 60 103 86 105 S140 84 172 89 S228 65 258 69 S320 48 344 54 S397 27 430 30 V150 H0Z"
-        />
-        <path
-          className="line"
-          d="M0 118 C45 112 60 103 86 105 S140 84 172 89 S228 65 258 69 S320 48 344 54 S397 27 430 30"
-        />
-        <g className="chart-points">
-          {activeStudentPoints.map((point) => (
-            <circle
-              key={point.short}
-              className={hoveredPoint?.short === point.short ? 'active' : ''}
-              cx={point.x}
-              cy={point.y}
-              r="5"
-              tabIndex={0}
-              aria-label={`${point.label}: ${point.value} alunos ativos`}
-              onMouseEnter={() => setHoveredPoint(point)}
-              onFocus={() => setHoveredPoint(point)}
-              onBlur={() => setHoveredPoint(null)}
-            />
-          ))}
-        </g>
-        <g className="chart-labels">
-          {activeStudentPoints.map((point) => (
-            <text key={point.short} x={Math.min(point.x, 411)} y="158">
-              {point.short}
-            </text>
-          ))}
-        </g>
-      </svg>
-    </div>
-  )
-}
-
-function AdherenceChart() {
-  const weeks = [
-    {
-      week: 'Semana 1',
-      short: 'S1',
-      answered: 82,
-      unanswered: 18,
-      count: '105 respondidos · 23 não respondidos',
-    },
-    {
-      week: 'Semana 2',
-      short: 'S2',
-      answered: 86,
-      unanswered: 14,
-      count: '110 respondidos · 18 não respondidos',
-    },
-    {
-      week: 'Semana 3',
-      short: 'S3',
-      answered: 84,
-      unanswered: 16,
-      count: '108 respondidos · 20 não respondidos',
-    },
-    {
-      week: 'Semana 4',
-      short: 'S4',
-      answered: 91,
-      unanswered: 9,
-      count: '116 respondidos · 12 não respondidos',
-    },
-    {
-      week: 'Semana 5',
-      short: 'S5',
-      answered: 89,
-      unanswered: 11,
-      count: '114 respondidos · 14 não respondidos',
-    },
-  ]
-  const [hoveredWeek, setHoveredWeek] = useState<(typeof weeks)[number] | null>(null)
-
-  return (
-    <div className="chart-content bar-chart">
-      {hoveredWeek && (
-        <ChartHoverDetail
-          label={hoveredWeek.week}
-          value={`Respondidos ${hoveredWeek.answered}% · Não respondidos ${hoveredWeek.unanswered}% (${hoveredWeek.count})`}
-        />
-      )}
-      <div className="chart-legend">
-        <span>
-          <i className="training" /> Respondidos (89%)
-        </span>
-        <span>
-          <i className="diet" /> Não respondidos (11%)
-        </span>
-      </div>
-      <div className="grouped-bars" onMouseLeave={() => setHoveredWeek(null)}>
-        {weeks.map((week) => (
-          <div
-            key={week.short}
-            tabIndex={0}
-            aria-label={`${week.week}: check-ins respondidos ${week.answered}%, não respondidos ${week.unanswered}%`}
-            onMouseEnter={() => setHoveredWeek(week)}
-            onFocus={() => setHoveredWeek(week)}
-            onBlur={() => setHoveredWeek(null)}
-          >
-            <span>
-              <i className="training" style={{ height: `${week.answered}%` }} />
-              <i className="diet" style={{ height: `${week.unanswered}%` }} />
-            </span>
-            <small>{week.short}</small>
-          </div>
-        ))}
-      </div>
+      <button type="button" className="widget-footer-link" onClick={onOpen}>
+        Abrir Atualizações no Interno →
+      </button>
     </div>
   )
 }
@@ -1069,61 +722,6 @@ function RenewalsOverview() {
   )
 }
 
-function GoalsChart() {
-  const goals = [
-    { label: 'Emagrecimento', className: 'weight-loss', percentage: 46, students: 59 },
-    { label: 'Hipertrofia', className: 'hypertrophy', percentage: 34, students: 44 },
-    { label: 'Performance', className: 'performance', percentage: 20, students: 25 },
-  ]
-  const goalSummary = {
-    label: 'Total da carteira',
-    className: '',
-    percentage: 100,
-    students: 128,
-  }
-  const [hoveredGoal, setHoveredGoal] = useState<(typeof goals)[number] | null>(null)
-
-  return (
-    <div className="chart-content goals-chart" onMouseLeave={() => setHoveredGoal(null)}>
-      {hoveredGoal && (
-        <ChartHoverDetail
-          label={hoveredGoal.label}
-          value={`${hoveredGoal.percentage}% · ${hoveredGoal.students} alunos`}
-        />
-      )}
-      <div
-        className="goals-donut"
-        tabIndex={0}
-        aria-label="128 alunos distribuídos em três objetivos"
-        onMouseEnter={() => setHoveredGoal(goalSummary)}
-        onFocus={() => setHoveredGoal(goalSummary)}
-        onBlur={() => setHoveredGoal(null)}
-      >
-        <span>
-          <strong>128</strong>
-          <small>alunos</small>
-        </span>
-      </div>
-      <div className="goals-legend">
-        {goals.map((goal) => (
-          <span
-            key={goal.label}
-            tabIndex={0}
-            aria-label={`${goal.label}: ${goal.percentage}%, ${goal.students} alunos`}
-            onMouseEnter={() => setHoveredGoal(goal)}
-            onFocus={() => setHoveredGoal(goal)}
-            onBlur={() => setHoveredGoal(null)}
-          >
-            <i className={goal.className} />
-            <small>{goal.label}</small>
-            <strong>{goal.percentage}%</strong>
-          </span>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function SiteFormsDashboardWidget({
   siteForms,
   onUpdateFormTemperature,
@@ -1228,32 +826,39 @@ function SiteFormsDashboardWidget({
 
 function WidgetContent({
   id,
+  period,
   internalUpdates,
   onToggleInternalUpdate,
   siteForms,
   onUpdateFormTemperature,
   onOpenSiteForms,
+  onOpenInternal,
+  onNavigate,
 }: {
   id: WidgetId
+  period: DashboardPeriod
   internalUpdates: InternalUpdate[]
   onToggleInternalUpdate: (updateId: string) => void
   siteForms: SiteFormSubmission[]
   onUpdateFormTemperature: (formId: string, temperature: LeadTemperature) => void
   onOpenSiteForms: () => void
+  onOpenInternal: () => void
+  onNavigate: (href: string) => void
 }) {
   if (id === 'kpi-overview') {
-    return <KpiOverview siteForms={siteForms} onOpenSiteForms={onOpenSiteForms} />
+    return <KpiOverview period={period} siteForms={siteForms} onNavigate={onNavigate} onOpenSiteForms={onOpenSiteForms} />
   }
-  if (id === 'attention-list') return <AttentionList />
+  if (id === 'attention-list') return <AttentionQueue onNavigate={onNavigate} />
   if (id === 'students-table') return <StudentsTable />
-  if (id === 'weekly-agenda') return <WeeklyAgenda />
+  if (id === 'weekly-agenda') return <TodayAgenda onNavigate={onNavigate} />
   if (id === 'team-overview') {
-    return <InternalUpdates updates={internalUpdates} onToggleUpdate={onToggleInternalUpdate} />
+    return <InternalUpdates updates={internalUpdates} onToggleUpdate={onToggleInternalUpdate} onOpen={onOpenInternal} />
   }
-  if (id === 'active-students-chart') return <ActiveStudentsChart />
-  if (id === 'adherence-chart') return <AdherenceChart />
+  if (id === 'active-students-chart') return <ActiveStudentsChart period={period} />
+  if (id === 'adherence-chart') return <AdherenceChart period={period} />
   if (id === 'renewals-overview') return <RenewalsOverview />
   if (id === 'goals-chart') return <GoalsChart />
+  if (id === 'leads-funnel') return <LeadsFunnel siteForms={siteForms} onOpenSiteForms={onOpenSiteForms} />
   if (id === 'site-forms') {
     return (
       <SiteFormsDashboardWidget
@@ -1437,32 +1042,8 @@ function WidgetContent({
   )
 }
 
-function ensureRenewalsWidget(items: DashboardLayoutItem[]): DashboardLayoutItem[] {
-  const base = items.length > 0 ? items : defaultDashboardLayout
-  let next = [...base]
-  if (!next.some((item) => item.widget === 'renewals-overview')) {
-    const renewalDefault = defaultDashboardLayout.find(
-      (item) => item.widget === 'renewals-overview',
-    ) ?? {
-      widget: 'renewals-overview' as const,
-      order: next.length,
-      width: '4' as const,
-      height: 'medium' as const,
-      visible: true,
-    }
-    next = [...next, { ...renewalDefault, order: next.length }]
-  }
-  if (!next.some((item) => item.widget === 'site-forms')) {
-    const formsDefault = defaultDashboardLayout.find((item) => item.widget === 'site-forms') ?? {
-      widget: 'site-forms' as const,
-      order: next.length,
-      width: '8' as const,
-      height: 'medium' as const,
-      visible: true,
-    }
-    next = [...next, { ...formsDefault, order: next.length }]
-  }
-  return next
+function withFallback(items: DashboardLayoutItem[]): DashboardLayoutItem[] {
+  return items.length > 0 ? items : defaultDashboardLayout
 }
 
 export default function CustomDashboard({
@@ -1473,7 +1054,11 @@ export default function CustomDashboard({
   siteForms = initialSiteFormSubmissions,
   onUpdateFormTemperature,
   onOpenSiteForms,
+  period = '30d',
+  onNavigate = () => {},
 }: {
+  period?: DashboardPeriod
+  onNavigate?: (href: string) => void
   initialLayout: DashboardLayoutItem[]
   internalUpdates: InternalUpdate[]
   onToggleInternalUpdate: (updateId: string) => void
@@ -1493,7 +1078,7 @@ export default function CustomDashboard({
       )
     }
   }
-  const startingLayout = ensureRenewalsWidget(initialLayout)
+  const startingLayout = withFallback(initialLayout)
   const [layout, setLayout] = useState(startingLayout)
   const [savedLayout, setSavedLayout] = useState(startingLayout)
   const [editing, setEditing] = useState(false)
@@ -1750,106 +1335,118 @@ export default function CustomDashboard({
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <Tabs
-          label="Layouts do dashboard"
-          className="min-w-0 flex-1 border-b-0"
-          value={activeLayout.id}
-          onChange={switchLayout}
-          items={allLayouts.map((item) => ({ id: item.id, label: item.name }))}
-        />
-        <div className="flex items-center gap-2 pb-1">
-          {feedback && (
-            <span className="mr-2 text-xs font-medium text-success" role="status">
-              {feedback}
-            </span>
-          )}
-          {editing ? (
-            <>
-              <Button size="sm" variant="ghost" onClick={cancelEditing}>
-                Cancelar
-              </Button>
-              <Button size="sm" onClick={() => setCatalogOpen(true)}>
-                <Icon name="plus" className="size-4" /> Adicionar widget
-              </Button>
-              <Button size="sm" onClick={() => setNameDialog({ mode: 'save-as', value: '' })}>
-                Salvar como novo…
-              </Button>
-              <Button size="sm" variant="accent" onClick={saveLayout}>
-                Salvar layout
-              </Button>
-            </>
-          ) : (
-            <>
-              <Menu
-                label="Opções do layout"
-                header={
-                  <p className="mb-1 border-b border-line px-2.5 pt-1.5 pb-2 text-xs text-ink-3">
-                    {activeLayout.description ?? 'Layout personalizado'}
-                    {activeLayout.id === defaultLayoutId && ' · padrão ao abrir'}
-                  </p>
-                }
-                items={[
-                  {
-                    id: 'save-as',
-                    label: 'Salvar como novo layout…',
-                    onSelect: () => setNameDialog({ mode: 'save-as', value: '' }),
-                  },
-                  {
-                    id: 'rename',
-                    label: 'Renomear',
-                    onSelect: () => setNameDialog({ mode: 'rename', value: activeLayout.name }),
-                  },
-                  ...(activeLayout.id !== defaultLayoutId
-                    ? [
-                        {
-                          id: 'default',
-                          label: 'Abrir sempre neste layout',
-                          onSelect: () => {
-                            persist(storedLayouts, activeLayout.id, activeLayout.id)
-                            setFeedback(`“${activeLayout.name}” agora abre por padrão.`)
-                          },
-                        },
-                      ]
-                    : []),
-                  ...(isCustomizedBuiltIn(activeLayout.id, storedLayouts)
-                    ? [{ id: 'restore', label: 'Restaurar original', onSelect: restoreBuiltIn }]
-                    : []),
-                  ...(!activeLayout.builtIn
-                    ? [{ id: 'delete', label: 'Excluir layout', danger: true, onSelect: deleteLayout }]
-                    : []),
-                ]}
-                trigger={({ open, toggle, id }) => (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={toggle}
-                    aria-haspopup="menu"
-                    aria-expanded={open}
-                    aria-controls={open ? id : undefined}
-                    aria-label="Opções do layout"
-                    className="size-8"
-                  >
-                    <span aria-hidden="true" className="text-base leading-none">⋯</span>
-                  </Button>
-                )}
-              />
-              <Button size="sm" onClick={() => setEditing(true)}>
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
-                  <path
-                    d="M4 20h4l11-11-4-4L4 16v4ZM13.5 6.5l4 4"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Personalizar
-              </Button>
-            </>
-          )}
+      {editing ? (
+        <div
+          role="region"
+          aria-label="Edição do layout"
+          className="sticky top-16 z-30 -mx-1 mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-card bg-night px-4 py-3 text-on-dark shadow-pop"
+        >
+          <div className="mr-auto min-w-0">
+            <p className="text-sm font-semibold">Editando layout “{activeLayout.name}”</p>
+            <p className="text-xs text-on-dark/65">
+              Arraste pelo puxador para mover e pelo canto inferior direito para redimensionar. Setas também funcionam.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="ghost" className="text-on-dark hover:bg-white/10 hover:text-on-dark" onClick={cancelEditing}>
+              Cancelar
+            </Button>
+            <Button size="sm" variant="ghost" className="text-on-dark hover:bg-white/10 hover:text-on-dark" onClick={() => setCatalogOpen(true)}>
+              <Icon name="plus" className="size-4" /> Adicionar widget
+            </Button>
+            <Button size="sm" variant="ghost" className="text-on-dark hover:bg-white/10 hover:text-on-dark" onClick={() => setNameDialog({ mode: 'save-as', value: '' })}>
+              Salvar como novo…
+            </Button>
+            <Button size="sm" variant="accent" onClick={saveLayout}>
+              Salvar layout
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <Tabs
+            label="Layouts do dashboard"
+            className="min-w-0 flex-1 border-b-0"
+            value={activeLayout.id}
+            onChange={switchLayout}
+            items={allLayouts.map((item) => ({ id: item.id, label: item.name }))}
+          />
+          <div className="flex items-center gap-2 pb-1">
+            {feedback && (
+              <span className="mr-2 text-xs font-medium text-success" role="status">
+                {feedback}
+              </span>
+            )}
+            <>
+                <Menu
+                  label="Opções do layout"
+                  header={
+                    <p className="mb-1 border-b border-line px-2.5 pt-1.5 pb-2 text-xs text-ink-3">
+                      {activeLayout.description ?? 'Layout personalizado'}
+                      {activeLayout.id === defaultLayoutId && ' · padrão ao abrir'}
+                    </p>
+                  }
+                  items={[
+                    {
+                      id: 'save-as',
+                      label: 'Salvar como novo layout…',
+                      onSelect: () => setNameDialog({ mode: 'save-as', value: '' }),
+                    },
+                    {
+                      id: 'rename',
+                      label: 'Renomear',
+                      onSelect: () => setNameDialog({ mode: 'rename', value: activeLayout.name }),
+                    },
+                    ...(activeLayout.id !== defaultLayoutId
+                      ? [
+                          {
+                            id: 'default',
+                            label: 'Abrir sempre neste layout',
+                            onSelect: () => {
+                              persist(storedLayouts, activeLayout.id, activeLayout.id)
+                              setFeedback(`“${activeLayout.name}” agora abre por padrão.`)
+                            },
+                          },
+                        ]
+                      : []),
+                    ...(isCustomizedBuiltIn(activeLayout.id, storedLayouts)
+                      ? [{ id: 'restore', label: 'Restaurar original', onSelect: restoreBuiltIn }]
+                      : []),
+                    ...(!activeLayout.builtIn
+                      ? [{ id: 'delete', label: 'Excluir layout', danger: true, onSelect: deleteLayout }]
+                      : []),
+                  ]}
+                  trigger={({ open, toggle, id }) => (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={toggle}
+                      aria-haspopup="menu"
+                      aria-expanded={open}
+                      aria-controls={open ? id : undefined}
+                      aria-label="Opções do layout"
+                      className="size-8"
+                    >
+                      <span aria-hidden="true" className="text-base leading-none">⋯</span>
+                    </Button>
+                  )}
+                />
+                <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
+                    <path
+                      d="M4 20h4l11-11-4-4L4 16v4ZM13.5 6.5l4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Personalizar
+                </Button>
+              </>
+          </div>
+        </div>
+      )}
 
       {nameDialog && (
         <NameDialog
@@ -1868,17 +1465,9 @@ export default function CustomDashboard({
         />
       )}
 
-      {editing && (
-        <div className="edit-dashboard-note">
-          <span>Modo de edição</span>
-          Arraste pelo puxador superior para mover. Puxe o canto inferior direito para ajustar
-          largura e altura. Clique em “Salvar layout” para guardar neste navegador.
-        </div>
-      )}
-
       <section
         ref={dashboardGridRef}
-        className="custom-dashboard-grid"
+        className={`custom-dashboard-grid ${editing ? 'editing' : ''}`}
         aria-label="Widgets do Dashboard"
       >
         {orderedLayout.map((item, index) => {
@@ -1891,33 +1480,13 @@ export default function CustomDashboard({
             '--widget-columns': size.columns,
             '--widget-height': `${size.height}px`,
           }
-          const opensInternal = item.widget === 'weekly-agenda' || item.widget === 'team-overview'
           return (
             <article
               key={item.widget}
               data-widget-id={item.widget}
               style={widgetStyle}
-              className={`dashboard-widget widget-${item.widget} ${opensInternal && !editing ? 'opens-internal' : ''} ${editing ? 'editing' : ''} ${draggedWidget === item.widget ? 'dragging' : ''} ${resizingWidget === item.widget ? 'resizing' : ''}`}
-              role={opensInternal && !editing ? 'link' : undefined}
-              tabIndex={opensInternal && !editing ? 0 : undefined}
-              aria-label={
-                opensInternal && !editing
-                  ? `${definition.title}. Abrir Atualizações e Agenda em Interno`
-                  : undefined
-              }
-              onClick={(event) => {
-                if (!opensInternal || editing) return
-                if ((event.target as HTMLElement).closest('button, input, select, textarea, a')) {
-                  return
-                }
-                onOpenInternal()
-              }}
-              onKeyDown={(event) => {
-                if (!opensInternal || editing || (event.key !== 'Enter' && event.key !== ' '))
-                  return
-                event.preventDefault()
-                onOpenInternal()
-              }}
+              aria-label={definition.title}
+              className={`dashboard-widget widget-${item.widget} ${editing ? 'editing' : ''} ${draggedWidget === item.widget ? 'dragging' : ''} ${resizingWidget === item.widget ? 'resizing' : ''}`}
             >
               <header className="widget-header">
                 <div>
@@ -1949,9 +1518,6 @@ export default function CustomDashboard({
                       <i />
                     </button>
                   )}
-                  <span className={`widget-category ${definition.category}`}>
-                    {definition.category}
-                  </span>
                   <h2>{definition.title}</h2>
                 </div>
                 {editing && (
@@ -1990,6 +1556,9 @@ export default function CustomDashboard({
               >
                 <WidgetContent
                   id={item.widget}
+                  period={period}
+                  onNavigate={onNavigate}
+                  onOpenInternal={onOpenInternal}
                   internalUpdates={internalUpdates}
                   onToggleInternalUpdate={onToggleInternalUpdate}
                   siteForms={effectiveForms}
@@ -2033,51 +1602,51 @@ export default function CustomDashboard({
         })}
       </section>
 
-      {catalogOpen && (
-        <div
-          className="widget-catalog-overlay"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target) setCatalogOpen(false)
-          }}
-        >
-          <section
-            className="widget-catalog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="widget-catalog-title"
-          >
-            <header>
-              <div>
-                <span>PERSONALIZE SUA VISÃO</span>
-                <h2 id="widget-catalog-title">Adicionar widget</h2>
-                <p>Misture indicadores de treino, nutrição e gestão conforme a sua rotina.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCatalogOpen(false)}
-                aria-label="Fechar catálogo"
-              >
-                Fechar
-              </button>
-            </header>
-            <div className="widget-catalog-grid">
-              {availableWidgets.length > 0 ? (
-                availableWidgets.map((widget) => (
-                  <button key={widget.id} type="button" onClick={() => addWidget(widget.id)}>
-                    <span className={`widget-category ${widget.category}`}>{widget.category}</span>
-                    <strong>{widget.title}</strong>
-                    <small>{widget.description}</small>
-                    <i>Adicionar</i>
+      <Sheet
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        label="Adicionar widget"
+        className="w-[min(420px,100vw)] bg-surface"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-5">
+          <div>
+            <h2 className="text-xl leading-7 font-semibold text-ink">Adicionar widget</h2>
+            <p className="mt-1 text-sm text-ink-2">Entra no fim do layout “{activeLayout.name}”, com 6 colunas.</p>
+          </div>
+          <Button size="icon" variant="ghost" aria-label="Fechar catálogo" onClick={() => setCatalogOpen(false)}>
+            <Icon name="close" className="size-4" />
+          </Button>
+        </header>
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {availableWidgets.length > 0 ? (
+            <ul className="space-y-2">
+              {availableWidgets.map((widget) => (
+                <li key={widget.id}>
+                  <button
+                    type="button"
+                    onClick={() => addWidget(widget.id)}
+                    className="group flex w-full items-start gap-3 rounded-control border border-line bg-surface p-3 text-left transition-colors hover:border-brand/40 hover:bg-subtle"
+                  >
+                    <span aria-hidden="true" className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand">
+                      <Icon name={widget.category === 'Treino' ? 'training' : widget.category === 'Nutrição' ? 'nutrition' : 'dashboard'} className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-ink">{widget.title}</span>
+                      <span className="mt-0.5 block text-xs text-ink-2">{widget.description}</span>
+                      <span className="mt-1 block text-[11px] text-ink-3">{widget.category}</span>
+                    </span>
+                    <span className="self-center text-xs font-medium text-brand opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                      Adicionar
+                    </span>
                   </button>
-                ))
-              ) : (
-                <div className="catalog-empty">Todos os widgets já estão no seu Dashboard.</div>
-              )}
-            </div>
-          </section>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-2 py-8 text-center text-sm text-ink-3">Todos os widgets já estão neste layout.</p>
+          )}
         </div>
-      )}
+      </Sheet>
     </>
   )
 }
