@@ -1,29 +1,5 @@
 
 
-.edit-dashboard-note {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding: 10px 13px;
-  border: 1px solid var(--gold-79);
-  border-radius: 8px;
-  color: var(--gold-39);
-  background: color-mix(in srgb, var(--gold-90) 52%, transparent);
-  font-size: 12px;
-}
-
-.edit-dashboard-note > span {
-  padding: 4px 7px;
-  border-radius: 4px;
-  color: var(--sand-100);
-  background: var(--elevn-accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
 .custom-dashboard-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -40,10 +16,9 @@
   flex-direction: column;
   grid-column: span var(--widget-columns, 4);
   overflow: hidden;
-  border: 1px solid var(--sand-85);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 5px 18px color-mix(in srgb, var(--elevn-sidebar-bg) 2.5%, transparent);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  background: var(--bg-surface);
   transition:
     border-color 180ms,
     box-shadow 180ms,
@@ -76,7 +51,49 @@
 .dashboard-widget.editing:hover {
   border-color: var(--gold-38);
   box-shadow: 0 12px 28px color-mix(in srgb, var(--elevn-sidebar-bg) 7%, transparent);
-  transform: translateY(-2px);
+}
+
+/* While editing, the 12 columns show behind the widgets so they snap visibly */
+.custom-dashboard-grid.editing {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--elevn-accent) 7%, transparent) calc(100% - 16px),
+    transparent calc(100% - 16px)
+  );
+  background-size: calc((100% + 16px) / 12) 100%;
+  border-radius: 14px;
+}
+
+/* KPI strip is its own card: no widget chrome and no fixed height (no empty band below) */
+.dashboard-widget.widget-kpi-overview {
+  height: auto;
+  min-height: 0;
+}
+
+.widget-kpi-overview:not(.editing) {
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
+.widget-kpi-overview:not(.editing) > .widget-header {
+  display: none;
+}
+
+.widget-kpi-overview.editing .widget-body-scroll {
+  padding: 0 12px 12px;
+}
+
+.widget-footer-link {
+  align-self: flex-start;
+  margin-top: 12px;
+  color: var(--elevn-accent);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.widget-footer-link:hover {
+  color: var(--accent-hover);
 }
 
 .widget-body-scroll {
@@ -112,12 +129,11 @@
 }
 
 .widget-header {
-  min-height: 67px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 19px 12px;
+  padding: 16px 20px 10px;
 }
 
 .widget-header > div:first-child {
@@ -130,39 +146,10 @@
 
 .widget-header h2 {
   width: 100%;
-  color: var(--ink-14);
-  font-size: 14px;
+  color: var(--text-primary);
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.widget-category {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  height: 20px;
-  padding: 0 7px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.widget-category.Treino {
-  color: var(--sand-26);
-  background: var(--gold-87);
-}
-
-.widget-category.Nutrição {
-  color: var(--green-29);
-  background: var(--sand-92-2);
-}
-
-.widget-category.Gestão {
-  color: var(--slate-37);
-  background: var(--slate-92);
+  line-height: 22px;
 }
 
 .drag-handle {
@@ -548,121 +535,6 @@
   font-weight: 700;
 }
 
-.widget-catalog-overlay {
-  position: fixed;
-  z-index: 60;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: color-mix(in srgb, var(--elevn-sidebar-bg) 62%, transparent);
-  backdrop-filter: blur(5px);
-}
-
-.widget-catalog {
-  width: min(760px, 100%);
-  max-height: min(720px, calc(100vh - 48px));
-  overflow: auto;
-  padding: 28px;
-  border-radius: 15px;
-  background: var(--sand-95);
-  box-shadow: 0 30px 90px color-mix(in srgb, var(--elevn-sidebar-bg) 28%, transparent);
-}
-
-.widget-catalog > header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 25px;
-}
-
-.widget-catalog > header span {
-  color: var(--gold-42);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.widget-catalog > header h2 {
-  margin: 6px 0;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.widget-catalog > header p {
-  color: var(--slate-53);
-  font-size: 12px;
-}
-
-.widget-catalog > header > button {
-  padding: 7px 10px;
-  border: 1px solid var(--sand-85);
-  border-radius: 6px;
-  color: var(--slate-43);
-  background: var(--sand-100);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.widget-catalog-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.widget-catalog-grid > button {
-  min-height: 145px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 18px;
-  border: 1px solid var(--sand-85);
-  border-radius: 10px;
-  background: var(--sand-100);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 160ms,
-    transform 160ms,
-    box-shadow 160ms;
-}
-
-.widget-catalog-grid > button:hover {
-  border-color: var(--gold-54);
-  box-shadow: 0 10px 25px color-mix(in srgb, var(--elevn-sidebar-bg) 6%, transparent);
-  transform: translateY(-2px);
-}
-
-.widget-catalog-grid > button strong {
-  margin: 13px 0 5px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.widget-catalog-grid > button small {
-  color: var(--slate-55);
-  font-size: 11px;
-}
-
-.widget-catalog-grid > button > i {
-  margin-top: auto;
-  color: var(--elevn-accent);
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 700;
-}
-
-.catalog-empty {
-  grid-column: 1 / -1;
-  padding: 45px;
-  color: var(--slate-55);
-  font-size: 12px;
-  text-align: center;
-}
-
 @media (max-width: 1120px) {
   .adherence-content {
     grid-template-columns: 1fr;
@@ -689,27 +561,13 @@
 
   .widget-header {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .adherence-content {
     grid-template-columns: 1fr;
   }
 
-  .widget-catalog-overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
-
-  .widget-catalog {
-    width: 100%;
-    max-height: 86svh;
-    padding: 24px 18px;
-    border-radius: 18px 18px 0 0;
-  }
-
-  .widget-catalog-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* No celular a altura fixa do widget cortava o conteúdo (KPIs empilhados sobrepunham o card seguinte) */

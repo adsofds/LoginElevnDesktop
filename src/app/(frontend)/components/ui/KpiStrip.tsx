@@ -11,6 +11,43 @@ export type KpiItem = {
   hint?: string
   active?: boolean
   onClick?: () => void
+  /** Accessible name for a clickable cell, e.g. "Abrir alunos vencendo". */
+  actionLabel?: string
+  /** Trend line drawn under the value; neutral until the cell is hovered. */
+  spark?: number[]
+}
+
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 2) return null
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+  const points = values
+    .map(
+      (value, index) =>
+        `${(index / (values.length - 1)) * 100},${22 - ((value - min) / range) * 20}`,
+    )
+    .join(' ')
+  return (
+    <div className="mt-auto pt-3">
+      <svg
+        viewBox="0 0 100 24"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        className="block h-6 w-full overflow-visible text-ink-3/45 transition-colors duration-200 group-hover:text-brand"
+      >
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
+  )
 }
 
 const deltaTone: Record<KpiTone, string> = {
@@ -24,7 +61,15 @@ const deltaTone: Record<KpiTone, string> = {
  * KPIs in a single card split by 1px dividers (Stripe-style). A clickable cell
  * acts as a filter toggle and shows its active state with an accent underline.
  */
-export function KpiStrip({ items, label, className }: { items: KpiItem[]; label: string; className?: string }) {
+export function KpiStrip({
+  items,
+  label,
+  className,
+}: {
+  items: KpiItem[]
+  label: string
+  className?: string
+}) {
   return (
     <section
       aria-label={label}
@@ -43,21 +88,37 @@ export function KpiStrip({ items, label, className }: { items: KpiItem[]; label:
               {item.value}
             </span>
             {item.delta && (
-              <span className={cx('mt-1 block text-xs font-semibold', deltaTone[item.delta.tone ?? 'neutral'])}>
+              <span
+                className={cx(
+                  'mt-1 block text-xs font-semibold',
+                  deltaTone[item.delta.tone ?? 'neutral'],
+                )}
+              >
                 {item.delta.text}
               </span>
             )}
             {item.hint && <span className="mt-0.5 block text-xs text-ink-3">{item.hint}</span>}
-            {item.active && <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-brand" />}
+            {item.spark && <Sparkline values={item.spark} />}
+            {item.actionLabel && <span className="sr-only">. {item.actionLabel}</span>}
+            {item.active && (
+              <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-brand" />
+            )}
           </>
         )
         const classes = cx(
-          'relative min-w-0 px-5 py-4 text-left',
+          'group relative flex min-w-0 flex-col px-5 py-4 text-left',
           item.onClick && 'cursor-pointer transition-colors hover:bg-subtle',
           item.active && 'bg-brand-soft/40',
         )
         return item.onClick ? (
-          <button key={item.id} type="button" className={classes} onClick={item.onClick} aria-pressed={!!item.active}>
+          <button
+            key={item.id}
+            type="button"
+            className={classes}
+            onClick={item.onClick}
+            aria-pressed={item.active}
+            title={item.actionLabel}
+          >
             {body}
           </button>
         ) : (
