@@ -1,6 +1,13 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react'
 import {
   formatFormTimestamp,
   formatPersonName,
@@ -12,6 +19,16 @@ import {
   type LeadTemperature,
   type SiteFormSubmission,
 } from '@/lib/demo-internal'
+import { demoAgenda } from '@/lib/demo-agenda'
+import LeadsSpreadsheet from './interno/LeadsSpreadsheet'
+import InternProgress from './interno/InternProgress'
+import WeekCalendar, { type CalendarAppointment } from './interno/WeekCalendar'
+import { Segmented } from './ui/Segmented'
+import { Badge, Kbd } from './ui/Badge'
+import { Button } from './ui/Button'
+import { cx } from './ui/cx'
+import { Icon } from './ui/icons'
+import { Menu } from './ui/Menu'
 import { Tabs } from './ui/Tabs'
 
 /** Today's year/month/day in Brasília, independent of the viewer's machine time zone. */
@@ -377,6 +394,30 @@ const starterContentNotes: ContentNote[] = [
   },
 ]
 
+const quickReplies = [
+  'Ajuste aplicado, mantém a carga.',
+  'Recebido! Reviso e te retorno hoje.',
+  'Ótimo trabalho, segue assim.',
+]
+
+const mailField =
+  'mt-1 h-10 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-3 focus:border-brand focus:outline-none'
+
+/** Where a conversation came from, shown as a small icon in the list. */
+function mailOrigin(update: InternalUpdate): { icon: string; label: string } {
+  if (/MFIT/.test(update.subject)) return { icon: 'training', label: 'Comentário do MFIT' }
+  if (update.role === 'Aluno' || update.recipientCategory === 'aluno') return { icon: 'students', label: 'Aluno pelo app' }
+  return { icon: 'team', label: 'Equipe' }
+}
+
+/** ⌘Enter / Ctrl+Enter submits the textarea's form. */
+function submitOnModEnter(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+    event.preventDefault()
+    event.currentTarget.form?.requestSubmit()
+  }
+}
+
 function makeId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
@@ -429,7 +470,10 @@ export default function InternalWorkspace({
   onIntentHandled,
   focusUpdateId,
   formSearch,
+  onConvertLead,
 }: {
+  /** "Converter em aluno" from the lead panel. */
+  onConvertLead?: (lead: SiteFormSubmission) => void
   updates: InternalUpdate[]
   onCreateUpdate: (update: InternalUpdate) => void
   onToggleUpdate: (updateId: string) => void
@@ -470,11 +514,6 @@ export default function InternalWorkspace({
   const [formTempFilter, setFormTempFilter] = useState<'Todos' | LeadTemperature>('Todos')
   const [formSearchQuery, setFormSearchQuery] = useState('')
   const [newFormModalOpen, setNewFormModalOpen] = useState(false)
-  const [leadName, setLeadName] = useState('')
-  const [leadPhone, setLeadPhone] = useState('')
-  const [leadInstagram, setLeadInstagram] = useState('')
-  const [leadReferral, setLeadReferral] = useState('')
-  const [leadTemperature, setLeadTemperature] = useState<LeadTemperature>('Quente')
   const [appointments, setAppointments] = useState(starterAppointments)
   const [calendarCursor, setCalendarCursor] = useState(() => {
     const today = getBusinessToday()
@@ -491,6 +530,42 @@ export default function InternalWorkspace({
     description: '',
     trelloWorkspaceId: '',
   })
+  const [calendarView, setCalendarView] = useState<'semana' | 'mes'>('semana')
+  const [todayIso, setTodayIso] = useState('')
+
+  // Today (Brasília) and this week's demo agenda are set after hydration so the
+  // static page and the browser agree; the same events show on the Dashboard.
+  useEffect(() => {
+    const { year, month, day } = getBusinessToday()
+    const today = new Date(year, month, day)
+    const iso = toISODate(today)
+    setTodayIso(iso)
+    setCalendarCursor({ year, month })
+    setAppointmentDraft((current) => ({ ...current, date: iso }))
+    setAppointments((current) => {
+      if (current.some((item) => item.id.startsWith('demo-'))) return current
+      const relative: Appointment[] = demoAgenda.map((event) => {
+        const date = new Date(today)
+        date.setDate(today.getDate() + event.dayOffset)
+        return {
+          id: `demo-${event.id}`,
+          title: event.title,
+          date: toISODate(date),
+          time: event.time,
+          person: event.person,
+          type: event.type === 'Prazo' ? 'Lembrete' : event.type,
+        }
+      })
+      return [...relative, ...current]
+    })
+  }, [])
+
+  const shiftWeek = (days: number) => {
+    const date = parseISODate(appointmentDraft.date)
+    date.setDate(date.getDate() + days)
+    selectCalendarDay(date)
+  }
+
   const [postView, setPostView] = useState<'week' | 'month' | 'goals' | 'notes'>('goals')
   const [contentGoals, setContentGoals] = useState(starterContentGoals)
   const [contentNotes, setContentNotes] = useState(starterContentNotes)
@@ -1082,6 +1157,40 @@ export default function InternalWorkspace({
   const selectedMail =
     updates.find((update) => update.id === selectedUpdateId) ?? filteredMailUpdates[0] ?? updates[0]
 
+  const replyRef = useRef<HTMLTextAreaElement>(null)
+
+  const selectMail = (id: string) => {
+    setSelectedUpdateId(id)
+    setComposingMail(false)
+    const target = updates.find((update) => update.id === id)
+    if (target?.unread) onMarkUpdateRead(id, false)
+  }
+
+  /** Inbox triage: J/K move, E concludes, U toggles unread, R jumps to the reply box. */
+  const onInboxKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement
+    if (target.closest('input, textarea, select, [contenteditable="true"]') || event.metaKey || event.ctrlKey || event.altKey) return
+    const key = event.key.toLowerCase()
+    const index = filteredMailUpdates.findIndex((update) => update.id === selectedMail?.id)
+    if (key === 'j' || key === 'k') {
+      event.preventDefault()
+      const next = filteredMailUpdates[Math.max(0, Math.min(filteredMailUpdates.length - 1, index + (key === 'j' ? 1 : -1)))]
+      if (next) {
+        selectMail(next.id)
+        document.querySelector<HTMLElement>(`[data-mail-id="${next.id}"]`)?.focus()
+      }
+    } else if (key === 'e' && selectedMail) {
+      event.preventDefault()
+      onToggleUpdate(selectedMail.id)
+    } else if (key === 'u' && selectedMail) {
+      event.preventDefault()
+      onMarkUpdateRead(selectedMail.id, !selectedMail.unread)
+    } else if (key === 'r' && selectedMail) {
+      event.preventDefault()
+      replyRef.current?.focus()
+    }
+  }
+
   const inboxCount = updates.filter((update) => !update.completed).length
   const unreadMailCount = updates.filter((update) => update.unread).length
   const studentMailCount = updates.filter(
@@ -1193,65 +1302,13 @@ export default function InternalWorkspace({
     }
   }
 
-  const handleCreateManualLead = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!leadName.trim() || !leadPhone.trim()) return
-    const createdLead: SiteFormSubmission = {
-      id: makeId('form'),
-      name: leadName.trim(),
-      phone: leadPhone.trim(),
-      instagram: leadInstagram.trim()
-        ? leadInstagram.trim().startsWith('@')
-          ? leadInstagram.trim()
-          : `@${leadInstagram.trim()}`
-        : '@nao.informado',
-      referralOrBirth: leadReferral.trim() || 'Site Elevn (Direto)',
-      submittedAtIso: new Date().toISOString(),
-      temperature: leadTemperature,
-    }
-    if (onCreateFormSubmission) {
-      onCreateFormSubmission(createdLead)
-    } else {
-      setLocalForms((current) => [createdLead, ...current])
-    }
-    setLeadName('')
-    setLeadPhone('')
-    setLeadInstagram('')
-    setLeadReferral('')
-    setLeadTemperature('Quente')
-    setNewFormModalOpen(false)
-  }
-
-  const filteredSiteForms = effectiveForms.filter((entry) => {
-    if (formTempFilter !== 'Todos' && entry.temperature !== formTempFilter) return false
-    if (!formSearchQuery.trim()) return true
-    const q = formSearchQuery.toLowerCase()
-    return (
-      entry.name.toLowerCase().includes(q) ||
-      entry.phone.toLowerCase().includes(q) ||
-      entry.instagram.toLowerCase().includes(q) ||
-      entry.referralOrBirth.toLowerCase().includes(q)
-    )
-  })
-
-  const countFechado = effectiveForms.filter((f) => f.temperature === 'Fechado').length
-  const countQuente = effectiveForms.filter((f) => f.temperature === 'Quente').length
-  const countMorno = effectiveForms.filter((f) => f.temperature === 'Morno').length
-  const countFrio = effectiveForms.filter((f) => f.temperature === 'Frio').length
-
   return (
     <section className="internal-workspace">
-      <header className="internal-workspace-heading">
-        <div>
-          <p>CENTRAL INTERNA</p>
-          <h1>Interno</h1>
-          <span>Organização, comunicação e conteúdo em um único espaço.</span>
-        </div>
-      </header>
+      <h1 className="mb-4 text-[32px] leading-[38px] font-semibold tracking-[-0.02em] text-ink">Interno</h1>
 
       <Tabs
         label="Seções de Interno"
-        className="mb-7"
+        className="mb-6"
         value={activeSection}
         onChange={setActiveSection}
         items={[
@@ -1271,552 +1328,413 @@ export default function InternalWorkspace({
       />
 
       {activeSection === 'forms' && (
-        <section className="site-forms-section" aria-label="Formulários preenchidos no site">
-          <header className="site-forms-header-card">
-            <div className="site-forms-title-block">
-              <span>CAPTAÇÃO DO SITE · PLANILHA INTEGRADA</span>
-              <h2>Formulários Recebidos do Site</h2>
-              <p>
-                Todos os cadastros preenchidos na página de captura do site chegam automaticamente
-                aqui com data e hora exatas do envio e classificação de temperatura comercial.
-              </p>
-            </div>
-
-            <div className="site-forms-header-actions">
-              <button
-                type="button"
-                className="site-forms-new-btn"
-                onClick={() => setNewFormModalOpen((open) => !open)}
-              >
-                + Registrar formulário manual
-              </button>
-            </div>
-          </header>
-
-          <div className="site-forms-kpis-grid">
-            <article className="site-forms-kpi">
-              <span>TOTAL RECEBIDO</span>
-              <strong>{effectiveForms.length}</strong>
-              <small>Formulários enviados pelo site</small>
-            </article>
-            <article className="site-forms-kpi fechado">
-              <span>FECHADOS</span>
-              <strong>{countFechado}</strong>
-              <small>Convertidos em alunos ativos</small>
-            </article>
-            <article className="site-forms-kpi quente">
-              <span>QUENTES</span>
-              <strong>{countQuente}</strong>
-              <small>Alta intenção de fechamento</small>
-            </article>
-            <article className="site-forms-kpi morno-frio">
-              <span>MORNOS & FRIOS</span>
-              <strong>{countMorno + countFrio}</strong>
-              <small>
-                {countMorno} mornos · {countFrio} frios em nutrição
-              </small>
-            </article>
-          </div>
-
-          {newFormModalOpen && (
-            <form className="site-forms-composer" onSubmit={handleCreateManualLead}>
-              <div className="site-forms-composer-head">
-                <strong>Adicionar preenchimento de formulário</strong>
-                <button type="button" onClick={() => setNewFormModalOpen(false)}>
-                  Fechar
-                </button>
-              </div>
-              <div className="site-forms-composer-grid">
-                <label>
-                  <span>Nome completo</span>
-                  <input
-                    type="text"
-                    value={leadName}
-                    onChange={(e) => setLeadName(e.target.value)}
-                    placeholder="Ex.: Juliana Costa"
-                    required
-                  />
-                </label>
-                <label>
-                  <span>Telefone / WhatsApp</span>
-                  <input
-                    type="text"
-                    value={leadPhone}
-                    onChange={(e) => setLeadPhone(e.target.value)}
-                    placeholder="Ex.: (85) 99988-7766"
-                    required
-                  />
-                </label>
-                <label>
-                  <span>Instagram</span>
-                  <input
-                    type="text"
-                    value={leadInstagram}
-                    onChange={(e) => setLeadInstagram(e.target.value)}
-                    placeholder="Ex.: @julianacosta"
-                  />
-                </label>
-                <label>
-                  <span>Indicação / Origem</span>
-                  <input
-                    type="text"
-                    value={leadReferral}
-                    onChange={(e) => setLeadReferral(e.target.value)}
-                    placeholder="Ex.: Indicação de aluno ou Instagram"
-                  />
-                </label>
-                <label>
-                  <span>Temperatura</span>
-                  <select
-                    value={leadTemperature}
-                    onChange={(e) => setLeadTemperature(e.target.value as LeadTemperature)}
-                  >
-                    <option value="Fechado">Fechado</option>
-                    <option value="Quente">Quente</option>
-                    <option value="Morno">Morno</option>
-                    <option value="Frio">Frio</option>
-                  </select>
-                </label>
-              </div>
-              <div className="site-forms-composer-foot">
-                <button type="submit">Salvar na planilha de formulários</button>
-              </div>
-            </form>
-          )}
-
-          <div className="site-forms-toolbar">
-            <div className="site-forms-filter-pills">
-              {(['Todos', 'Fechado', 'Quente', 'Morno', 'Frio'] as const).map((temp) => (
-                <button
-                  key={temp}
-                  type="button"
-                  className={`${formTempFilter === temp ? 'active' : ''} pill-${temp.toLowerCase()}`}
-                  onClick={() => setFormTempFilter(temp)}
-                >
-                  {temp}
-                  <span className="pill-count">
-                    {temp === 'Todos'
-                      ? effectiveForms.length
-                      : effectiveForms.filter((f) => f.temperature === temp).length}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="site-forms-search">
-              <input
-                type="search"
-                value={formSearchQuery}
-                onChange={(e) => setFormSearchQuery(e.target.value)}
-                placeholder="Buscar por nome, telefone, @instagram ou indicação..."
-              />
-            </div>
-          </div>
-
-          <div className="site-forms-sheet-wrap">
-            <table className="site-forms-sheet-table">
-              <thead>
-                <tr>
-                  <th className="col-idx">#</th>
-                  <th>Nome</th>
-                  <th>Telefone</th>
-                  <th>Instagram</th>
-                  <th>Indicação</th>
-                  <th>Nascimento</th>
-                  <th>Data e Hora do Preenchimento</th>
-                  <th>Temperatura</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSiteForms.map((item, idx) => {
-                  const formattedTime = formatFormTimestamp(item.submittedAtIso)
-                  const { referral, birthDate } = splitReferralOrBirth(item.referralOrBirth)
-                  const tempSlug = item.temperature.toLowerCase()
-                  return (
-                    <tr key={item.id}>
-                      <td className="col-idx">{idx + 1}</td>
-                      <td className="col-name">
-                        <strong>{formatPersonName(item.name)}</strong>
-                      </td>
-                      <td className="col-phone">{item.phone}</td>
-                      <td className="col-instagram">
-                        <span>{item.instagram}</span>
-                      </td>
-                      <td className="col-referral">{referral}</td>
-                      <td className="col-birth">{birthDate}</td>
-                      <td className="col-timestamp">
-                        <div className="timestamp-cell" title={item.submittedAtIso}>
-                          <strong>{formattedTime.fullLabel}</strong>
-                          <small>{formatRelativeTime(item.submittedAtIso)}</small>
-                        </div>
-                      </td>
-                      <td className="col-temperature">
-                        <div className={`temp-pill-select-wrap temp-${tempSlug}`}>
-                          <span className="temp-dot" aria-hidden="true" />
-                          <select
-                            aria-label={`Temperatura de ${item.name}`}
-                            value={item.temperature}
-                            onChange={(e) =>
-                              handleTemperatureChange(item.id, e.target.value as LeadTemperature)
-                            }
-                          >
-                            <option value="Fechado">Fechado</option>
-                            <option value="Quente">Quente</option>
-                            <option value="Morno">Morno</option>
-                            <option value="Frio">Frio</option>
-                          </select>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <LeadsSpreadsheet
+          forms={effectiveForms}
+          onTemperatureChange={handleTemperatureChange}
+          onCreate={(lead) =>
+            onCreateFormSubmission ? onCreateFormSubmission(lead) : setLocalForms((current) => [lead, ...current])
+          }
+          onConvert={(lead) => onConvertLead?.(lead)}
+          search={formSearchQuery}
+          onSearchChange={setFormSearchQuery}
+          filter={formTempFilter}
+          onFilterChange={setFormTempFilter}
+          composerOpen={newFormModalOpen}
+          onComposerOpenChange={setNewFormModalOpen}
+        />
       )}
 
       {activeSection === 'updates' && (
         <section className="updates-agenda-section">
-          <section className="internal-mail-shell" aria-label="Caixa de entrada e mensagens">
-            <header className="internal-mail-topbar">
-              <div>
-                <span>CORREIO INTERNO E ALUNOS</span>
-                <h2>Caixa de Entrada</h2>
-                <p>
-                  Troque mensagens diretas, tarefas e orientações pessoais com colaboradores ou
-                  alunos da consultoria.
-                </p>
-              </div>
-              <div className="internal-mail-topbar-actions">
-                <input
-                  type="search"
-                  value={mailSearch}
-                  onChange={(event) => setMailSearch(event.target.value)}
-                  placeholder="Buscar por pessoa, aluno ou assunto..."
-                  aria-label="Buscar mensagens"
-                />
-                <button
-                  type="button"
-                  className="mail-compose-cta"
-                  onClick={() => setComposingMail(true)}
-                >
-                  + Escrever mensagem
-                </button>
-              </div>
-            </header>
-
-            <div className="internal-mail-grid">
-              <aside className="mail-folders" aria-label="Pastas de mensagens">
-                <button
-                  type="button"
-                  className={mailFolder === 'inbox' && !composingMail ? 'active' : ''}
-                  onClick={() => {
-                    setMailFolder('inbox')
-                    setComposingMail(false)
-                  }}
-                >
-                  <span>Caixa de entrada</span>
-                  <strong>{inboxCount}</strong>
-                </button>
-                <button
-                  type="button"
-                  className={mailFolder === 'unread' && !composingMail ? 'active' : ''}
-                  onClick={() => {
-                    setMailFolder('unread')
-                    setComposingMail(false)
-                  }}
-                >
-                  <span>Não lidas</span>
-                  <strong>{unreadMailCount}</strong>
-                </button>
-                <button
-                  type="button"
-                  className={mailFolder === 'students' && !composingMail ? 'active' : ''}
-                  onClick={() => {
-                    setMailFolder('students')
-                    setComposingMail(false)
-                  }}
-                >
-                  <span>Alunos</span>
-                  <strong>{studentMailCount}</strong>
-                </button>
-                <button
-                  type="button"
-                  className={mailFolder === 'team' && !composingMail ? 'active' : ''}
-                  onClick={() => {
-                    setMailFolder('team')
-                    setComposingMail(false)
-                  }}
-                >
-                  <span>Equipe interna</span>
-                  <strong>{teamMailCount}</strong>
-                </button>
-                <button
-                  type="button"
-                  className={mailFolder === 'sent' && !composingMail ? 'active' : ''}
-                  onClick={() => {
-                    setMailFolder('sent')
-                    setComposingMail(false)
-                  }}
-                >
-                  <span>Enviados</span>
-                  <strong>{sentMailCount}</strong>
-                </button>
-                <button
-                  type="button"
-                  className={mailFolder === 'completed' && !composingMail ? 'active' : ''}
-                  onClick={() => {
-                    setMailFolder('completed')
-                    setComposingMail(false)
-                  }}
-                >
-                  <span>Concluídos</span>
-                  <strong>{completedMailCount}</strong>
-                </button>
-              </aside>
-
-              <div className="mail-thread-list" role="list" aria-label="Lista de mensagens">
-                {filteredMailUpdates.length === 0 ? (
-                  <p className="mail-empty-list">Nenhuma conversa encontrada nesta pasta.</p>
-                ) : (
-                  filteredMailUpdates.map((update) => {
-                    const isSelected = !composingMail && selectedMail?.id === update.id
-                    const replyCount = update.replies?.length ?? 0
+          <section
+            className="flex min-h-[560px] flex-col overflow-hidden rounded-card border border-line bg-surface lg:h-[calc(100dvh-210px)]"
+            aria-label="Caixa de entrada e mensagens"
+            onKeyDown={onInboxKeyDown}
+          >
+            <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[200px_minmax(300px,380px)_1fr]">
+              <aside className="flex flex-col gap-1 border-b border-line bg-subtle p-3 lg:border-r lg:border-b-0" aria-label="Pastas de mensagens">
+                <Button variant="accent" size="sm" className="mb-2 w-full" onClick={() => setComposingMail(true)}>
+                  <Icon name="plus" className="size-4" /> Escrever
+                </Button>
+                <nav className="flex gap-1 overflow-x-auto lg:flex-col">
+                  {(
+                    [
+                      ['inbox', 'Caixa de entrada', inboxCount],
+                      ['unread', 'Não lidas', unreadMailCount],
+                      ['students', 'Alunos', studentMailCount],
+                      ['team', 'Equipe interna', teamMailCount],
+                      ['sent', 'Enviados', sentMailCount],
+                      ['completed', 'Concluídos', completedMailCount],
+                    ] as const
+                  ).map(([id, label, count]) => {
+                    const active = mailFolder === id && !composingMail
                     return (
                       <button
-                        key={update.id}
+                        key={id}
                         type="button"
-                        className={`mail-thread-item ${isSelected ? 'selected' : ''} ${update.unread ? 'unread' : ''} ${update.completed ? 'completed' : ''}`}
+                        aria-current={active ? 'true' : undefined}
                         onClick={() => {
-                          setSelectedUpdateId(update.id)
+                          setMailFolder(id)
                           setComposingMail(false)
-                          if (update.unread) onMarkUpdateRead(update.id, false)
                         }}
+                        className={cx(
+                          'flex shrink-0 items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-[13px] whitespace-nowrap transition-colors',
+                          active ? 'bg-surface font-medium text-ink shadow-[0_0_0_1px_var(--border-default)]' : 'text-ink-2 hover:bg-surface/70 hover:text-ink',
+                        )}
                       >
-                        <img src={update.avatar} alt={`Foto de ${update.author}`} />
-                        <div className="mail-thread-preview">
-                          <header>
-                            <strong>{update.author}</strong>
-                            <time>{update.time}</time>
-                          </header>
-                          <span className="mail-thread-subject">
-                            {update.subject || `${update.type} · ${update.audience}`}
-                          </span>
-                          <p>{update.message}</p>
-                          <footer>
-                            <span className="mail-badge-type">{update.type}</span>
-                            <span className="mail-badge-target">Para: {update.audience}</span>
-                            {replyCount > 0 && (
-                              <small>
-                                {replyCount} {replyCount === 1 ? 'resposta' : 'respostas'}
-                              </small>
-                            )}
-                          </footer>
-                        </div>
+                        {label}
+                        <span className={cx('text-xs tabular-nums', id === 'unread' && count > 0 ? 'font-semibold text-brand' : 'text-ink-3')}>{count}</span>
                       </button>
                     )
-                  })
-                )}
+                  })}
+                </nav>
+                <p className="mt-auto hidden pt-4 text-[11px] leading-5 text-ink-3 lg:block">
+                  <Kbd>J</Kbd> <Kbd>K</Kbd> navegar · <Kbd>E</Kbd> concluir · <Kbd>U</Kbd> não lida · <Kbd>R</Kbd> responder
+                </p>
+              </aside>
+
+              <div className="flex min-h-0 flex-col border-b border-line lg:border-r lg:border-b-0">
+                <label className="relative block border-b border-line p-2.5">
+                  <span className="sr-only">Buscar mensagens</span>
+                  <Icon name="search" className="pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-1/2 text-ink-3" />
+                  <input
+                    type="search"
+                    value={mailSearch}
+                    onChange={(event) => setMailSearch(event.target.value)}
+                    placeholder="Buscar pessoa, aluno ou assunto"
+                    className="h-9 w-full rounded-control border border-line bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-3 focus:border-brand focus:outline-none"
+                  />
+                </label>
+                <div className="max-h-[420px] min-h-0 flex-1 overflow-y-auto lg:max-h-none" role="list" aria-label="Lista de mensagens">
+                  {filteredMailUpdates.length === 0 ? (
+                    <p className="px-4 py-10 text-center text-sm text-ink-3">Nenhuma conversa nesta pasta.</p>
+                  ) : (
+                    filteredMailUpdates.map((update) => {
+                      const isSelected = !composingMail && selectedMail?.id === update.id
+                      const replyCount = update.replies?.length ?? 0
+                      const origin = mailOrigin(update)
+                      return (
+                        <button
+                          key={update.id}
+                          type="button"
+                          role="listitem"
+                          aria-current={isSelected ? 'true' : undefined}
+                          data-mail-id={update.id}
+                          className={cx(
+                            'relative flex w-full gap-3 border-b border-line-subtle px-4 py-3 text-left transition-colors',
+                            isSelected ? 'bg-brand-soft/50' : 'hover:bg-subtle',
+                            update.completed && 'opacity-60',
+                          )}
+                          onClick={() => selectMail(update.id)}
+                        >
+                          {isSelected && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-brand" />}
+                          <img src={update.avatar} alt="" className="size-8 shrink-0 rounded-full object-cover" />
+                          <div className="min-w-0 flex-1">
+                            <p className="flex items-center gap-1.5">
+                              <span className={cx('truncate text-sm', update.unread ? 'font-semibold text-ink' : 'text-ink-2')}>{update.author}</span>
+                              <span title={origin.label} className="shrink-0 text-ink-3">
+                                <Icon name={origin.icon} className="size-3.5" />
+                                <span className="sr-only">{origin.label}</span>
+                              </span>
+                              <time className="ml-auto shrink-0 text-[11px] text-ink-3">{update.time}</time>
+                            </p>
+                            <p className={cx('truncate text-[13px]', update.unread ? 'font-medium text-ink' : 'text-ink-2')}>
+                              {update.subject || `${update.type} · ${update.audience}`}
+                            </p>
+                            <p className="flex items-center gap-2 text-xs text-ink-3">
+                              <span className="truncate">{update.message}</span>
+                              {replyCount > 0 && <span className="shrink-0 tabular-nums">· {replyCount}</span>}
+                            </p>
+                          </div>
+                          {update.unread && <span aria-label="Não lida" className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" />}
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
               </div>
 
-              <div className="mail-reading-pane">
+              <div className="flex min-h-[420px] min-w-0 flex-col">
                 {composingMail ? (
-                  <form className="mail-compose-form" onSubmit={createInternalUpdate}>
-                    <header>
-                      <div>
-                        <span>NOVA MENSAGEM OU TAREFA</span>
-                        <h3>Escrever para Equipe ou Aluno</h3>
-                      </div>
-                      <button type="button" onClick={() => setComposingMail(false)}>
-                        Fechar
-                      </button>
-                    </header>
-
-                    <div className="mail-compose-row">
-                      <label>
-                        <span>Enviar para</span>
-                        <select
-                          value={recipientCategory}
-                          onChange={(event) =>
-                            setRecipientCategory(event.target.value as 'equipe' | 'aluno')
-                          }
-                        >
-                          <option value="equipe">Equipe / Colaboradores</option>
-                          <option value="aluno">Aluno da Consultoria</option>
-                        </select>
-                      </label>
-
-                      <label>
-                        <span>Destinatário</span>
-                        {recipientCategory === 'equipe' ? (
-                          <select name="update-audience" defaultValue="Toda a equipe">
-                            <option>Toda a equipe</option>
-                            <option>Grupo Nutrição</option>
-                            <option>Grupo Treino</option>
-                            <option>Administradores</option>
-                            <option>Gerentes</option>
-                            <option>Renata Alves (Nutrição)</option>
-                            <option>Gustavo Lima (Gerente)</option>
-                            <option>Paula Nunes (Admin)</option>
-                            <option>Marina Lopes (Estagiária)</option>
-                            <option>Felipe Santos (Estagiário)</option>
-                          </select>
-                        ) : (
-                          <select name="update-audience" defaultValue="Lucas Andrade (Aluno)">
-                            <option>Lucas Andrade (Aluno)</option>
-                            <option>Camila Rocha (Aluna)</option>
-                            <option>Rafael Souza (Aluno)</option>
-                            <option>Juliana Costa (Aluna)</option>
-                            <option>Pedro Lima (Aluno)</option>
-                            <option>Aline Moraes (Aluna)</option>
-                            <option>Bruno Martins (Aluno)</option>
-                            <option>Todos os alunos ativos</option>
-                          </select>
-                        )}
-                      </label>
-
-                      <label>
-                        <span>Categoria</span>
-                        <select name="update-type" defaultValue="Mensagem">
-                          <option>Mensagem</option>
-                          <option>Tarefa</option>
-                          <option>Lembrete</option>
-                        </select>
-                      </label>
-                    </div>
-
-                    <label>
-                      <span>Assunto</span>
-                      <input
-                        name="update-subject"
-                        placeholder="Ex.: Ajuste no plano alimentar ou alinhamento de check-in"
-                        required
-                      />
-                    </label>
-
-                    <label>
-                      <span>Mensagem</span>
-                      <textarea
-                        name="update-message"
-                        rows={6}
-                        placeholder="Escreva sua mensagem pessoal, orientação ou tarefa detalhada..."
-                        required
-                      />
-                    </label>
-
-                    <div className="mail-compose-actions">
-                      <button type="submit">Enviar para a caixa de entrada</button>
-                      <button type="button" onClick={() => setComposingMail(false)}>
+                  <form className="flex min-h-0 flex-1 flex-col" onSubmit={createInternalUpdate}>
+                    <header className="flex items-center justify-between gap-3 border-b border-line px-6 py-4">
+                      <h3 className="text-[15px] font-semibold text-ink">Nova mensagem ou tarefa</h3>
+                      <Button size="sm" variant="ghost" onClick={() => setComposingMail(false)}>
                         Cancelar
-                      </button>
+                      </Button>
+                    </header>
+                    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <label className="block text-xs font-medium text-ink-2">
+                          Enviar para
+                          <select
+                            value={recipientCategory}
+                            onChange={(event) => setRecipientCategory(event.target.value as 'equipe' | 'aluno')}
+                            className={mailField}
+                          >
+                            <option value="equipe">Equipe / colaboradores</option>
+                            <option value="aluno">Aluno da consultoria</option>
+                          </select>
+                        </label>
+                        <label className="block text-xs font-medium text-ink-2">
+                          Destinatário
+                          {recipientCategory === 'equipe' ? (
+                            <select name="update-audience" defaultValue="Toda a equipe" className={mailField}>
+                              <option>Toda a equipe</option>
+                              <option>Grupo Nutrição</option>
+                              <option>Grupo Treino</option>
+                              <option>Administradores</option>
+                              <option>Gerentes</option>
+                              <option>Renata Alves (Nutrição)</option>
+                              <option>Gustavo Lima (Gerente)</option>
+                              <option>Paula Nunes (Admin)</option>
+                              <option>Marina Lopes (Estagiária)</option>
+                              <option>Felipe Santos (Estagiário)</option>
+                            </select>
+                          ) : (
+                            <select name="update-audience" defaultValue="Lucas Andrade (Aluno)" className={mailField}>
+                              <option>Lucas Andrade (Aluno)</option>
+                              <option>Camila Rocha (Aluna)</option>
+                              <option>Rafael Souza (Aluno)</option>
+                              <option>Juliana Costa (Aluna)</option>
+                              <option>Pedro Lima (Aluno)</option>
+                              <option>Aline Moraes (Aluna)</option>
+                              <option>Bruno Martins (Aluno)</option>
+                              <option>Todos os alunos ativos</option>
+                            </select>
+                          )}
+                        </label>
+                        <label className="block text-xs font-medium text-ink-2">
+                          Categoria
+                          <select name="update-type" defaultValue="Mensagem" className={mailField}>
+                            <option>Mensagem</option>
+                            <option>Tarefa</option>
+                            <option>Lembrete</option>
+                          </select>
+                        </label>
+                      </div>
+                      <label className="block text-xs font-medium text-ink-2">
+                        Assunto
+                        <input name="update-subject" required placeholder="Ex.: ajuste no plano alimentar" className={mailField} />
+                      </label>
+                      <label className="block text-xs font-medium text-ink-2">
+                        Mensagem
+                        <textarea
+                          name="update-message"
+                          rows={8}
+                          required
+                          placeholder="Escreva a orientação ou a tarefa"
+                          onKeyDown={submitOnModEnter}
+                          className={cx(mailField, 'h-auto resize-none py-2')}
+                        />
+                      </label>
                     </div>
+                    <footer className="flex items-center justify-between gap-3 border-t border-line px-6 py-3">
+                      <span className="text-xs text-ink-3">
+                        <Kbd>⌘</Kbd> <Kbd>Enter</Kbd> envia
+                      </span>
+                      <Button type="submit" variant="accent">
+                        Enviar
+                      </Button>
+                    </footer>
                   </form>
                 ) : selectedMail ? (
-                  <article className="mail-thread-detail">
-                    <header className="mail-detail-header">
-                      <div>
-                        <div className="mail-detail-badges">
-                          <span className="mail-badge-type">{selectedMail.type}</span>
-                          <span className="mail-badge-role">{selectedMail.role}</span>
+                  <article className="flex min-h-0 flex-1 flex-col">
+                    <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-6 py-4">
+                      <div className="min-w-0">
+                        <h3 className="text-xl leading-7 font-semibold text-ink">
+                          {selectedMail.subject || `${selectedMail.type} · ${selectedMail.audience}`}
+                        </h3>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          <Badge>{selectedMail.type}</Badge>
+                          <Badge>{selectedMail.role}</Badge>
                           {selectedMail.completed && (
-                            <span className="mail-badge-completed">Concluído</span>
+                            <Badge tone="success" dot>
+                              Concluído
+                            </Badge>
                           )}
                         </div>
-                        <h3>
-                          {selectedMail.subject ||
-                            `${selectedMail.type} · ${selectedMail.audience}`}
-                        </h3>
                       </div>
-                      <div className="mail-detail-actions">
-                        <button
-                          type="button"
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title="Atalho: U"
                           onClick={() => onMarkUpdateRead(selectedMail.id, !selectedMail.unread)}
                         >
                           {selectedMail.unread ? 'Marcar como lida' : 'Marcar não lida'}
-                        </button>
-                        <button
-                          type="button"
-                          className={selectedMail.completed ? 'reopen' : 'complete'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={selectedMail.completed ? 'secondary' : 'primary'}
+                          title="Atalho: E"
                           onClick={() => onToggleUpdate(selectedMail.id)}
                         >
-                          {selectedMail.completed ? 'Reabrir conversa' : 'Marcar como concluído'}
-                        </button>
+                          {selectedMail.completed ? 'Reabrir' : (
+                            <>
+                              <Icon name="check" className="size-4" /> Concluir
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </header>
 
-                    <div className="mail-messages-scroll">
-                      <section className="mail-message-card">
-                        <header>
-                          <img src={selectedMail.avatar} alt={`Foto de ${selectedMail.author}`} />
-                          <div>
-                            <strong>{selectedMail.author}</strong>
-                            <span>
-                              Para: {selectedMail.audience} · {selectedMail.role}
-                            </span>
+                    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-5">
+                      {/\(MFIT\)/.test(selectedMail.subject) && (
+                        <div className="flex items-center gap-3 rounded-lg border border-line bg-subtle px-3 py-2">
+                          <span aria-hidden="true" className="grid size-8 place-items-center rounded-md bg-brand-soft text-brand">
+                            <Icon name="training" className="size-4" />
+                          </span>
+                          <div className="min-w-0 text-xs">
+                            <p className="font-semibold text-ink">{selectedMail.subject.split('·').slice(1).join('·').trim() || 'Treino'}</p>
+                            <p className="text-ink-3">{selectedMail.subject.split('·')[0].replace('Comentário no ', '').trim()}</p>
                           </div>
-                          <time>{selectedMail.time}</time>
-                        </header>
-                        <p>{selectedMail.message}</p>
-                      </section>
-
-                      {(selectedMail.replies ?? []).map((reply) => (
-                        <section key={reply.id} className="mail-message-card reply">
-                          <header>
-                            <img src={reply.avatar} alt={`Foto de ${reply.author}`} />
-                            <div>
-                              <strong>{reply.author}</strong>
-                              <span>{reply.role}</span>
+                        </div>
+                      )}
+                      {[
+                        { id: selectedMail.id, author: selectedMail.author, avatar: selectedMail.avatar, role: `Para: ${selectedMail.audience} · ${selectedMail.role}`, time: selectedMail.time, message: selectedMail.message, own: selectedMail.author === 'Breno Monteiro' },
+                        ...(selectedMail.replies ?? []).map((reply) => ({ ...reply, own: reply.author === 'Breno Monteiro' || selectedMail.role === 'Aluno' })),
+                      ].map((message, index) => (
+                        <section
+                          key={message.id}
+                          className={cx(
+                            'max-w-[640px] rounded-xl border px-4 py-3',
+                            index > 0 && message.own ? 'ml-auto border-brand/15 bg-brand-soft/60' : 'border-line bg-surface',
+                          )}
+                        >
+                          <header className="flex items-center gap-2.5">
+                            <img src={message.avatar} alt="" className="size-7 rounded-full object-cover" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-ink">{message.author}</p>
+                              <p className="truncate text-[11px] text-ink-3">{message.role}</p>
                             </div>
-                            <time>{reply.time}</time>
+                            <time className="shrink-0 text-[11px] text-ink-3">{message.time}</time>
                           </header>
-                          <p>{reply.message}</p>
+                          <p className="mt-2 text-sm leading-6 whitespace-pre-line text-ink">{message.message}</p>
                         </section>
                       ))}
                     </div>
 
-                    <form
-                      className="mail-reply-box"
-                      onSubmit={(event) => submitMailReply(event, selectedMail.id)}
-                    >
+                    <form className="border-t border-line px-6 py-3" onSubmit={(event) => submitMailReply(event, selectedMail.id)}>
+                      <div className="mb-2 flex flex-wrap gap-1.5" aria-label="Respostas rápidas">
+                        {quickReplies.map((text) => (
+                          <button
+                            key={text}
+                            type="button"
+                            onClick={() => {
+                              setReplyDraft(text)
+                              replyRef.current?.focus()
+                            }}
+                            className="rounded-full border border-line px-2.5 py-1 text-xs text-ink-2 transition-colors hover:border-brand/40 hover:text-ink"
+                          >
+                            {text}
+                          </button>
+                        ))}
+                      </div>
+                      <label htmlFor="mail-reply" className="sr-only">
+                        Responder para {selectedMail.author}
+                      </label>
                       <textarea
-                        rows={3}
+                        id="mail-reply"
+                        ref={replyRef}
+                        rows={2}
                         value={replyDraft}
                         onChange={(event) => setReplyDraft(event.target.value)}
-                        placeholder={`Responder diretamente para ${selectedMail.author}...`}
+                        onKeyDown={submitOnModEnter}
+                        placeholder={`Responder para ${selectedMail.author}`}
+                        className="w-full resize-none rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:border-brand focus:outline-none"
                       />
-                      <div className="mail-reply-actions">
-                        <span>A resposta fica registrada nesta conversa</span>
-                        <button type="submit">Enviar resposta</button>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <span className="text-xs text-ink-3">
+                          <Kbd>⌘</Kbd> <Kbd>Enter</Kbd> envia · fica registrada na conversa
+                        </span>
+                        <Button size="sm" type="submit" variant="accent" disabled={!replyDraft.trim()}>
+                          Responder
+                        </Button>
                       </div>
                     </form>
                   </article>
                 ) : (
-                  <p className="mail-empty-list">
-                    Selecione uma mensagem ao lado ou clique em “Escrever mensagem”.
-                  </p>
+                  <p className="m-auto px-6 text-center text-sm text-ink-3">Selecione uma conversa ou escreva uma mensagem.</p>
                 )}
               </div>
             </div>
           </section>
 
           <section className="internal-calendar">
-            <header className="internal-calendar-header">
-              <div>
-                <span>AGENDA COMPARTILHADA</span>
-                <h2>Calendário da equipe</h2>
-                <p>Crie e acompanhe compromissos em uma agenda local.</p>
+            <header className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
+              <h2 className="mr-auto text-xl leading-7 font-semibold text-ink">
+                Agenda da equipe{' '}
+                <span className="text-sm font-normal text-ink-3">
+                  · {appointments.length} {appointments.length === 1 ? 'compromisso' : 'compromissos'}
+                </span>
+              </h2>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label={calendarView === 'semana' ? 'Semana anterior' : 'Mês anterior'}
+                  onClick={() => (calendarView === 'semana' ? shiftWeek(-7) : changeCalendarMonth(-1))}
+                >
+                  <Icon name="chevronRight" className="size-4 rotate-180" />
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => todayIso && selectCalendarDay(parseISODate(todayIso))}>
+                  Hoje
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label={calendarView === 'semana' ? 'Próxima semana' : 'Próximo mês'}
+                  onClick={() => (calendarView === 'semana' ? shiftWeek(7) : changeCalendarMonth(1))}
+                >
+                  <Icon name="chevronRight" className="size-4" />
+                </Button>
               </div>
-              <strong>
-                {appointments.length} {appointments.length === 1 ? 'agendado' : 'agendados'}
-              </strong>
+              <Segmented
+                label="Visualização da agenda"
+                size="sm"
+                items={[
+                  { id: 'semana' as const, label: 'Semana' },
+                  { id: 'mes' as const, label: 'Mês' },
+                ]}
+                value={calendarView}
+                onChange={setCalendarView}
+              />
             </header>
 
             <div className="internal-calendar-layout">
+              {calendarView === 'semana' ? (
+                <WeekCalendar
+                  appointments={appointments as CalendarAppointment[]}
+                  selectedDate={appointmentDraft.date}
+                  today={todayIso}
+                  onSelectDate={(iso) => selectCalendarDay(parseISODate(iso))}
+                  onEdit={(item) => {
+                    const appointment = appointments.find((entry) => entry.id === item.id)
+                    if (appointment) editAppointment(appointment)
+                  }}
+                  onCreateAt={(iso, time) => {
+                    selectCalendarDay(parseISODate(iso))
+                    setEditingAppointmentId(null)
+                    setAppointmentComposerOpen(true)
+                    setAppointmentDraft((current) => ({
+                      ...current,
+                      date: iso,
+                      time,
+                      title: '',
+                      person: '',
+                      type: 'Reunião',
+                      description: '',
+                      trelloWorkspaceId: '',
+                    }))
+                  }}
+                />
+              ) : (
               <div className="calendar-month">
                 <header>
                   <button
                     type="button"
+                    className="hidden"
                     onClick={() => changeCalendarMonth(-1)}
                     aria-label="Mês anterior"
                   >
@@ -1827,6 +1745,7 @@ export default function InternalWorkspace({
                   <h3>{formatMonth(calendarCursor.year, calendarCursor.month)}</h3>
                   <button
                     type="button"
+                    className="hidden"
                     onClick={() => changeCalendarMonth(1)}
                     aria-label="Próximo mês"
                   >
@@ -1873,6 +1792,7 @@ export default function InternalWorkspace({
                   })}
                 </div>
               </div>
+              )}
 
               <aside className="calendar-sidebar">
                 <section className="calendar-day-detail">
@@ -2181,34 +2101,26 @@ export default function InternalWorkspace({
       )}
 
       {activeSection === 'posts' && (
-        <section className="internal-posts content-planner">
-          <header>
+        <section className="space-y-5" aria-label="Postagens">
+          <header className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <span>GESTÃO DE POSTAGENS</span>
-              <h2>Painel Social Media</h2>
-              <p>Defina metas, acompanhe entregas e registre o contexto de cada semana.</p>
+              <h2 className="text-xl leading-7 font-semibold text-ink">Postagens</h2>
+              <p className="mt-0.5 text-sm text-ink-2">Metas da equipe de social media e o que já foi entregue na semana.</p>
             </div>
-            <strong>Visão administrativa</strong>
+            <Segmented
+              label="Visões de postagens"
+              items={[
+                { id: 'week' as const, label: 'Semana' },
+                { id: 'month' as const, label: 'Mês' },
+                { id: 'goals' as const, label: 'Metas' },
+                { id: 'notes' as const, label: 'Anotações', ...(unreadNotes > 0 ? { count: unreadNotes } : {}) },
+              ]}
+              value={postView}
+              onChange={setPostView}
+            />
           </header>
 
-          <nav className="content-planner-tabs" aria-label="Visões de postagens">
-            {[
-              ['week', 'Semana', 'Entregas atuais'],
-              ['month', 'Mês', 'Resumo do período'],
-              ['goals', 'Metas', 'Configuração do admin'],
-              ['notes', 'Anotações', 'Retorno dos estagiários'],
-            ].map(([view, title, description]) => (
-              <button
-                key={view}
-                type="button"
-                className={postView === view ? 'active' : ''}
-                onClick={() => setPostView(view as typeof postView)}
-              >
-                <strong>{title}</strong>
-                <small>{description}</small>
-              </button>
-            ))}
-          </nav>
+          <InternProgress goals={contentGoals} />
 
           <div className="content-planner-body">
             {postView === 'week' && (
@@ -2732,22 +2644,16 @@ export default function InternalWorkspace({
           <section className="personal-board">
             <header className="personal-board-header">
               <div>
-                <span>ÁREA DE TRABALHO</span>
                 <h2>{activeWorkspace.title}</h2>
                 <p>{activeWorkspace.description}</p>
               </div>
               <div>
-                <span className="demo-state">Demonstração local</span>
-                <button
-                  className="manage-labels-button"
-                  type="button"
-                  onClick={() => setLabelManagerOpen((current) => !current)}
-                >
+                <Button size="sm" variant="secondary" onClick={() => setLabelManagerOpen((current) => !current)}>
                   Etiquetas
-                </button>
-                <button type="button" onClick={() => setListComposerOpen(true)}>
-                  Adicionar grupo
-                </button>
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setListComposerOpen(true)}>
+                  <Icon name="plus" className="size-4" /> Adicionar grupo
+                </Button>
               </div>
             </header>
 
@@ -2846,7 +2752,7 @@ export default function InternalWorkspace({
                         return (
                           <article
                             key={card.id}
-                            className="board-card"
+                            className="board-card group/card"
                             draggable={
                               !(editingCard?.cardId === card.id && editingCard.listId === list.id)
                             }
@@ -2868,24 +2774,32 @@ export default function InternalWorkspace({
                                 <i aria-hidden="true" />
                                 {label?.name ?? 'Sem etiqueta'}
                               </span>
-                              <div>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setEditingCard({ cardId: card.id, listId: list.id })
-                                  }
-                                  aria-label={`Editar ${card.title}`}
-                                >
-                                  Editar
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeCard(list.id, card.id)}
-                                  aria-label={`Remover ${card.title}`}
-                                >
-                                  Remover
-                                </button>
-                              </div>
+                              <Menu
+                                label={`Ações do cartão ${card.title}`}
+                                items={[
+                                  { id: 'edit', label: 'Editar', onSelect: () => setEditingCard({ cardId: card.id, listId: list.id }) },
+                                  ...(listIndex > 0
+                                    ? [{ id: 'prev', label: `Mover para ${activeWorkspace.lists[listIndex - 1].title}`, onSelect: () => moveCardByDirection(list.id, card.id, -1) }]
+                                    : []),
+                                  ...(listIndex < activeWorkspace.lists.length - 1
+                                    ? [{ id: 'next', label: `Mover para ${activeWorkspace.lists[listIndex + 1].title}`, onSelect: () => moveCardByDirection(list.id, card.id, 1) }]
+                                    : []),
+                                  { id: 'remove', label: 'Remover', danger: true, onSelect: () => removeCard(list.id, card.id) },
+                                ]}
+                                trigger={({ open, toggle, id }) => (
+                                  <button
+                                    type="button"
+                                    onClick={toggle}
+                                    aria-haspopup="menu"
+                                    aria-expanded={open}
+                                    aria-controls={open ? id : undefined}
+                                    aria-label={`Ações do cartão ${card.title}`}
+                                    className="board-card-menu grid size-7 place-items-center rounded-md text-ink-3 opacity-0 transition-opacity group-hover/card:opacity-100 hover:bg-subtle hover:text-ink focus-visible:opacity-100 aria-expanded:opacity-100"
+                                  >
+                                    <Icon name="dots" className="size-4" />
+                                  </button>
+                                )}
+                              />
                             </div>
                             {editingCard?.cardId === card.id && editingCard.listId === list.id ? (
                               <form
@@ -2928,27 +2842,45 @@ export default function InternalWorkspace({
                                 </div>
                               </form>
                             ) : (
-                              <div>
-                                <h4>{card.title}</h4>
-                                <p>{card.note}</p>
-                                <footer>
-                                  <small>{card.due}</small>
-                                  <div>
+                              <div className="board-card-body">
+                                <h4 className="text-sm leading-5 font-medium text-ink">{card.title}</h4>
+                                {card.note && <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-ink-2">{card.note}</p>}
+                                <footer className="mt-3 flex items-center gap-2">
+                                  {card.due && (() => {
+                                    const due = card.dueDate && todayIso ? (card.dueDate < todayIso ? 'overdue' : card.dueDate === todayIso ? 'today' : 'later') : 'later'
+                                    return (
+                                      <span
+                                        title={card.dueDate ? 'Aparece também na Agenda' : undefined}
+                                        className={cx(
+                                          'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium',
+                                          due === 'overdue' ? 'bg-danger-soft text-danger' : due === 'today' ? 'bg-warning-soft text-warning' : 'bg-subtle text-ink-2',
+                                        )}
+                                      >
+                                        <Icon name="calendar" className="size-3" />
+                                        {due === 'overdue' ? `Venceu · ${card.due}` : card.due}
+                                      </span>
+                                    )
+                                  })()}
+                                  <span className="ml-auto flex gap-0.5 opacity-0 transition-opacity group-hover/card:opacity-100 group-focus-within/card:opacity-100">
                                     <button
                                       type="button"
                                       disabled={listIndex === 0}
                                       onClick={() => moveCardByDirection(list.id, card.id, -1)}
+                                      aria-label={`Mover ${card.title} para o grupo anterior`}
+                                      className="grid size-6 place-items-center rounded text-ink-3 hover:bg-subtle hover:text-ink disabled:invisible"
                                     >
-                                      Anterior
+                                      <Icon name="chevronRight" className="size-3.5 rotate-180" />
                                     </button>
                                     <button
                                       type="button"
                                       disabled={listIndex === activeWorkspace.lists.length - 1}
                                       onClick={() => moveCardByDirection(list.id, card.id, 1)}
+                                      aria-label={`Mover ${card.title} para o próximo grupo`}
+                                      className="grid size-6 place-items-center rounded text-ink-3 hover:bg-subtle hover:text-ink disabled:invisible"
                                     >
-                                      Próximo
+                                      <Icon name="chevronRight" className="size-3.5" />
                                     </button>
-                                  </div>
+                                  </span>
                                 </footer>
                               </div>
                             )}
