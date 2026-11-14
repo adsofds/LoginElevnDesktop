@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
-import type { DashboardLayoutItem } from '@/lib/dashboard'
-import AdminShell from './AdminShell'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState, type FormEvent } from 'react'
+import { readDemoSession, writeDemoSession } from './panel/PanelState'
 
 type LoginView = 'login' | 'forgot' | 'access'
 
@@ -118,14 +118,8 @@ function FlowLines() {
   )
 }
 
-export default function LoginGateway({
-  currentDate,
-  initialLayout,
-}: {
-  currentDate: string
-  initialLayout: DashboardLayoutItem[]
-}) {
-  const [authenticated, setAuthenticated] = useState(false)
+export default function LoginGateway() {
+  const router = useRouter()
   const [view, setView] = useState<LoginView>('login')
   const [showPassword, setShowPassword] = useState(false)
   const [showAccessPassword, setShowAccessPassword] = useState(false)
@@ -156,12 +150,16 @@ export default function LoginGateway({
     setError('')
   }
 
+  // Already signed in on this browser: go straight to the panel
+  useEffect(() => {
+    if (readDemoSession()) router.replace('/dashboard')
+  }, [router])
+
   const finishDemoAccess = () => {
     setLoading(true)
-    window.setTimeout(() => {
-      setLoading(false)
-      setAuthenticated(true)
-    }, 450)
+    writeDemoSession(true)
+    router.prefetch('/dashboard')
+    window.setTimeout(() => router.push('/dashboard'), 450)
   }
 
   const submitLogin = (event: FormEvent<HTMLFormElement>) => {
@@ -212,22 +210,6 @@ export default function LoginGateway({
       return
     }
     finishDemoAccess()
-  }
-
-  if (authenticated) {
-    return (
-      <AdminShell
-        currentDate={currentDate}
-        user={{ name: 'Breno Monteiro', profession: 'Personal Trainer' }}
-        initialLayout={initialLayout}
-        onLogout={() => {
-          setAuthenticated(false)
-          setView('login')
-          setFeedback('')
-          setError('')
-        }}
-      />
-    )
   }
 
   return (

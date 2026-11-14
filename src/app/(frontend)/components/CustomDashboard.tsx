@@ -1153,11 +1153,7 @@ function SiteFormsDashboardWidget({
           <span>Frios</span>
           <strong>{countFrio}</strong>
         </div>
-        <button
-          type="button"
-          className="open-internal-forms-btn"
-          onClick={onOpenSiteForms}
-        >
+        <button type="button" className="open-internal-forms-btn" onClick={onOpenSiteForms}>
           Abrir planilha em Interno →
         </button>
       </div>
@@ -1178,47 +1174,47 @@ function SiteFormsDashboardWidget({
               .sort((a, b) => b.submittedAtIso.localeCompare(a.submittedAtIso))
               .slice(0, 8)
               .map((item) => {
-              const ts = formatFormTimestamp(item.submittedAtIso)
-              const tempSlug = item.temperature.toLowerCase()
-              const { referral } = splitReferralOrBirth(item.referralOrBirth)
-              return (
-                <tr key={item.id}>
-                  <td>
-                    <strong>{formatPersonName(item.name)}</strong>
-                  </td>
-                  <td>
-                    <div className="dash-form-contact">
-                      <span>{item.phone}</span>
-                      <small>{item.instagram}</small>
-                    </div>
-                  </td>
-                  <td>{referral}</td>
-                  <td>
-                    <div className="dash-form-timestamp" title={item.submittedAtIso}>
-                      <strong>{ts.fullLabel}</strong>
-                      <small>{formatRelativeTime(item.submittedAtIso)}</small>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={`dash-temp-pill temp-${tempSlug}`}>
-                      <span className="dot" aria-hidden="true" />
-                      <select
-                        aria-label={`Temperatura de ${item.name}`}
-                        value={item.temperature}
-                        onChange={(e) =>
-                          onUpdateFormTemperature(item.id, e.target.value as LeadTemperature)
-                        }
-                      >
-                        <option value="Fechado">Fechado</option>
-                        <option value="Quente">Quente</option>
-                        <option value="Morno">Morno</option>
-                        <option value="Frio">Frio</option>
-                      </select>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
+                const ts = formatFormTimestamp(item.submittedAtIso)
+                const tempSlug = item.temperature.toLowerCase()
+                const { referral } = splitReferralOrBirth(item.referralOrBirth)
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      <strong>{formatPersonName(item.name)}</strong>
+                    </td>
+                    <td>
+                      <div className="dash-form-contact">
+                        <span>{item.phone}</span>
+                        <small>{item.instagram}</small>
+                      </div>
+                    </td>
+                    <td>{referral}</td>
+                    <td>
+                      <div className="dash-form-timestamp" title={item.submittedAtIso}>
+                        <strong>{ts.fullLabel}</strong>
+                        <small>{formatRelativeTime(item.submittedAtIso)}</small>
+                      </div>
+                    </td>
+                    <td>
+                      <div className={`dash-temp-pill temp-${tempSlug}`}>
+                        <span className="dot" aria-hidden="true" />
+                        <select
+                          aria-label={`Temperatura de ${item.name}`}
+                          value={item.temperature}
+                          onChange={(e) =>
+                            onUpdateFormTemperature(item.id, e.target.value as LeadTemperature)
+                          }
+                        >
+                          <option value="Fechado">Fechado</option>
+                          <option value="Quente">Quente</option>
+                          <option value="Morno">Morno</option>
+                          <option value="Frio">Frio</option>
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
           </tbody>
         </table>
       </div>
@@ -1453,9 +1449,7 @@ function ensureRenewalsWidget(items: DashboardLayoutItem[]): DashboardLayoutItem
     next = [...next, { ...renewalDefault, order: next.length }]
   }
   if (!next.some((item) => item.widget === 'site-forms')) {
-    const formsDefault = defaultDashboardLayout.find(
-      (item) => item.widget === 'site-forms',
-    ) ?? {
+    const formsDefault = defaultDashboardLayout.find((item) => item.widget === 'site-forms') ?? {
       widget: 'site-forms' as const,
       order: next.length,
       width: '8' as const,
@@ -1516,20 +1510,16 @@ export default function CustomDashboard({
   useEffect(() => {
     setLayout((current) => ensureRenewalsWidget(current))
     setSavedLayout((current) => ensureRenewalsWidget(current))
-    setWidgetSizes((current) =>
-      ({
-        ...current,
-        'renewals-overview': current['renewals-overview'] ?? { columns: 4, height: 380 },
-        'site-forms': current['site-forms'] ?? { columns: 8, height: 420 },
-      }),
-    )
-    setSavedWidgetSizes((current) =>
-      ({
-        ...current,
-        'renewals-overview': current['renewals-overview'] ?? { columns: 4, height: 380 },
-        'site-forms': current['site-forms'] ?? { columns: 8, height: 420 },
-      }),
-    )
+    setWidgetSizes((current) => ({
+      ...current,
+      'renewals-overview': current['renewals-overview'] ?? { columns: 4, height: 380 },
+      'site-forms': current['site-forms'] ?? { columns: 8, height: 420 },
+    }))
+    setSavedWidgetSizes((current) => ({
+      ...current,
+      'renewals-overview': current['renewals-overview'] ?? { columns: 4, height: 380 },
+      'site-forms': current['site-forms'] ?? { columns: 8, height: 420 },
+    }))
   }, [])
 
   const orderedLayout = [...layout].sort((a, b) => a.order - b.order)

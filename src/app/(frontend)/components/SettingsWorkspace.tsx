@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
+import { Tabs } from './ui/Tabs'
 
 export type ThemeConfig = {
   id: string
@@ -284,12 +285,22 @@ export default function SettingsWorkspace({
   adminUser,
   activeTheme,
   onSelectTheme,
+  tab,
+  onTabChange,
 }: {
   adminUser: { name: string; profession: string }
   activeTheme: ThemeConfig
   onSelectTheme: (theme: ThemeConfig) => void
+  /** Controlled tab (from the URL). Falls back to local state when omitted. */
+  tab?: 'employees' | 'theme' | 'security'
+  onTabChange?: (tab: 'employees' | 'theme' | 'security') => void
 }) {
-  const [activeTab, setActiveTab] = useState<'employees' | 'theme' | 'security'>('employees')
+  const [localTab, setLocalTab] = useState<'employees' | 'theme' | 'security'>('employees')
+  const activeTab = tab ?? localTab
+  const setActiveTab = (next: 'employees' | 'theme' | 'security') => {
+    setLocalTab(next)
+    onTabChange?.(next)
+  }
   const [employees, setEmployees] = useState<EmployeeMember[]>(initialEmployees)
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmployees[0].id)
   const [newEmpModalOpen, setNewEmpModalOpen] = useState(false)
@@ -402,9 +413,7 @@ export default function SettingsWorkspace({
   const toggleEmployeeStatus = (empId: string) => {
     setEmployees((current) =>
       current.map((emp) =>
-        emp.id === empId
-          ? { ...emp, status: emp.status === 'Ativo' ? 'Pausado' : 'Ativo' }
-          : emp,
+        emp.id === empId ? { ...emp, status: emp.status === 'Ativo' ? 'Pausado' : 'Ativo' } : emp,
       ),
     )
   }
@@ -520,32 +529,17 @@ export default function SettingsWorkspace({
       )}
 
       {/* ABAS DE CONFIGURAÇÕES */}
-      <nav className="settings-tabs-nav" aria-label="Seções de Configurações">
-        <button
-          type="button"
-          className={activeTab === 'employees' ? 'active' : ''}
-          onClick={() => setActiveTab('employees')}
-        >
-          <strong>Equipe & Permissões de Funcionários</strong>
-          <small>Cadastrar funcionários e definir o que podem ou não fazer</small>
-        </button>
-        <button
-          type="button"
-          className={activeTab === 'theme' ? 'active' : ''}
-          onClick={() => setActiveTab('theme')}
-        >
-          <strong>Cor do Tema & Aparência</strong>
-          <small>Mudar a paleta de cores da barra lateral, botões e fundo</small>
-        </button>
-        <button
-          type="button"
-          className={activeTab === 'security' ? 'active' : ''}
-          onClick={() => setActiveTab('security')}
-        >
-          <strong>Alterar Senha & Segurança</strong>
-          <small>Credenciais do Admin Master e proteção da conta</small>
-        </button>
-      </nav>
+      <Tabs
+        label="Seções de Configurações"
+        className="mb-7"
+        value={activeTab}
+        onChange={setActiveTab}
+        items={[
+          { id: 'employees', label: 'Equipe e permissões' },
+          { id: 'theme', label: 'Cor do tema e aparência' },
+          { id: 'security', label: 'Senha e segurança' },
+        ]}
+      />
 
       {/* ABA 1: FUNCIONÁRIOS E PERMISSÕES (O QUE PODE OU NÃO FAZER) */}
       {activeTab === 'employees' && (
@@ -594,10 +588,7 @@ export default function SettingsWorkspace({
                 </label>
                 <label>
                   <span>Cargo / Função na Consultoria *</span>
-                  <select
-                    value={empRole}
-                    onChange={(e) => handleRolePresetChange(e.target.value)}
-                  >
+                  <select value={empRole} onChange={(e) => handleRolePresetChange(e.target.value)}>
                     <option value="Nutricionista Esportiva">Nutricionista Esportiva</option>
                     <option value="Treinador Assistente">Treinador Assistente</option>
                     <option value="Comercial & Closer (SDR)">Comercial & Closer (SDR)</option>
@@ -635,7 +626,9 @@ export default function SettingsWorkspace({
               </div>
 
               <div className="settings-new-emp-perms-box">
-                <strong>Selecione o que este funcionário poderá fazer desde o primeiro acesso:</strong>
+                <strong>
+                  Selecione o que este funcionário poderá fazer desde o primeiro acesso:
+                </strong>
                 <div className="settings-new-emp-perms-grid">
                   {permissionDefinitions.map((perm) => (
                     <label key={perm.key} className="perm-checkbox-tile">
@@ -717,7 +710,9 @@ export default function SettingsWorkspace({
                     <img src={selectedEmployee.avatar} alt={selectedEmployee.name} />
                     <div>
                       <div className="emp-detail-badges">
-                        <span className="code-badge">CREDENCIAL: {selectedEmployee.accessCode}</span>
+                        <span className="code-badge">
+                          CREDENCIAL: {selectedEmployee.accessCode}
+                        </span>
                         <span
                           className={`emp-status-pill ${selectedEmployee.status.toLowerCase()}`}
                         >
@@ -738,9 +733,7 @@ export default function SettingsWorkspace({
                       className="emp-action-btn"
                       onClick={() => toggleEmployeeStatus(selectedEmployee.id)}
                     >
-                      {selectedEmployee.status === 'Ativo'
-                        ? 'Pausar Acesso'
-                        : 'Reativar Acesso'}
+                      {selectedEmployee.status === 'Ativo' ? 'Pausar Acesso' : 'Reativar Acesso'}
                     </button>
                     <button
                       type="button"
@@ -801,14 +794,10 @@ export default function SettingsWorkspace({
                             role="switch"
                             aria-checked={allowed}
                             className={`perm-toggle-btn ${allowed ? 'on' : 'off'}`}
-                            onClick={() =>
-                              toggleEmployeePermission(selectedEmployee.id, perm.key)
-                            }
+                            onClick={() => toggleEmployeePermission(selectedEmployee.id, perm.key)}
                           >
                             <span className="knob" />
-                            <span className="label">
-                              {allowed ? 'Permitido' : 'Bloqueado'}
-                            </span>
+                            <span className="label">{allowed ? 'Permitido' : 'Bloqueado'}</span>
                           </button>
                         </div>
                       </div>
@@ -860,14 +849,8 @@ export default function SettingsWorkspace({
                       showToast(`Tema "${preset.name}" aplicado em todo o painel!`)
                     }}
                   >
-                    <div
-                      className="theme-swatch-preview"
-                      style={{ background: preset.canvasBg }}
-                    >
-                      <span
-                        className="swatch-sidebar"
-                        style={{ background: preset.sidebarBg }}
-                      />
+                    <div className="theme-swatch-preview" style={{ background: preset.canvasBg }}>
+                      <span className="swatch-sidebar" style={{ background: preset.sidebarBg }} />
                       <div className="swatch-content">
                         <span
                           className="swatch-accent-bar"

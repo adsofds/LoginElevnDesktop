@@ -1,11 +1,4 @@
-.workspace-label > img {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
-  border: 2px solid color-mix(in srgb, var(--gold-90) 18%, transparent);
-  border-radius: 50%;
-  object-fit: cover;
-}
+
 
 .profile-avatar-image {
   width: 36px;
@@ -14,10 +7,6 @@
   border: 2px solid color-mix(in srgb, var(--gold-90) 16%, transparent);
   border-radius: 50%;
   object-fit: cover;
-}
-
-.header-profile .profile-avatar-image {
-  border-color: var(--gold-84);
 }
 
 .dashboard-toolbar {

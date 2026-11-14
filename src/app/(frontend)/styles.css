@@ -1,5 +1,37 @@
 @import 'tailwindcss';
 @import './tokens.css';
+
+/* Tailwind utilities backed by the Elevn tokens: bg-brand, text-ink-2, border-line, rounded-card… */
+@theme inline {
+  --font-sans: var(--font-figtree), 'Figtree', ui-sans-serif, system-ui, sans-serif;
+  --color-brand: var(--elevn-accent);
+  --color-brand-hover: var(--accent-hover);
+  --color-brand-light: var(--elevn-accent-light);
+  --color-brand-soft: var(--accent-soft);
+  --color-night: var(--elevn-sidebar-bg);
+  --color-canvas: var(--elevn-canvas-bg);
+  --color-surface: var(--bg-surface);
+  --color-subtle: var(--bg-subtle);
+  --color-line: var(--border-default);
+  --color-line-subtle: var(--border-subtle);
+  --color-ink: var(--text-primary);
+  --color-ink-2: var(--text-secondary);
+  --color-ink-3: var(--text-tertiary);
+  --color-on-dark: var(--text-on-dark);
+  --color-success: var(--success-fg);
+  --color-success-soft: var(--success-bg);
+  --color-danger: var(--danger-fg);
+  --color-danger-soft: var(--danger-bg);
+  --color-warning: var(--warning-fg);
+  --color-warning-soft: var(--warning-bg);
+  --color-info: var(--info-fg);
+  --color-info-soft: var(--info-bg);
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --shadow-pop: 0 12px 32px -12px rgb(13 10 33 / 0.22), 0 2px 6px rgb(13 10 33 / 0.06);
+  --shadow-modal: 0 24px 64px -16px rgb(13 10 33 / 0.32);
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
 @import './login.css';
 @import './dashboard.css';
 @import './dashboard-v2.css';
@@ -60,480 +92,6 @@
   }
 }
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.admin-shell {
-  min-height: 100vh;
-  display: flex;
-  color: var(--ink-08);
-  background: var(--elevn-canvas-bg);
-  transition: background-color 0.2s ease;
-}
-
-.admin-sidebar {
-  position: fixed;
-  z-index: 20;
-  inset: 0 auto 0 0;
-  width: 252px;
-  display: flex;
-  flex-direction: column;
-  padding: 32px 20px 22px;
-  color: var(--sand-100);
-  background:
-    radial-gradient(circle at 15% 90%, color-mix(in srgb, var(--elevn-accent) 24%, transparent), transparent 34%),
-    var(--elevn-sidebar-bg);
-  transition: background 0.2s ease;
-}
-
-.admin-brand-row {
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 8px;
-}
-
-.admin-brand-row > img {
-  width: 108px;
-  height: auto;
-}
-
-.sidebar-close {
-  display: none;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.sidebar-close svg,
-.mobile-menu-button svg {
-  width: 22px;
-  height: 22px;
-}
-
-.workspace-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 34px 0 32px;
-  padding: 13px 12px;
-  border: 1px solid color-mix(in srgb, var(--gold-90) 11%, transparent);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.workspace-label > span {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 7px;
-  color: var(--ink-08);
-  background: var(--gold-90);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.workspace-label div,
-.sidebar-profile > div:nth-child(2),
-.header-profile > div:last-child {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.workspace-label strong {
-  overflow: hidden;
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.workspace-label small {
-  color: rgba(255, 255, 255, 0.42);
-  font-size: 11px;
-}
-
-.admin-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin-top: 28px;
-}
-
-.admin-nav > p {
-  margin: 0 12px 9px;
-  color: rgba(255, 255, 255, 0.28);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.admin-nav > button {
-  position: relative;
-  width: 100%;
-  height: 43px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 12px;
-  border-radius: 7px;
-  color: rgba(255, 255, 255, 0.49);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    color 160ms,
-    background 160ms;
-}
-
-.admin-nav > button svg {
-  width: 18px;
-  height: 18px;
-}
-
-.admin-nav > button:hover {
-  color: var(--sand-100);
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.admin-nav > button.active {
-  color: var(--gold-90);
-  background: color-mix(in srgb, var(--gold-90) 10%, transparent);
-}
-
-.admin-nav > button.active::before {
-  content: '';
-  position: absolute;
-  width: 3px;
-  height: 20px;
-  left: -20px;
-  border-radius: 0 3px 3px 0;
-  background: var(--elevn-accent-light);
-}
-
-.admin-nav > button.coming-soon,
-.admin-nav > button.coming-soon:hover {
-  color: rgba(255, 255, 255, 0.3);
-  background: transparent;
-  cursor: default;
-}
-
-.nav-soon-badge {
-  margin-left: auto;
-  padding: 2px 7px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.admin-nav > button i {
-  width: 5px;
-  height: 5px;
-  margin-left: auto;
-  border-radius: 50%;
-  background: var(--elevn-accent-light);
-}
-
-.sidebar-profile {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  margin-top: auto;
-  padding: 18px 7px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.profile-avatar {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--ink-08);
-  background: var(--gold-75);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.sidebar-profile strong {
-  overflow: hidden;
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebar-profile span {
-  color: rgba(255, 255, 255, 0.38);
-  font-size: 11px;
-}
-
-.sidebar-logout {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 7px;
-  color: rgba(255, 255, 255, 0.42);
-  cursor: pointer;
-  transition:
-    color 160ms,
-    background 160ms;
-}
-
-.sidebar-logout:hover,
-.sidebar-logout:focus-visible {
-  color: var(--gold-90);
-  background: color-mix(in srgb, var(--gold-90) 10%, transparent);
-}
-
-.sidebar-logout svg {
-  width: 18px;
-  height: 18px;
-}
-
-.admin-workspace {
-  width: calc(100% - 252px);
-  min-height: 100vh;
-  margin-left: 252px;
-}
-
-.admin-header {
-  height: 76px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 38px;
-  border-bottom: 1px solid var(--sand-90);
-  background: rgba(255, 255, 255, 0.58);
-  backdrop-filter: blur(14px);
-}
-
-.admin-header-title {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.admin-header-title > div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.admin-header-title span {
-  color: var(--slate-59);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.admin-header-title strong {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.mobile-menu-button {
-  display: none;
-}
-
-.admin-header-actions,
-.header-profile {
-  display: flex;
-  align-items: center;
-}
-
-.admin-header-actions {
-  position: relative;
-  gap: 20px;
-}
-
-.notification-button {
-  position: relative;
-  width: 35px;
-  height: 35px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--sand-85);
-  border-radius: 50%;
-  color: var(--slate-43);
-  background: var(--sand-100);
-  cursor: pointer;
-}
-
-.notification-button svg {
-  width: 17px;
-  height: 17px;
-}
-
-.notification-button > span {
-  position: absolute;
-  min-width: 16px;
-  height: 16px;
-  top: -5px;
-  right: -5px;
-  display: grid;
-  place-items: center;
-  padding: 0 4px;
-  border: 2px solid var(--sand-100);
-  border-radius: 999px;
-  color: var(--sand-100);
-  background: var(--elevn-accent);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.notification-popover {
-  position: absolute;
-  z-index: 30;
-  width: min(390px, calc(100vw - 30px));
-  top: 47px;
-  right: 0;
-  overflow: hidden;
-  border: 1px solid var(--sand-85);
-  border-radius: 13px;
-  background: var(--sand-100);
-  box-shadow: 0 20px 55px color-mix(in srgb, var(--elevn-sidebar-bg) 18%, transparent);
-}
-
-.notification-popover > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px 16px;
-  border-bottom: 1px solid var(--sand-90);
-  background: var(--sand-95);
-}
-
-.notification-popover > header > div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.notification-popover > header span {
-  color: var(--gold-42);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.notification-popover > header strong {
-  color: var(--ink-16);
-  font-size: 13px;
-}
-
-.notification-popover > header small {
-  width: 23px;
-  height: 23px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--elevn-accent);
-  background: var(--gold-90);
-  font-size: 11px;
-}
-
-.notification-popover > div > button {
-  width: 100%;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 9px;
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--sand-90);
-  text-align: left;
-  cursor: pointer;
-}
-
-.notification-popover > div > button:hover {
-  background: var(--sand-95);
-}
-
-.notification-popover img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.notification-popover > div > button > span {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.notification-popover > div strong {
-  color: var(--ink-22);
-  font-size: 12px;
-}
-
-.notification-popover > div small {
-  overflow: hidden;
-  color: var(--slate-47);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.notification-popover time {
-  color: var(--slate-66);
-  font-size: 11px;
-}
-
-.notification-popover > button {
-  width: 100%;
-  min-height: 38px;
-  color: var(--elevn-accent);
-  background: var(--sand-95);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.header-profile {
-  gap: 9px;
-  padding-left: 20px;
-  border-left: 1px solid var(--sand-85);
-}
-
-.header-profile strong {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.header-profile span {
-  color: var(--slate-59);
-  font-size: 11px;
-}
-
-.admin-content {
-  padding: 42px 42px 54px;
-}
-
 .dashboard-heading {
   display: flex;
   align-items: flex-end;
@@ -542,8 +100,7 @@
   margin-bottom: 34px;
 }
 
-.dashboard-heading p,
-.empty-admin-page > p {
+.dashboard-heading p {
   color: var(--gold-42);
   font-size: 11px;
   font-weight: 700;
@@ -552,7 +109,7 @@
 
 .dashboard-heading h1 {
   margin: 8px 0 7px;
-  font-size: clamp(27px, 2.4vw, 36px);
+  font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -693,62 +250,7 @@
   border: 1px dashed transparent;
 }
 
-.empty-admin-page {
-  min-height: calc(100vh - 170px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.empty-admin-page > span {
-  width: 52px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 22px;
-  border-radius: 50%;
-  color: var(--elevn-accent);
-  background: var(--gold-90);
-}
-
-.empty-admin-page > span svg {
-  width: 23px;
-  height: 23px;
-}
-
-.empty-admin-page h1 {
-  margin: 8px 0;
-  font-size: 32px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.empty-admin-page small {
-  max-width: 360px;
-  color: var(--slate-55);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.admin-overlay {
-  display: none;
-}
-
 @media (max-width: 980px) {
-  .admin-sidebar {
-    width: 230px;
-  }
-
-  .admin-workspace {
-    width: calc(100% - 230px);
-    margin-left: 230px;
-  }
-
-  .admin-content {
-    padding-inline: 28px;
-  }
 
   .dashboard-structure {
     grid-template-columns: 1fr;
@@ -760,75 +262,6 @@
 }
 
 @media (max-width: 760px) {
-  .admin-sidebar {
-    width: min(82vw, 290px);
-    padding-top: 26px;
-    transform: translateX(-101%);
-    transition: transform 260ms ease;
-  }
-
-  .admin-sidebar.open {
-    transform: translateX(0);
-  }
-
-  .sidebar-close {
-    display: grid;
-  }
-
-  .admin-overlay {
-    position: fixed;
-    z-index: 19;
-    inset: 0;
-    display: block;
-    visibility: hidden;
-    opacity: 0;
-    background: color-mix(in srgb, var(--elevn-sidebar-bg) 45%, transparent);
-    backdrop-filter: blur(2px);
-    transition:
-      opacity 220ms,
-      visibility 220ms;
-  }
-
-  .admin-overlay.visible {
-    visibility: visible;
-    opacity: 1;
-  }
-
-  .admin-workspace {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .admin-header {
-    height: 68px;
-    padding: 0 18px;
-  }
-
-  .mobile-menu-button {
-    width: 36px;
-    height: 36px;
-    display: grid;
-    place-items: center;
-    border: 1px solid var(--sand-85);
-    border-radius: 8px;
-    background: var(--sand-100);
-  }
-
-  .header-profile > div:last-child {
-    display: none;
-  }
-
-  .header-profile {
-    padding-left: 12px;
-  }
-
-  .admin-header-actions {
-    gap: 8px;
-  }
-
-  .admin-content {
-    padding: 30px 18px 42px;
-  }
 
   .dashboard-heading {
     align-items: flex-start;
@@ -859,9 +292,34 @@
   }
 }
 
+
+/* Shared motion for popovers, menus and the command palette */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Visible keyboard focus on every interactive element (layered, so utilities can refine it) */
+@layer base {
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--elevn-accent);
+    outline-offset: 2px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .admin-sidebar,
-  .admin-overlay {
-    transition: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
