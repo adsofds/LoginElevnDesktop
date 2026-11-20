@@ -12,6 +12,7 @@ export type SectionId =
   | 'nutricao'
   | 'treino'
   | 'club'
+  | 'app-aluno'
   | 'configuracoes'
 
 export type Section = {
@@ -50,6 +51,13 @@ export const sections: Section[] = [
     icon: 'creation',
     group: 'Conteúdo',
     comingSoon: true,
+  },
+  {
+    id: 'app-aluno',
+    label: 'App do aluno',
+    href: '/app-aluno',
+    icon: 'phone',
+    group: 'Conteúdo',
   },
   {
     id: 'configuracoes',
