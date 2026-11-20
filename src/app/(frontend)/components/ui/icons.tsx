@@ -114,6 +114,12 @@ const paths: Record<string, ReactNode> = {
   arrowRight: <path d="M5 12h14M14 7l5 5-5 5" />,
   arrowLeft: <path d="M19 12H5m6-6-6 6 6 6" />,
   trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />,
+  phone: (
+    <>
+      <rect x="6.5" y="2.75" width="11" height="18.5" rx="2.5" />
+      <path d="M10.5 18h3" />
+    </>
+  ),
   download: <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" />,
   key: (
     <>

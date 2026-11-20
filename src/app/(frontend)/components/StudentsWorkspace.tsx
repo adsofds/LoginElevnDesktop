@@ -81,8 +81,6 @@ type WorkoutSessionPlan = {
   schedule: string
   studentAppComment: string
   commentSentAt: string
-  adminReply?: string
-  repliedAt?: string
   exercises: WorkoutExercise[]
 }
 
@@ -91,8 +89,6 @@ type WorkoutAppComment = {
   workoutTitle: string
   sentAt: string
   comment: string
-  adminReply?: string
-  repliedAt?: string
 }
 
 type StudentWorkoutPlan = {
@@ -1079,8 +1075,6 @@ function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
           schedule: 'Segunda e Quinta',
           studentAppComment: commentA.comment,
           commentSentAt: commentA.sentAt,
-          adminReply: commentA.adminReply,
-          repliedAt: commentA.repliedAt,
           exercises: [
             {
               name: 'Supino Inclinado com Halteres',
@@ -1120,8 +1114,6 @@ function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
           schedule: 'Terça e Sexta',
           studentAppComment: commentB.comment,
           commentSentAt: commentB.sentAt,
-          adminReply: commentB.adminReply,
-          repliedAt: commentB.repliedAt,
           exercises: [
             {
               name: 'Puxada Frontal Aberta Pronada',
@@ -1161,8 +1153,6 @@ function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
           schedule: 'Quarta e Sábado',
           studentAppComment: commentC.comment,
           commentSentAt: commentC.sentAt,
-          adminReply: commentC.adminReply,
-          repliedAt: commentC.repliedAt,
           exercises: [
             {
               name: 'Agachamento Livre ou Hack Machine',
@@ -1215,8 +1205,6 @@ function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
           schedule: 'Segunda e Quinta',
           studentAppComment: commentA.comment,
           commentSentAt: commentA.sentAt,
-          adminReply: commentA.adminReply,
-          repliedAt: commentA.repliedAt,
           exercises: [
             {
               name: 'Agachamento Livre Barra Alta',
@@ -1256,8 +1244,6 @@ function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
           schedule: 'Quarta e Sexta',
           studentAppComment: commentB.comment,
           commentSentAt: commentB.sentAt,
-          adminReply: commentB.adminReply,
-          repliedAt: commentB.repliedAt,
           exercises: [
             {
               name: 'Supino Reto com Halteres',
@@ -1291,8 +1277,6 @@ function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
           schedule: 'Sexta e Sábado',
           studentAppComment: commentC.comment,
           commentSentAt: commentC.sentAt,
-          adminReply: commentC.adminReply,
-          repliedAt: commentC.repliedAt,
           exercises: [
             {
               name: 'Agachamento Búlgaro Explosivo com Halteres',
@@ -1332,8 +1316,6 @@ function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
         schedule: 'Segunda e Quinta',
         studentAppComment: commentA.comment,
         commentSentAt: commentA.sentAt,
-        adminReply: commentA.adminReply,
-        repliedAt: commentA.repliedAt,
         exercises: [
           {
             name: 'Supino Inclinado com Halteres',
@@ -1373,8 +1355,6 @@ function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
         schedule: 'Terça e Sexta',
         studentAppComment: commentB.comment,
         commentSentAt: commentB.sentAt,
-        adminReply: commentB.adminReply,
-        repliedAt: commentB.repliedAt,
         exercises: [
           {
             name: 'Remada Curvada Pronada com Barra',
@@ -1408,8 +1388,6 @@ function getStudentWorkoutPlan(student: StudentRecord): StudentWorkoutPlan {
         schedule: 'Quarta e Sábado',
         studentAppComment: commentC.comment,
         commentSentAt: commentC.sentAt,
-        adminReply: commentC.adminReply,
-        repliedAt: commentC.repliedAt,
         exercises: [
           {
             name: 'Leg Press 45° Amplitude Completa',
@@ -2181,15 +2159,6 @@ export default function StudentsWorkspace({
   const [newStudentNameQuery, setNewStudentNameQuery] = useState('')
   const [externalSearchOpen, setExternalSearchOpen] = useState(false)
   const [externalSearchResults, setExternalSearchResults] = useState<ExternalPlatformStudent[]>([])
-  const [workoutCommentDrafts, setWorkoutCommentDrafts] = useState<
-    Record<'Treino A' | 'Treino B' | 'Treino C', string>
-  >({
-    'Treino A': '',
-    'Treino B': '',
-    'Treino C': '',
-  })
-  const [lastRepliedWorkout, setLastRepliedWorkout] = useState<string | null>(null)
-
   const openStudentModal = (
     studentId: string,
     initialTab: FichaTab = 'checkin',
@@ -2503,36 +2472,6 @@ export default function StudentsWorkspace({
       setCompareBeforeId(matching[0].id)
       setCompareAfterId(matching[0].id)
     }
-  }
-
-  const replyToStudentWorkoutComment = (
-    student: StudentRecord,
-    workoutCode: 'Treino A' | 'Treino B' | 'Treino C',
-    replyText: string,
-  ) => {
-    const cleanText = replyText.trim()
-    if (!cleanText) return
-        setStudents((current) =>
-      current.map((item) => {
-        if (item.id !== student.id) return item
-        const existing = getStudentWorkoutComments(item)
-        const updated = existing.map((entry) =>
-          entry.workoutCode === workoutCode
-            ? {
-                ...entry,
-                adminReply: cleanText,
-                repliedAt: 'Respondido agora',
-              }
-            : entry,
-        )
-        return {
-          ...item,
-          workoutComments: updated,
-        }
-      }),
-    )
-    setWorkoutCommentDrafts((current) => ({ ...current, [workoutCode]: '' }))
-    setLastRepliedWorkout(`${student.id}-${workoutCode}`)
   }
 
   const generateAccessKeyForStudent = (student: StudentRecord) => {
@@ -3739,7 +3678,7 @@ export default function StudentsWorkspace({
                         <span>COMENTÁRIOS DO ALUNO POR TREINO NO APP (MFIT)</span>
                         <h3>Comentários recebidos: Treino A, Treino B e Treino C</h3>
                       </div>
-                      <small>A resposta aparece para o aluno no app</small>
+                      <small>Para responder, fale com o aluno no WhatsApp</small>
                     </header>
                     <div className="app-observations-list">
                       {modalWorkoutComments.map((wc) => (
@@ -3752,46 +3691,6 @@ export default function StudentsWorkspace({
                           </header>
                           <p>{wc.comment}</p>
 
-                          {wc.adminReply && (
-                            <div className="workout-admin-reply-preview">
-                              <div>
-                                <span>SUA RESPOSTA AO ALUNO</span>
-                                <p>{wc.adminReply}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          <form
-                            className="workout-comment-inline-form"
-                            onSubmit={(event) => {
-                              event.preventDefault()
-                              replyToStudentWorkoutComment(
-                                modalStudent,
-                                wc.workoutCode,
-                                workoutCommentDrafts[wc.workoutCode] || '',
-                              )
-                            }}
-                          >
-                            <input
-                              type="text"
-                              value={workoutCommentDrafts[wc.workoutCode] || ''}
-                              onChange={(event) =>
-                                setWorkoutCommentDrafts((current) => ({
-                                  ...current,
-                                  [wc.workoutCode]: event.target.value,
-                                }))
-                              }
-                              placeholder={`Responder comentário do ${wc.workoutCode}...`}
-                              aria-label={`Responder comentário do ${wc.workoutCode}`}
-                            />
-                            <button type="submit">Responder aluno</button>
-                          </form>
-
-                          {lastRepliedWorkout === `${modalStudent.id}-${wc.workoutCode}` && (
-                            <div className="workout-reply-sent-notice" role="status">
-                              <span>Resposta enviada ao aluno.</span>
-                            </div>
-                          )}
                         </article>
                       ))}
                       {modalStudent.appObservations.map((obs) => (
@@ -3943,46 +3842,6 @@ export default function StudentsWorkspace({
                         </header>
                         <p>“{session.studentAppComment}”</p>
 
-                        {session.adminReply && (
-                          <div className="workout-admin-reply-preview">
-                            <div>
-                              <span>SUA RESPOSTA (O ALUNO VÊ NO APP)</span>
-                              <p>{session.adminReply}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        <form
-                          className="workout-comment-inline-form"
-                          onSubmit={(event) => {
-                            event.preventDefault()
-                            const code = session.code as 'Treino A' | 'Treino B' | 'Treino C'
-                            replyToStudentWorkoutComment(
-                              modalStudent,
-                              code,
-                              workoutCommentDrafts[code] || '',
-                            )
-                          }}
-                        >
-                          <input
-                            type="text"
-                            value={
-                              workoutCommentDrafts[
-                                session.code as 'Treino A' | 'Treino B' | 'Treino C'
-                              ] || ''
-                            }
-                            onChange={(event) => {
-                              const code = session.code as 'Treino A' | 'Treino B' | 'Treino C'
-                              setWorkoutCommentDrafts((current) => ({
-                                ...current,
-                                [code]: event.target.value,
-                              }))
-                            }}
-                            placeholder={`Responder ${modalStudent.name} sobre o ${session.code}...`}
-                            aria-label={`Responder aluno sobre o ${session.code}`}
-                          />
-                          <button type="submit">Responder aluno</button>
-                        </form>
                       </div>
 
                       <div className="workout-exercise-list">
