@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import InternalWorkspace from '../InternalWorkspace'
 import { internoTabs, panelHref, tabFromInternal, tabFromUrl } from '../panel/navigation'
 import { usePanel, useTrail } from '../panel/PanelState'
@@ -10,8 +11,14 @@ export default function InternoView() {
   const router = useRouter()
   const query = useUrlQuery()
   const panel = usePanel()
-  const tab = tabFromUrl(internoTabs, query.get('aba'))
+  // "Atualizações" became "Agenda": old links (?aba=atualizacoes) land on the agenda.
+  const legacyUpdates = query.get('aba') === 'atualizacoes'
+  const tab = tabFromUrl(internoTabs, legacyUpdates ? 'agenda' : query.get('aba'))
   useTrail([tab.label])
+  useEffect(() => {
+    if (legacyUpdates) query.set({ aba: 'agenda', conversa: null }, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [legacyUpdates])
 
   return (
     <InternalWorkspace
@@ -26,19 +33,17 @@ export default function InternoView() {
       }
       intent={query.get('novo')}
       onIntentHandled={() => query.set({ novo: null }, { replace: true })}
-      focusUpdateId={query.get('conversa')}
       formSearch={query.get('busca')}
-      updates={panel.internalUpdates}
-      onToggleUpdate={panel.toggleInternalUpdate}
-      onMarkUpdateRead={panel.markInternalUpdateRead}
-      onReplyUpdate={panel.replyInternalUpdate}
-      onCreateUpdate={panel.createInternalUpdate}
       siteForms={panel.siteForms}
       onUpdateFormTemperature={panel.updateSiteFormTemperature}
       onCreateFormSubmission={panel.createSiteFormSubmission}
       onConvertLead={(lead) =>
         router.push(
-          panelHref('/alunos', { novo: 'aluno', nome: lead.name, whatsapp: lead.phone.replace(/\D/g, '') }),
+          panelHref('/alunos', {
+            novo: 'aluno',
+            nome: lead.name,
+            whatsapp: lead.phone.replace(/\D/g, ''),
+          }),
         )
       }
     />

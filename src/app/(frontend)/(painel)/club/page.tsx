@@ -1,14 +1,18 @@
 import type { Metadata } from 'next'
-import { Suspense } from 'react'
-import ClubView from '../../components/views/ClubView'
+import { ComingSoon } from '../../components/panel/ComingSoon'
 
 export const metadata: Metadata = { title: 'Elevn Club · Elevn' }
 
-// The view reads ?aba=/?ficha= with useSearchParams; Suspense keeps the route static.
+// The Club (playlists, trilhas, GymRats) is paused while the core of the panel is built.
+// Its code stays in components/CreationWorkspace.tsx and components/club/ — to bring it back,
+// render <ClubView /> inside <Suspense> here and drop `comingSoon` from the Club entry in
+// components/panel/navigation.ts.
 export default function ClubPage() {
   return (
-    <Suspense fallback={null}>
-      <ClubView />
-    </Suspense>
+    <ComingSoon
+      icon="creation"
+      title="Elevn Club"
+      description="A área de playlists, trilhas e desafios da comunidade está em construção. Por enquanto o foco é o essencial do painel: alunos, check-ins e treinos."
+    />
   )
 }

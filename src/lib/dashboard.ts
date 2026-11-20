@@ -5,7 +5,6 @@ export const widgetIds = [
   'leads-funnel',
   'students-table',
   'weekly-agenda',
-  'team-overview',
   'active-students-chart',
   'adherence-chart',
   'renewals-overview',

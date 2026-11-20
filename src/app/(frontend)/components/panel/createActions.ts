@@ -17,18 +17,11 @@ export const createActions = [
     href: panelHref('/interno', { aba: 'formulario', novo: 'lead' }),
   },
   {
-    id: 'mensagem',
-    label: 'Mensagem',
-    description: 'Para a equipe ou um aluno',
-    icon: 'mail',
-    href: panelHref('/interno', { aba: 'atualizacoes', novo: 'mensagem' }),
-  },
-  {
     id: 'compromisso',
     label: 'Compromisso',
     description: 'Avaliação, reunião ou prazo na agenda',
     icon: 'calendar',
-    href: panelHref('/interno', { aba: 'atualizacoes', novo: 'compromisso' }),
+    href: panelHref('/interno', { aba: 'agenda', novo: 'compromisso' }),
   },
   {
     id: 'cartao',

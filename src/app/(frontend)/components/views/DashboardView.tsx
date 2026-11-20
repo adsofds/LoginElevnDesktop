@@ -22,8 +22,7 @@ export default function DashboardView() {
   const router = useRouter()
   const query = useUrlQuery()
   const now = useNow()
-  const { user, internalUpdates, toggleInternalUpdate, siteForms, updateSiteFormTemperature } =
-    usePanel()
+  const { user, siteForms, updateSiteFormTemperature } = usePanel()
   useTrail([])
 
   const requested = query.get('periodo')
@@ -68,9 +67,7 @@ export default function DashboardView() {
         initialLayout={defaultDashboardLayout}
         period={period}
         onNavigate={(href) => router.push(href)}
-        internalUpdates={internalUpdates}
-        onToggleInternalUpdate={toggleInternalUpdate}
-        onOpenInternal={() => router.push(panelHref('/interno', { aba: 'atualizacoes' }))}
+        onOpenInternal={() => router.push(panelHref('/interno', { aba: 'agenda' }))}
         siteForms={siteForms}
         onUpdateFormTemperature={updateSiteFormTemperature}
         onOpenSiteForms={() => router.push(panelHref('/interno', { aba: 'formulario' }))}

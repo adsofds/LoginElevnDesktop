@@ -25,6 +25,12 @@ import {
   toMinutes,
   type AgendaEvent,
 } from '@/lib/demo-agenda'
+import {
+  checkinCount,
+  studentAdherence,
+  trainingCount,
+  type StudentAdherence,
+} from '@/lib/demo-adherence'
 import type { SiteFormSubmission } from '@/lib/demo-internal'
 import { panelHref } from '../panel/navigation'
 import { Button } from '../ui/Button'
@@ -92,7 +98,13 @@ export function WidgetSkeleton({ rows = 4, chart = false }: { rows?: number; cha
   )
 }
 
-export function WidgetFooterLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+export function WidgetFooterLink({
+  onClick,
+  children,
+}: {
+  onClick: () => void
+  children: ReactNode
+}) {
   return (
     <button
       type="button"
@@ -225,9 +237,9 @@ export function KpiOverview({
 
 /* -------------------------------------------------------- Precisa de atenção */
 
-type Priority = 'alta' | 'media' | 'baixa'
+export type Priority = 'alta' | 'media' | 'baixa'
 
-type AttentionItem = {
+export type AttentionItem = {
   id: string
   area: string
   priority: Priority
@@ -238,7 +250,7 @@ type AttentionItem = {
   action: string
 }
 
-const attentionItems: AttentionItem[] = [
+export const attentionItems: AttentionItem[] = [
   {
     id: 'at-1',
     area: 'Treino',
@@ -307,7 +319,7 @@ const attentionItems: AttentionItem[] = [
   },
 ]
 
-const priorityStyle: Record<Priority, { dot: string; label: string }> = {
+export const priorityStyle: Record<Priority, { dot: string; label: string }> = {
   alta: { dot: 'bg-danger', label: 'Alta' },
   media: { dot: 'bg-warning', label: 'Média' },
   baixa: { dot: 'bg-ink-3', label: 'Baixa' },
@@ -832,9 +844,17 @@ export function ActiveStudentsChart({ period }: { period: DashboardPeriod }) {
   )
 }
 
-export function AdherenceChart({ period }: { period: DashboardPeriod }) {
+export function AdherenceChart({
+  period,
+  onNavigate,
+}: {
+  period: DashboardPeriod
+  onNavigate?: (href: string) => void
+}) {
   const now = useNow()
   const [hover, setHover] = useState<number | null>(null)
+  const [studentId, setStudentId] = useState('')
+  const student = studentAdherence.find((item) => item.id === studentId)
   const points = adherenceSeries[period]
   const rates = points.map((point) => Math.round((point.answered / point.total) * 100))
   const current = points[points.length - 1]
@@ -850,8 +870,30 @@ export function AdherenceChart({ period }: { period: DashboardPeriod }) {
     return { short, full: `Semana de ${full}` }
   }
 
+  const picker = (
+    <StudentPicker
+      value={studentId}
+      onChange={setStudentId}
+      label="Filtrar adesão ao check-in por aluno"
+    />
+  )
+
+  if (student) {
+    return (
+      <div className="flex min-h-full flex-col px-5 pb-4">
+        <div className="flex justify-end">{picker}</div>
+        <StudentCheckinAdherence
+          student={student}
+          days={period === '7d' ? 7 : 30}
+          onNavigate={onNavigate}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-full flex-col px-5 pb-4">
+      <div className="mb-1 flex justify-end">{picker}</div>
       <div className="flex items-baseline gap-2">
         <strong className="text-[28px] leading-8 font-semibold tracking-[-0.02em] text-ink tabular-nums">
           {currentRate}%
@@ -942,6 +984,276 @@ export function AdherenceChart({ period }: { period: DashboardPeriod }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------- Filtro por aluno (adesão) */
+
+/** Native select so it works with keyboard and screen readers out of the box. */
+export function StudentPicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: string
+  onChange: (studentId: string) => void
+  label: string
+}) {
+  return (
+    <label className="relative inline-flex max-w-full">
+      <span className="sr-only">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-8 max-w-[200px] truncate rounded-control border border-line bg-surface pr-7 pl-2.5 text-[13px] text-ink-2 focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none"
+      >
+        <option value="">Todos os alunos</option>
+        {studentAdherence.map((student) => (
+          <option key={student.id} value={student.id}>
+            {student.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function StudentHeader({
+  student,
+  onNavigate,
+}: {
+  student: StudentAdherence
+  onNavigate?: (href: string) => void
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <Avatar src={student.avatar} name={student.name} size={28} />
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{student.name}</span>
+      {onNavigate && (
+        <button
+          type="button"
+          onClick={() => onNavigate(panelHref('/alunos', { ficha: student.id }))}
+          className="shrink-0 text-xs font-medium text-brand hover:underline"
+        >
+          Abrir ficha
+        </button>
+      )}
+    </div>
+  )
+}
+
+function StudentCheckinAdherence({
+  student,
+  days,
+  onNavigate,
+}: {
+  student: StudentAdherence
+  days: number
+  onNavigate?: (href: string) => void
+}) {
+  const now = useNow()
+  const { answered, expected } = checkinCount(student, days)
+  const rate = Math.round((answered / expected) * 100)
+  const window = student.checkins.slice(-days)
+  const below = rate < ADHERENCE_GOAL
+
+  return (
+    <div className="mt-3 flex flex-1 flex-col">
+      <StudentHeader student={student} onNavigate={onNavigate} />
+      <div className="mt-4 flex items-baseline gap-2">
+        <strong className="text-[28px] leading-8 font-semibold tracking-[-0.02em] text-ink tabular-nums">
+          {answered}/{expected}
+        </strong>
+        <span className="text-xs text-ink-3">check-ins nos últimos {expected} dias</span>
+        <span
+          className={cx(
+            'ml-auto text-sm font-semibold tabular-nums',
+            below ? 'text-warning' : 'text-success',
+          )}
+        >
+          {rate}%
+        </span>
+      </div>
+      <div
+        className="mt-2 h-2 overflow-hidden rounded-full bg-subtle"
+        role="progressbar"
+        aria-label={`Adesão ao check-in de ${student.name}`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={rate}
+      >
+        <div
+          className={cx('h-full rounded-full', below ? 'bg-warning' : 'bg-brand')}
+          style={{ width: `${rate}%` }}
+        />
+      </div>
+      <p className="mt-1 text-[11px] text-ink-3">
+        Meta {ADHERENCE_GOAL}% ·{' '}
+        {below
+          ? `faltam ${Math.ceil((ADHERENCE_GOAL / 100) * expected) - answered} para a meta`
+          : 'meta atingida'}
+      </p>
+      <ol
+        className="mt-auto grid max-w-[420px] gap-1 pt-4"
+        style={{ gridTemplateColumns: `repeat(${Math.min(window.length, 15)}, minmax(0, 1fr))` }}
+        aria-label="Check-ins dia a dia"
+      >
+        {window.map((done, index) => {
+          const offset = window.length - 1 - index
+          const date = now ? new Date(now.getTime() - offset * 86_400_000) : null
+          const dayLabel = date
+            ? new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(date)
+            : `dia ${index + 1}`
+          return (
+            <li
+              key={index}
+              title={`${dayLabel}: ${done ? 'respondido' : 'sem check-in'}`}
+              className={cx(
+                'aspect-square rounded-[4px]',
+                done ? 'bg-brand' : 'border border-line bg-surface',
+              )}
+            >
+              <span className="sr-only">
+                {dayLabel}: {done ? 'respondido' : 'sem check-in'}
+              </span>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+const weekdayInitials = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+
+/** Monthly training frequency: "20/31 dias", with a calendar of the days trained. */
+export function WorkoutAdherence({ onNavigate }: { onNavigate?: (href: string) => void }) {
+  const now = useNow()
+  const [studentId, setStudentId] = useState('')
+  const student = studentAdherence.find((item) => item.id === studentId)
+
+  const today = now?.getDate() ?? 0
+  const daysInMonth = now ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() : 31
+  const firstWeekday = now ? new Date(now.getFullYear(), now.getMonth(), 1).getDay() : 0
+  const monthName = now ? new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(now) : ''
+
+  const rows = studentAdherence
+    .map((item) => ({ ...item, ...trainingCount(item, today) }))
+    .sort((a, b) => a.trained - b.trained)
+  const average = rows.length ? rows.reduce((sum, item) => sum + item.trained, 0) / rows.length : 0
+  const averageRate = today ? Math.round((average / today) * 100) : 0
+
+  return (
+    <div className="flex min-h-full flex-col px-5 pb-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-ink-3 first-letter:uppercase">{monthName}</span>
+        <StudentPicker
+          value={studentId}
+          onChange={setStudentId}
+          label="Filtrar adesão aos treinos por aluno"
+        />
+      </div>
+
+      {!now ? (
+        <div className="mt-4 h-24 animate-pulse rounded-lg bg-subtle motion-reduce:animate-none" />
+      ) : student ? (
+        (() => {
+          const { trained } = trainingCount(student, today)
+          return (
+            <div className="mt-3 flex flex-1 flex-col">
+              <StudentHeader student={student} onNavigate={onNavigate} />
+              <div className="mt-3 flex items-baseline gap-2">
+                <strong className="text-[28px] leading-8 font-semibold tracking-[-0.02em] text-ink tabular-nums">
+                  {trained}/{daysInMonth}
+                </strong>
+                <span className="text-xs text-ink-3">dias treinados no mês</span>
+                <span className="ml-auto text-sm font-semibold text-ink tabular-nums">
+                  {Math.round((trained / today) * 100)}%
+                  <span className="ml-1 text-[11px] font-normal text-ink-3">até hoje</span>
+                </span>
+              </div>
+              <div
+                className="mt-3 grid w-full max-w-[300px] grid-cols-7 gap-1 text-center"
+                role="grid"
+                aria-label={`Treinos de ${student.name} em ${monthName}`}
+              >
+                {weekdayInitials.map((initial, index) => (
+                  <span
+                    key={index}
+                    className="text-[10px] font-medium text-ink-3"
+                    aria-hidden="true"
+                  >
+                    {initial}
+                  </span>
+                ))}
+                {Array.from({ length: firstWeekday }, (_, index) => (
+                  <span key={`pad-${index}`} aria-hidden="true" />
+                ))}
+                {Array.from({ length: daysInMonth }, (_, index) => {
+                  const day = index + 1
+                  const future = day > today
+                  const done = !future && student.trainedDays[index]
+                  return (
+                    <span
+                      key={day}
+                      role="gridcell"
+                      aria-label={`Dia ${day}: ${future ? 'ainda não chegou' : done ? 'treinou' : 'sem treino'}`}
+                      className={cx(
+                        'grid aspect-square place-items-center rounded-md text-[11px] tabular-nums',
+                        future
+                          ? 'text-ink-3/50'
+                          : done
+                            ? 'bg-brand font-semibold text-white'
+                            : 'border border-line text-ink-3',
+                        day === today && 'ring-2 ring-brand/40 ring-offset-1 ring-offset-surface',
+                      )}
+                    >
+                      {day}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()
+      ) : (
+        <div className="mt-3 flex flex-1 flex-col">
+          <div className="flex items-baseline gap-2">
+            <strong className="text-[28px] leading-8 font-semibold tracking-[-0.02em] text-ink tabular-nums">
+              {average.toFixed(0)}/{daysInMonth}
+            </strong>
+            <span className="text-xs text-ink-3">dias treinados em média por aluno</span>
+            <span className="ml-auto text-sm font-semibold text-ink tabular-nums">
+              {averageRate}%
+            </span>
+          </div>
+          <p className="mt-3 text-xs font-semibold text-ink-3">Menor frequência no mês</p>
+          <ul className="mt-1 divide-y divide-line-subtle">
+            {rows.slice(0, 3).map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => setStudentId(item.id)}
+                  className="flex w-full items-center gap-2.5 py-2 text-left hover:text-brand"
+                >
+                  <Avatar src={item.avatar} name={item.name} size={24} />
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{item.name}</span>
+                  <span className="text-xs text-ink-2 tabular-nums">
+                    {item.trained}/{daysInMonth} dias
+                  </span>
+                  <span className="w-16 overflow-hidden rounded-full bg-subtle" aria-hidden="true">
+                    <span
+                      className="block h-1.5 rounded-full bg-warning"
+                      style={{ width: `${Math.round((item.trained / item.elapsed) * 100)}%` }}
+                    />
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

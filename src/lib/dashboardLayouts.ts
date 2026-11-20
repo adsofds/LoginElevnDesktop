@@ -1,4 +1,9 @@
-import { defaultDashboardLayout, type DashboardLayoutItem, type WidgetId } from './dashboard'
+import {
+  defaultDashboardLayout,
+  widgetIds,
+  type DashboardLayoutItem,
+  type WidgetId,
+} from './dashboard'
 
 export type WidgetSize = { columns: number; height: number }
 export type WidgetSizes = Partial<Record<WidgetId, WidgetSize>>
@@ -39,8 +44,8 @@ export const builtInLayouts: SavedDashboardLayout[] = [
       item('kpi-overview', 0, '12', 'compact'),
       item('attention-list', 1, '8', 'tall'),
       item('weekly-agenda', 2, '4', 'tall'),
-      item('workout-adherence', 3, '6'),
-      item('progress', 4, '6'),
+      item('workout-adherence', 3, '6', 'tall'),
+      item('progress', 4, '6', 'tall'),
       item('students-table', 5, '12', 'tall'),
     ],
   },
@@ -54,7 +59,7 @@ export const builtInLayouts: SavedDashboardLayout[] = [
       item('nutrition-adherence', 1, '6'),
       item('adherence-chart', 2, '6'),
       item('goals-chart', 3, '6'),
-      item('team-overview', 4, '6'),
+      item('recent-activity', 4, '6'),
       item('students-table', 5, '12', 'tall'),
     ],
   },
@@ -90,7 +95,11 @@ export function readLayoutState(): StoredState {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return { layouts: [] }
     const parsed = JSON.parse(raw) as StoredState
-    return { layouts: Array.isArray(parsed.layouts) ? parsed.layouts : [], activeId: parsed.activeId, defaultId: parsed.defaultId }
+    return {
+      layouts: Array.isArray(parsed.layouts) ? parsed.layouts : [],
+      activeId: parsed.activeId,
+      defaultId: parsed.defaultId,
+    }
   } catch {
     return { layouts: [] }
   }
@@ -105,18 +114,30 @@ export function writeLayoutState(state: StoredState) {
 }
 
 /** Built-ins (with any customization applied) followed by the user's own layouts. */
-export function mergeLayouts(stored: SavedDashboardLayout[]): SavedDashboardLayout[] {
+export function mergeLayouts(rawStored: SavedDashboardLayout[]): SavedDashboardLayout[] {
+  // Layouts saved before a widget was retired (e.g. "Últimas atualizações") just drop it.
+  const known = new Set<string>(widgetIds)
+  const stored = rawStored.map((layout) => ({
+    ...layout,
+    items: layout.items.filter((entry) => known.has(entry.widget)),
+  }))
   const overrides = new Map(stored.map((layout) => [layout.id, layout]))
   const builtIns = builtInLayouts.map((layout) => {
     const override = overrides.get(layout.id)
-    return override ? { ...layout, name: override.name, items: override.items, sizes: override.sizes } : layout
+    return override
+      ? { ...layout, name: override.name, items: override.items, sizes: override.sizes }
+      : layout
   })
-  const custom = stored.filter((layout) => !builtInLayouts.some((builtIn) => builtIn.id === layout.id))
+  const custom = stored.filter(
+    (layout) => !builtInLayouts.some((builtIn) => builtIn.id === layout.id),
+  )
   return [...builtIns, ...custom]
 }
 
 export function isCustomizedBuiltIn(id: string, stored: SavedDashboardLayout[]) {
-  return builtInLayouts.some((layout) => layout.id === id) && stored.some((layout) => layout.id === id)
+  return (
+    builtInLayouts.some((layout) => layout.id === id) && stored.some((layout) => layout.id === id)
+  )
 }
 
 export function makeLayoutId(name: string) {

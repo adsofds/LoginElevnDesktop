@@ -43,7 +43,14 @@ export const sections: Section[] = [
     group: 'Operação',
     comingSoon: true,
   },
-  { id: 'club', label: 'Elevn Club', href: '/club', icon: 'creation', group: 'Conteúdo' },
+  {
+    id: 'club',
+    label: 'Elevn Club',
+    href: '/club',
+    icon: 'creation',
+    group: 'Conteúdo',
+    comingSoon: true,
+  },
   {
     id: 'configuracoes',
     label: 'Configurações',
@@ -66,7 +73,7 @@ export function sectionFromPathname(pathname: string | null): Section | undefine
 
 export const internoTabs = [
   { id: 'trello', label: 'Trello', internal: 'board' },
-  { id: 'atualizacoes', label: 'Atualizações e Agenda', internal: 'updates' },
+  { id: 'agenda', label: 'Agenda', internal: 'updates' },
   { id: 'postagens', label: 'Postagens', internal: 'posts' },
   { id: 'formulario', label: 'Formulário', internal: 'forms' },
 ] as const
@@ -83,11 +90,13 @@ export const configTabs = [
   { id: 'seguranca', label: 'Segurança', internal: 'security' },
 ] as const
 
+/** Sections of the student file (?aba= opens and scrolls to one of them). */
 export const fichaTabs = [
-  { id: 'checkin', label: 'Check-in LiveClin' },
-  { id: 'treino', label: 'Treino (MFIT)' },
-  { id: 'dieta', label: 'Dieta (WebDiet)' },
-  { id: 'fotos', label: 'Fotos e comparador' },
+  { id: 'checkin', label: 'Check-in semanal' },
+  { id: 'treino', label: 'Treino' },
+  { id: 'dieta', label: 'Dieta' },
+  { id: 'fotos', label: 'Fotos e evolução' },
+  { id: 'acesso', label: 'Acesso e plano' },
 ] as const
 
 type TabDef = { readonly id: string; readonly label: string; readonly internal: string }

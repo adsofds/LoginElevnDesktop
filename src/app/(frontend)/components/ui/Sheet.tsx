@@ -13,6 +13,7 @@ export function Sheet({
   side = 'right',
   label,
   className,
+  layer = 'z-50',
   children,
 }: {
   open: boolean
@@ -20,6 +21,8 @@ export function Sheet({
   side?: 'left' | 'right'
   label: string
   className?: string
+  /** Stacking class for the overlay; raise it to open above another overlay (e.g. the student file). */
+  layer?: string
   children: ReactNode
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
@@ -67,7 +70,7 @@ export function Sheet({
 
   return (
     <div
-      className={cx('fixed inset-0 z-50', open ? 'visible' : 'invisible pointer-events-none')}
+      className={cx('fixed inset-0', layer, open ? 'visible' : 'invisible pointer-events-none')}
       aria-hidden={!open}
     >
       <button
