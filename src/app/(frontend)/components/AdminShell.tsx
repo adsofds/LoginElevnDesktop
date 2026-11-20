@@ -371,7 +371,7 @@ function NewMenu() {
 /* ---------- Shell ---------- */
 
 export default function AdminShell({ children }: { children: ReactNode }) {
-  const { ready, activeTheme, unreadCount } = usePanel()
+  const { ready, activeTheme, siteForms } = usePanel()
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -427,7 +427,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   useEffect(() => setMobileOpen(false), [pathname])
 
   const counts: Partial<Record<SectionId, number>> = {
-    interno: unreadCount,
+    interno: siteForms.filter((form) => form.temperature === 'Quente').length,
     alunos: pendingCheckins,
   }
 

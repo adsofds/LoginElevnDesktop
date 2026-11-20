@@ -252,46 +252,6 @@
   background: var(--sand-93-2);
 }
 
-.students-directory-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.75fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.student-inspector-card {
-  border: 1px solid var(--sand-85);
-  border-radius: 13px;
-  background: var(--sand-100);
-  overflow: hidden;
-}
-
-.roster-adherence-cell > div {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.roster-adherence-cell > div > span {
-  flex: 1;
-  height: 6px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--sand-90);
-}
-
-.roster-adherence-cell > div > span > i {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--elevn-accent);
-}
-
-.roster-adherence-cell strong {
-  color: var(--ink-16);
-  font-size: 12px;
-}
-
 .student-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -699,28 +659,6 @@
   line-height: 1.35;
 }
 
-.liveclin-full-report {
-  margin-top: 12px;
-  padding: 12px 13px;
-  border-left: 3px solid var(--elevn-accent);
-  border-radius: 0 9px 9px 0;
-  background: var(--gold-92);
-}
-
-.liveclin-full-report span {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--elevn-accent);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.liveclin-full-report p {
-  color: var(--ink-19);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 .modal-app-and-coach-section {
   display: flex;
   flex-direction: column;
@@ -864,71 +802,6 @@
   background: var(--sand-90);
 }
 
-.student-inspector-card {
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.student-inspector-card > header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.student-inspector-card > header img {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.student-inspector-card > header span {
-  color: var(--gold-42);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.student-inspector-card > header h3 {
-  margin: 2px 0;
-  color: var(--ink-14);
-  font-size: 16px;
-}
-
-.student-inspector-card > header small {
-  color: var(--slate-47);
-  font-size: 11px;
-}
-
-.inspector-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.inspector-metrics > div {
-  padding: 10px;
-  border: 1px solid var(--sand-87);
-  border-radius: 9px;
-  background: var(--sand-95);
-}
-
-.inspector-metrics span {
-  display: block;
-  color: var(--slate-55);
-  font-size: 11px;
-}
-
-.inspector-metrics strong {
-  margin-top: 3px;
-  display: block;
-  color: var(--ink-16);
-  font-size: 13px;
-}
-
-.inspector-note-box,
 .inspector-feedback-box {
   padding: 12px;
   border-radius: 9px;
@@ -940,7 +813,6 @@
   background: var(--gold-90);
 }
 
-.inspector-note-box span,
 .inspector-feedback-box span {
   display: block;
   margin-bottom: 4px;
@@ -949,7 +821,6 @@
   font-weight: 700;
 }
 
-.inspector-note-box p,
 .inspector-feedback-box p {
   color: var(--slate-26);
   font-size: 12px;
@@ -1436,7 +1307,7 @@
 @media (max-width: 1120px) {
 
   
-  .students-directory-layout,
+  
   .student-create-form,
   .student-modal-columns,
   .student-modal-highlights,
@@ -2073,42 +1944,28 @@
   backdrop-filter: blur(12px);
 }
 
-.ficha-body {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  align-items: start;
-  gap: 24px;
-  padding: 24px 28px 40px;
-}
-
-.ficha-summary {
+.ficha-stack {
   display: flex;
+  width: min(960px, 100%);
+  margin-inline: auto;
   flex-direction: column;
   gap: 12px;
+  padding: 24px 28px 48px;
 }
 
-.ficha-summary .student-access-panel {
-  flex-direction: column;
-  align-items: stretch;
+.ficha-stack .student-modal-highlights {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.ficha-summary .student-access-actions {
-  align-items: stretch;
-  flex-direction: column;
-}
-
-.ficha-summary .student-modal-highlights {
-  grid-template-columns: 1fr;
-}
-
-.ficha-main {
-  min-width: 0;
+@media (max-width: 640px) {
+  .ficha-stack .student-modal-highlights {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 980px) {
-  .ficha-body {
-    grid-template-columns: 1fr;
-    padding-inline: 18px;
+  .ficha-stack {
+    padding-inline: 14px;
   }
 
   .student-modal-header {

@@ -2,20 +2,12 @@
 
 import {
   useEffect,
-  useRef,
   useState,
   type CSSProperties,
   type FormEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import {
-  formatFormTimestamp,
-  formatPersonName,
-  formatRelativeTime,
-  splitReferralOrBirth,
   initialSiteFormSubmissions,
-  type InternalUpdate,
-  type InternalUpdateReply,
   type LeadTemperature,
   type SiteFormSubmission,
 } from '@/lib/demo-internal'
@@ -24,7 +16,6 @@ import LeadsSpreadsheet from './interno/LeadsSpreadsheet'
 import InternProgress from './interno/InternProgress'
 import WeekCalendar, { type CalendarAppointment } from './interno/WeekCalendar'
 import { Segmented } from './ui/Segmented'
-import { Badge, Kbd } from './ui/Badge'
 import { Button } from './ui/Button'
 import { cx } from './ui/cx'
 import { Icon } from './ui/icons'
@@ -394,31 +385,6 @@ const starterContentNotes: ContentNote[] = [
   },
 ]
 
-const quickReplies = [
-  'Ajuste aplicado, mantém a carga.',
-  'Recebido! Reviso e te retorno hoje.',
-  'Ótimo trabalho, segue assim.',
-]
-
-const mailField =
-  'mt-1 h-10 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-3 focus:border-brand focus:outline-none'
-
-/** Where a conversation came from, shown as a small icon in the list. */
-function mailOrigin(update: InternalUpdate): { icon: string; label: string } {
-  if (/MFIT/.test(update.subject)) return { icon: 'training', label: 'Comentário do MFIT' }
-  if (update.role === 'Aluno' || update.recipientCategory === 'aluno')
-    return { icon: 'students', label: 'Aluno pelo app' }
-  return { icon: 'team', label: 'Equipe' }
-}
-
-/** ⌘Enter / Ctrl+Enter submits the textarea's form. */
-function submitOnModEnter(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
-  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-    event.preventDefault()
-    event.currentTarget.form?.requestSubmit()
-  }
-}
-
 function makeId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
@@ -456,11 +422,6 @@ function formatMonth(year: number, month: number) {
 }
 
 export default function InternalWorkspace({
-  updates,
-  onCreateUpdate,
-  onToggleUpdate,
-  onMarkUpdateRead,
-  onReplyUpdate,
   siteForms = initialSiteFormSubmissions,
   onUpdateFormTemperature,
   onCreateFormSubmission,
@@ -469,17 +430,11 @@ export default function InternalWorkspace({
   onSectionChange,
   intent,
   onIntentHandled,
-  focusUpdateId,
   formSearch,
   onConvertLead,
 }: {
   /** "Converter em aluno" from the lead panel. */
   onConvertLead?: (lead: SiteFormSubmission) => void
-  updates: InternalUpdate[]
-  onCreateUpdate: (update: InternalUpdate) => void
-  onToggleUpdate: (updateId: string) => void
-  onMarkUpdateRead: (updateId: string, unread?: boolean) => void
-  onReplyUpdate: (updateId: string, reply: InternalUpdateReply) => void
   siteForms?: SiteFormSubmission[]
   onUpdateFormTemperature?: (formId: string, temperature: LeadTemperature) => void
   onCreateFormSubmission?: (submission: SiteFormSubmission) => void
@@ -487,11 +442,9 @@ export default function InternalWorkspace({
   /** Controlled tab (from the URL). Falls back to local state when omitted. */
   section?: 'board' | 'updates' | 'posts' | 'forms'
   onSectionChange?: (section: 'board' | 'updates' | 'posts' | 'forms') => void
-  /** Opens a create flow once ("+ Novo" / ⌘K): lead, mensagem, compromisso or cartao. */
+  /** Opens a create flow once ("+ Novo" / ⌘K): lead, compromisso or cartao. */
   intent?: string | null
   onIntentHandled?: () => void
-  /** Selects a conversation in the inbox (deep link from notifications). */
-  focusUpdateId?: string | null
   /** Pre-fills the leads search (deep link from ⌘K). */
   formSearch?: string | null
 }) {
@@ -574,15 +527,6 @@ export default function InternalWorkspace({
   const [contentNotes, setContentNotes] = useState(starterContentNotes)
   const [replyingNoteId, setReplyingNoteId] = useState<string | null>(null)
   const [conversationSaved, setConversationSaved] = useState(false)
-  const [mailFolder, setMailFolder] = useState<
-    'inbox' | 'unread' | 'students' | 'team' | 'sent' | 'completed'
-  >('inbox')
-  const [mailSearch, setMailSearch] = useState('')
-  const [selectedUpdateId, setSelectedUpdateId] = useState<string>(updates[0]?.id ?? '')
-  const [composingMail, setComposingMail] = useState(false)
-  const [recipientCategory, setRecipientCategory] = useState<'equipe' | 'aluno'>('equipe')
-  const [replyDraft, setReplyDraft] = useState('')
-
   useEffect(() => {
     setAppointments((current) => {
       const agendaOnlyAppointments = current.filter(
@@ -629,7 +573,6 @@ export default function InternalWorkspace({
   useEffect(() => {
     if (!intent) return
     if (intent === 'lead') setNewFormModalOpen(true)
-    else if (intent === 'mensagem') setComposingMail(true)
     else if (intent === 'compromisso') {
       setEditingAppointmentId(null)
       setAppointmentComposerOpen(true)
@@ -646,13 +589,6 @@ export default function InternalWorkspace({
     onIntentHandled?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intent])
-
-  useEffect(() => {
-    if (focusUpdateId) {
-      setSelectedUpdateId(focusUpdateId)
-      setComposingMail(false)
-    }
-  }, [focusUpdateId])
 
   useEffect(() => {
     if (formSearch) {
@@ -1088,132 +1024,6 @@ export default function InternalWorkspace({
     }))
   }
 
-  const createInternalUpdate = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    const subject = String(form.get('update-subject') || '').trim()
-    const message = String(form.get('update-message') || '').trim()
-    const audience = String(form.get('update-audience') || 'Toda a equipe')
-    const type = String(form.get('update-type') || 'Mensagem') as InternalUpdate['type']
-    if (!message) return
-    const newUpdateId = makeId('update')
-    onCreateUpdate({
-      id: newUpdateId,
-      author: 'Breno Monteiro',
-      initials: 'BM',
-      avatar: '/people/breno-monteiro.png',
-      role: 'Administrador',
-      time: 'Agora',
-      subject: subject || `${type} para ${audience}`,
-      message,
-      audience,
-      recipientCategory,
-      type,
-      completed: false,
-      unread: false,
-      replies: [],
-    })
-    setSelectedUpdateId(newUpdateId)
-    setComposingMail(false)
-    event.currentTarget.reset()
-  }
-
-  const submitMailReply = (event: FormEvent<HTMLFormElement>, updateId: string) => {
-    event.preventDefault()
-    const text = replyDraft.trim()
-    if (!text) return
-    onReplyUpdate(updateId, {
-      id: makeId('reply'),
-      author: 'Breno Monteiro',
-      avatar: '/people/breno-monteiro.png',
-      role: 'Administrador · Personal Trainer',
-      time: 'Agora',
-      message: text,
-    })
-    setReplyDraft('')
-  }
-
-  const filteredMailUpdates = updates.filter((update) => {
-    if (mailFolder === 'inbox' && update.completed) return false
-    if (mailFolder === 'unread' && !update.unread) return false
-    if (
-      mailFolder === 'students' &&
-      update.recipientCategory !== 'aluno' &&
-      update.role !== 'Aluno'
-    )
-      return false
-    if (mailFolder === 'team' && (update.recipientCategory === 'aluno' || update.role === 'Aluno'))
-      return false
-    if (mailFolder === 'sent' && update.author !== 'Breno Monteiro') return false
-    if (mailFolder === 'completed' && !update.completed) return false
-
-    if (!mailSearch.trim()) return true
-    const query = mailSearch.toLowerCase()
-    return (
-      (update.author ?? '').toLowerCase().includes(query) ||
-      (update.audience ?? '').toLowerCase().includes(query) ||
-      (update.subject ?? '').toLowerCase().includes(query) ||
-      (update.message ?? '').toLowerCase().includes(query)
-    )
-  })
-
-  const selectedMail =
-    updates.find((update) => update.id === selectedUpdateId) ?? filteredMailUpdates[0] ?? updates[0]
-
-  const replyRef = useRef<HTMLTextAreaElement>(null)
-
-  const selectMail = (id: string) => {
-    setSelectedUpdateId(id)
-    setComposingMail(false)
-    const target = updates.find((update) => update.id === id)
-    if (target?.unread) onMarkUpdateRead(id, false)
-  }
-
-  /** Inbox triage: J/K move, E concludes, U toggles unread, R jumps to the reply box. */
-  const onInboxKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
-    const target = event.target as HTMLElement
-    if (
-      target.closest('input, textarea, select, [contenteditable="true"]') ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.altKey
-    )
-      return
-    const key = event.key.toLowerCase()
-    const index = filteredMailUpdates.findIndex((update) => update.id === selectedMail?.id)
-    if (key === 'j' || key === 'k') {
-      event.preventDefault()
-      const next =
-        filteredMailUpdates[
-          Math.max(0, Math.min(filteredMailUpdates.length - 1, index + (key === 'j' ? 1 : -1)))
-        ]
-      if (next) {
-        selectMail(next.id)
-        document.querySelector<HTMLElement>(`[data-mail-id="${next.id}"]`)?.focus()
-      }
-    } else if (key === 'e' && selectedMail) {
-      event.preventDefault()
-      onToggleUpdate(selectedMail.id)
-    } else if (key === 'u' && selectedMail) {
-      event.preventDefault()
-      onMarkUpdateRead(selectedMail.id, !selectedMail.unread)
-    } else if (key === 'r' && selectedMail) {
-      event.preventDefault()
-      replyRef.current?.focus()
-    }
-  }
-
-  const inboxCount = updates.filter((update) => !update.completed).length
-  const unreadMailCount = updates.filter((update) => update.unread).length
-  const studentMailCount = updates.filter(
-    (update) => update.recipientCategory === 'aluno' || update.role === 'Aluno',
-  ).length
-  const teamMailCount = updates.filter(
-    (update) => update.recipientCategory !== 'aluno' && update.role !== 'Aluno',
-  ).length
-  const sentMailCount = updates.filter((update) => update.author === 'Breno Monteiro').length
-  const completedMailCount = updates.filter((update) => update.completed).length
-
   const createContentGoal = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
@@ -1327,11 +1137,7 @@ export default function InternalWorkspace({
         onChange={setActiveSection}
         items={[
           { id: 'board', label: 'Trello' },
-          {
-            id: 'updates',
-            label: 'Atualizações e Agenda',
-            count: updates.filter((u) => u.unread).length,
-          },
+          { id: 'updates', label: 'Agenda' },
           { id: 'posts', label: 'Postagens' },
           {
             id: 'forms',
@@ -1362,442 +1168,6 @@ export default function InternalWorkspace({
 
       {activeSection === 'updates' && (
         <section className="updates-agenda-section">
-          <section
-            className="flex min-h-[560px] flex-col overflow-hidden rounded-card border border-line bg-surface lg:h-[calc(100dvh-210px)]"
-            aria-label="Caixa de entrada e mensagens"
-            onKeyDown={onInboxKeyDown}
-          >
-            <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[200px_minmax(300px,380px)_1fr]">
-              <aside
-                className="flex flex-col gap-1 border-b border-line bg-subtle p-3 lg:border-r lg:border-b-0"
-                aria-label="Pastas de mensagens"
-              >
-                <Button
-                  variant="accent"
-                  size="sm"
-                  className="mb-2 w-full"
-                  onClick={() => setComposingMail(true)}
-                >
-                  <Icon name="plus" className="size-4" /> Escrever
-                </Button>
-                <nav className="flex gap-1 overflow-x-auto lg:flex-col">
-                  {(
-                    [
-                      ['inbox', 'Caixa de entrada', inboxCount],
-                      ['unread', 'Não lidas', unreadMailCount],
-                      ['students', 'Alunos', studentMailCount],
-                      ['team', 'Equipe interna', teamMailCount],
-                      ['sent', 'Enviados', sentMailCount],
-                      ['completed', 'Concluídos', completedMailCount],
-                    ] as const
-                  ).map(([id, label, count]) => {
-                    const active = mailFolder === id && !composingMail
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        aria-current={active ? 'true' : undefined}
-                        onClick={() => {
-                          setMailFolder(id)
-                          setComposingMail(false)
-                        }}
-                        className={cx(
-                          'flex shrink-0 items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-[13px] whitespace-nowrap transition-colors',
-                          active
-                            ? 'bg-surface font-medium text-ink shadow-[0_0_0_1px_var(--border-default)]'
-                            : 'text-ink-2 hover:bg-surface/70 hover:text-ink',
-                        )}
-                      >
-                        {label}
-                        <span
-                          className={cx(
-                            'text-xs tabular-nums',
-                            id === 'unread' && count > 0
-                              ? 'font-semibold text-brand'
-                              : 'text-ink-3',
-                          )}
-                        >
-                          {count}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </nav>
-                <p className="mt-auto hidden pt-4 text-[11px] leading-5 text-ink-3 lg:block">
-                  <Kbd>J</Kbd> <Kbd>K</Kbd> navegar · <Kbd>E</Kbd> concluir · <Kbd>U</Kbd> não lida
-                  · <Kbd>R</Kbd> responder
-                </p>
-              </aside>
-
-              <div className="flex min-h-0 flex-col border-b border-line lg:border-r lg:border-b-0">
-                <label className="relative block border-b border-line p-2.5">
-                  <span className="sr-only">Buscar mensagens</span>
-                  <Icon
-                    name="search"
-                    className="pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-1/2 text-ink-3"
-                  />
-                  <input
-                    type="search"
-                    value={mailSearch}
-                    onChange={(event) => setMailSearch(event.target.value)}
-                    placeholder="Buscar pessoa, aluno ou assunto"
-                    className="h-9 w-full rounded-control border border-line bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-3 focus:border-brand focus:outline-none"
-                  />
-                </label>
-                <div
-                  className="max-h-[420px] min-h-0 flex-1 overflow-y-auto lg:max-h-none"
-                  role="list"
-                  aria-label="Lista de mensagens"
-                >
-                  {filteredMailUpdates.length === 0 ? (
-                    <p className="px-4 py-10 text-center text-sm text-ink-3">
-                      Nenhuma conversa nesta pasta.
-                    </p>
-                  ) : (
-                    filteredMailUpdates.map((update) => {
-                      const isSelected = !composingMail && selectedMail?.id === update.id
-                      const replyCount = update.replies?.length ?? 0
-                      const origin = mailOrigin(update)
-                      return (
-                        <button
-                          key={update.id}
-                          type="button"
-                          role="listitem"
-                          aria-current={isSelected ? 'true' : undefined}
-                          data-mail-id={update.id}
-                          className={cx(
-                            'relative flex w-full gap-3 border-b border-line-subtle px-4 py-3 text-left transition-colors',
-                            isSelected ? 'bg-brand-soft/50' : 'hover:bg-subtle',
-                            update.completed && 'opacity-60',
-                          )}
-                          onClick={() => selectMail(update.id)}
-                        >
-                          {isSelected && (
-                            <span
-                              aria-hidden="true"
-                              className="absolute inset-y-0 left-0 w-0.5 bg-brand"
-                            />
-                          )}
-                          <img
-                            src={update.avatar}
-                            alt=""
-                            className="size-8 shrink-0 rounded-full object-cover"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="flex items-center gap-1.5">
-                              <span
-                                className={cx(
-                                  'truncate text-sm',
-                                  update.unread ? 'font-semibold text-ink' : 'text-ink-2',
-                                )}
-                              >
-                                {update.author}
-                              </span>
-                              <span title={origin.label} className="shrink-0 text-ink-3">
-                                <Icon name={origin.icon} className="size-3.5" />
-                                <span className="sr-only">{origin.label}</span>
-                              </span>
-                              <time className="ml-auto shrink-0 text-[11px] text-ink-3">
-                                {update.time}
-                              </time>
-                            </p>
-                            <p
-                              className={cx(
-                                'truncate text-[13px]',
-                                update.unread ? 'font-medium text-ink' : 'text-ink-2',
-                              )}
-                            >
-                              {update.subject || `${update.type} · ${update.audience}`}
-                            </p>
-                            <p className="flex items-center gap-2 text-xs text-ink-3">
-                              <span className="truncate">{update.message}</span>
-                              {replyCount > 0 && (
-                                <span className="shrink-0 tabular-nums">· {replyCount}</span>
-                              )}
-                            </p>
-                          </div>
-                          {update.unread && (
-                            <span
-                              aria-label="Não lida"
-                              className="mt-1.5 size-2 shrink-0 rounded-full bg-brand"
-                            />
-                          )}
-                        </button>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-
-              <div className="flex min-h-[420px] min-w-0 flex-col">
-                {composingMail ? (
-                  <form className="flex min-h-0 flex-1 flex-col" onSubmit={createInternalUpdate}>
-                    <header className="flex items-center justify-between gap-3 border-b border-line px-6 py-4">
-                      <h3 className="text-[15px] font-semibold text-ink">
-                        Nova mensagem ou tarefa
-                      </h3>
-                      <Button size="sm" variant="ghost" onClick={() => setComposingMail(false)}>
-                        Cancelar
-                      </Button>
-                    </header>
-                    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <label className="block text-xs font-medium text-ink-2">
-                          Enviar para
-                          <select
-                            value={recipientCategory}
-                            onChange={(event) =>
-                              setRecipientCategory(event.target.value as 'equipe' | 'aluno')
-                            }
-                            className={mailField}
-                          >
-                            <option value="equipe">Equipe / colaboradores</option>
-                            <option value="aluno">Aluno da consultoria</option>
-                          </select>
-                        </label>
-                        <label className="block text-xs font-medium text-ink-2">
-                          Destinatário
-                          {recipientCategory === 'equipe' ? (
-                            <select
-                              name="update-audience"
-                              defaultValue="Toda a equipe"
-                              className={mailField}
-                            >
-                              <option>Toda a equipe</option>
-                              <option>Grupo Nutrição</option>
-                              <option>Grupo Treino</option>
-                              <option>Administradores</option>
-                              <option>Gerentes</option>
-                              <option>Renata Alves (Nutrição)</option>
-                              <option>Gustavo Lima (Gerente)</option>
-                              <option>Paula Nunes (Admin)</option>
-                              <option>Marina Lopes (Estagiária)</option>
-                              <option>Felipe Santos (Estagiário)</option>
-                            </select>
-                          ) : (
-                            <select
-                              name="update-audience"
-                              defaultValue="Lucas Andrade (Aluno)"
-                              className={mailField}
-                            >
-                              <option>Lucas Andrade (Aluno)</option>
-                              <option>Camila Rocha (Aluna)</option>
-                              <option>Rafael Souza (Aluno)</option>
-                              <option>Juliana Costa (Aluna)</option>
-                              <option>Pedro Lima (Aluno)</option>
-                              <option>Aline Moraes (Aluna)</option>
-                              <option>Bruno Martins (Aluno)</option>
-                              <option>Todos os alunos ativos</option>
-                            </select>
-                          )}
-                        </label>
-                        <label className="block text-xs font-medium text-ink-2">
-                          Categoria
-                          <select name="update-type" defaultValue="Mensagem" className={mailField}>
-                            <option>Mensagem</option>
-                            <option>Tarefa</option>
-                            <option>Lembrete</option>
-                          </select>
-                        </label>
-                      </div>
-                      <label className="block text-xs font-medium text-ink-2">
-                        Assunto
-                        <input
-                          name="update-subject"
-                          required
-                          placeholder="Ex.: ajuste no plano alimentar"
-                          className={mailField}
-                        />
-                      </label>
-                      <label className="block text-xs font-medium text-ink-2">
-                        Mensagem
-                        <textarea
-                          name="update-message"
-                          rows={8}
-                          required
-                          placeholder="Escreva a orientação ou a tarefa"
-                          onKeyDown={submitOnModEnter}
-                          className={cx(mailField, 'h-auto resize-none py-2')}
-                        />
-                      </label>
-                    </div>
-                    <footer className="flex items-center justify-between gap-3 border-t border-line px-6 py-3">
-                      <span className="text-xs text-ink-3">
-                        <Kbd>⌘</Kbd> <Kbd>Enter</Kbd> envia
-                      </span>
-                      <Button type="submit" variant="accent">
-                        Enviar
-                      </Button>
-                    </footer>
-                  </form>
-                ) : selectedMail ? (
-                  <article className="flex min-h-0 flex-1 flex-col">
-                    <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-6 py-4">
-                      <div className="min-w-0">
-                        <h3 className="text-xl leading-7 font-semibold text-ink">
-                          {selectedMail.subject ||
-                            `${selectedMail.type} · ${selectedMail.audience}`}
-                        </h3>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          <Badge>{selectedMail.type}</Badge>
-                          <Badge>{selectedMail.role}</Badge>
-                          {selectedMail.completed && (
-                            <Badge tone="success" dot>
-                              Concluído
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title="Atalho: U"
-                          onClick={() => onMarkUpdateRead(selectedMail.id, !selectedMail.unread)}
-                        >
-                          {selectedMail.unread ? 'Marcar como lida' : 'Marcar não lida'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={selectedMail.completed ? 'secondary' : 'primary'}
-                          title="Atalho: E"
-                          onClick={() => onToggleUpdate(selectedMail.id)}
-                        >
-                          {selectedMail.completed ? (
-                            'Reabrir'
-                          ) : (
-                            <>
-                              <Icon name="check" className="size-4" /> Concluir
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </header>
-
-                    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-5">
-                      {/\(MFIT\)/.test(selectedMail.subject) && (
-                        <div className="flex items-center gap-3 rounded-lg border border-line bg-subtle px-3 py-2">
-                          <span
-                            aria-hidden="true"
-                            className="grid size-8 place-items-center rounded-md bg-brand-soft text-brand"
-                          >
-                            <Icon name="training" className="size-4" />
-                          </span>
-                          <div className="min-w-0 text-xs">
-                            <p className="font-semibold text-ink">
-                              {selectedMail.subject.split('·').slice(1).join('·').trim() ||
-                                'Treino'}
-                            </p>
-                            <p className="text-ink-3">
-                              {selectedMail.subject
-                                .split('·')[0]
-                                .replace('Comentário no ', '')
-                                .trim()}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      {[
-                        {
-                          id: selectedMail.id,
-                          author: selectedMail.author,
-                          avatar: selectedMail.avatar,
-                          role: `Para: ${selectedMail.audience} · ${selectedMail.role}`,
-                          time: selectedMail.time,
-                          message: selectedMail.message,
-                          own: selectedMail.author === 'Breno Monteiro',
-                        },
-                        ...(selectedMail.replies ?? []).map((reply) => ({
-                          ...reply,
-                          own: reply.author === 'Breno Monteiro' || selectedMail.role === 'Aluno',
-                        })),
-                      ].map((message, index) => (
-                        <section
-                          key={message.id}
-                          className={cx(
-                            'max-w-[640px] rounded-xl border px-4 py-3',
-                            index > 0 && message.own
-                              ? 'ml-auto border-brand/15 bg-brand-soft/60'
-                              : 'border-line bg-surface',
-                          )}
-                        >
-                          <header className="flex items-center gap-2.5">
-                            <img
-                              src={message.avatar}
-                              alt=""
-                              className="size-7 rounded-full object-cover"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-ink">
-                                {message.author}
-                              </p>
-                              <p className="truncate text-[11px] text-ink-3">{message.role}</p>
-                            </div>
-                            <time className="shrink-0 text-[11px] text-ink-3">{message.time}</time>
-                          </header>
-                          <p className="mt-2 text-sm leading-6 whitespace-pre-line text-ink">
-                            {message.message}
-                          </p>
-                        </section>
-                      ))}
-                    </div>
-
-                    <form
-                      className="border-t border-line px-6 py-3"
-                      onSubmit={(event) => submitMailReply(event, selectedMail.id)}
-                    >
-                      <div className="mb-2 flex flex-wrap gap-1.5" aria-label="Respostas rápidas">
-                        {quickReplies.map((text) => (
-                          <button
-                            key={text}
-                            type="button"
-                            onClick={() => {
-                              setReplyDraft(text)
-                              replyRef.current?.focus()
-                            }}
-                            className="rounded-full border border-line px-2.5 py-1 text-xs text-ink-2 transition-colors hover:border-brand/40 hover:text-ink"
-                          >
-                            {text}
-                          </button>
-                        ))}
-                      </div>
-                      <label htmlFor="mail-reply" className="sr-only">
-                        Responder para {selectedMail.author}
-                      </label>
-                      <textarea
-                        id="mail-reply"
-                        ref={replyRef}
-                        rows={2}
-                        value={replyDraft}
-                        onChange={(event) => setReplyDraft(event.target.value)}
-                        onKeyDown={submitOnModEnter}
-                        placeholder={`Responder para ${selectedMail.author}`}
-                        className="w-full resize-none rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:border-brand focus:outline-none"
-                      />
-                      <div className="mt-2 flex items-center justify-between gap-3">
-                        <span className="text-xs text-ink-3">
-                          <Kbd>⌘</Kbd> <Kbd>Enter</Kbd> envia · fica registrada na conversa
-                        </span>
-                        <Button
-                          size="sm"
-                          type="submit"
-                          variant="accent"
-                          disabled={!replyDraft.trim()}
-                        >
-                          Responder
-                        </Button>
-                      </div>
-                    </form>
-                  </article>
-                ) : (
-                  <p className="m-auto px-6 text-center text-sm text-ink-3">
-                    Selecione uma conversa ou escreva uma mensagem.
-                  </p>
-                )}
-              </div>
-            </div>
-          </section>
-
           <section className="internal-calendar">
             <header className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
               <h2 className="mr-auto text-xl leading-7 font-semibold text-ink">

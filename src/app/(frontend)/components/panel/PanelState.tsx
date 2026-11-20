@@ -11,13 +11,11 @@ import {
   type ReactNode,
 } from 'react'
 import {
-  initialInternalUpdates,
   initialSiteFormSubmissions,
-  type InternalUpdate,
-  type InternalUpdateReply,
   type LeadTemperature,
   type SiteFormSubmission,
 } from '@/lib/demo-internal'
+import { demoNotificationHistory, type StudentNotification } from '@/lib/student-notifications'
 import { presetThemes, type ThemeConfig } from '../SettingsWorkspace'
 
 /* Demo session. Real authentication (Payload `users`) is a later phase; until then the
@@ -42,30 +40,19 @@ export function writeDemoSession(active: boolean) {
   }
 }
 
-export type WorkoutReplyPayload = {
-  studentId: string
-  studentName: string
-  studentAvatar: string
-  workoutCode: 'Treino A' | 'Treino B' | 'Treino C'
-  workoutTitle: string
-  studentComment: string
-  adminReply: string
-}
-
 type PanelState = {
   ready: boolean
   user: { name: string; profession: string; avatar: string }
   currentDate: string
   trail: string[]
   setTrail: (trail: string[]) => void
-  internalUpdates: InternalUpdate[]
-  unreadCount: number
-  toggleInternalUpdate: (id: string) => void
-  markInternalUpdateRead: (id: string, unread?: boolean) => void
-  markAllInternalUpdatesRead: () => void
-  replyInternalUpdate: (id: string, reply: InternalUpdateReply) => void
-  createInternalUpdate: (update: InternalUpdate) => void
-  sendWorkoutReplyToInternal: (payload: WorkoutReplyPayload) => void
+  /** Alert ids ("Precisa de atenção") already seen in the bell. */
+  seenAlerts: string[]
+  markAlertsSeen: (ids: string[]) => void
+  /** One-way notifications to students (simulated delivery). */
+  notifications: StudentNotification[]
+  addNotification: (notification: StudentNotification) => void
+  cancelNotification: (id: string) => void
   siteForms: SiteFormSubmission[]
   updateSiteFormTemperature: (id: string, temperature: LeadTemperature) => void
   createSiteFormSubmission: (submission: SiteFormSubmission) => void
@@ -108,14 +95,15 @@ function formatToday() {
 
 /**
  * State shared by every panel route. It lives in the (painel) layout, so it survives
- * navigation between sections: inbox, leads and theme no longer reset when you switch pages.
+ * navigation between sections: alerts, leads and theme no longer reset when you switch pages.
  */
 export function PanelProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const [ready, setReady] = useState(false)
   const [currentDate, setCurrentDate] = useState('')
   const [trail, setTrailState] = useState<string[]>([])
-  const [internalUpdates, setInternalUpdates] = useState(initialInternalUpdates)
+  const [seenAlerts, setSeenAlerts] = useState<string[]>([])
+  const [notifications, setNotifications] = useState<StudentNotification[]>([])
   const [siteForms, setSiteForms] = useState<SiteFormSubmission[]>(initialSiteFormSubmissions)
   const [activeTheme, setActiveThemeState] = useState<ThemeConfig>(presetThemes[0])
 
@@ -132,6 +120,7 @@ export function PanelProvider({ children }: { children: ReactNode }) {
       /* ignore a corrupt or unavailable theme preference */
     }
     setCurrentDate(formatToday())
+    setNotifications(demoNotificationHistory(new Date()))
     setReady(true)
   }, [router])
 
@@ -144,92 +133,6 @@ export function PanelProvider({ children }: { children: ReactNode }) {
     } catch {
       /* preference not persisted */
     }
-  }, [])
-
-  const toggleInternalUpdate = useCallback((updateId: string) => {
-    setInternalUpdates((current) =>
-      current.map((update) =>
-        update.id === updateId
-          ? { ...update, completed: !update.completed, unread: false }
-          : update,
-      ),
-    )
-  }, [])
-
-  const markInternalUpdateRead = useCallback((updateId: string, unread = false) => {
-    setInternalUpdates((current) =>
-      current.map((update) => (update.id === updateId ? { ...update, unread } : update)),
-    )
-  }, [])
-
-  const markAllInternalUpdatesRead = useCallback(() => {
-    setInternalUpdates((current) => current.map((update) => ({ ...update, unread: false })))
-  }, [])
-
-  const replyInternalUpdate = useCallback((updateId: string, reply: InternalUpdateReply) => {
-    setInternalUpdates((current) => {
-      const target = current.find((update) => update.id === updateId)
-      if (!target) return current
-      const updatedItem: InternalUpdate = {
-        ...target,
-        time: 'Agora',
-        unread: false,
-        replies: [...(target.replies ?? []), reply],
-      }
-      return [updatedItem, ...current.filter((update) => update.id !== updateId)]
-    })
-  }, [])
-
-  const createInternalUpdate = useCallback((update: InternalUpdate) => {
-    setInternalUpdates((current) => [update, ...current])
-  }, [])
-
-  const sendWorkoutReplyToInternal = useCallback((payload: WorkoutReplyPayload) => {
-    const threadId = `workout-comment-${payload.studentId}-${payload.workoutCode.replace(/\s+/g, '-').toLowerCase()}`
-    const nameParts = payload.studentName.trim().split(/\s+/)
-    const initials =
-      nameParts.length >= 2
-        ? `${nameParts[0][0] ?? 'A'}${nameParts[nameParts.length - 1][0] ?? 'L'}`.toUpperCase()
-        : (nameParts[0]?.slice(0, 2) || 'AL').toUpperCase()
-
-    const newReply: InternalUpdateReply = {
-      id: `reply-${Date.now()}`,
-      author: user.name,
-      avatar: user.avatar,
-      role: user.profession,
-      time: 'Agora',
-      message: payload.adminReply,
-    }
-
-    setInternalUpdates((current) => {
-      const existing = current.find((item) => item.id === threadId)
-      if (existing) {
-        const updated: InternalUpdate = {
-          ...existing,
-          time: 'Respondido agora',
-          unread: false,
-          replies: [...(existing.replies ?? []), newReply],
-        }
-        return [updated, ...current.filter((item) => item.id !== threadId)]
-      }
-      const created: InternalUpdate = {
-        id: threadId,
-        author: payload.studentName,
-        initials,
-        avatar: payload.studentAvatar,
-        role: 'Aluno',
-        time: 'Respondido agora',
-        subject: `Comentário no ${payload.workoutCode} (MFIT) · ${payload.workoutTitle}`,
-        message: payload.studentComment,
-        audience: user.name,
-        recipientCategory: 'aluno',
-        type: 'Mensagem',
-        completed: false,
-        unread: false,
-        replies: [newReply],
-      }
-      return [created, ...current]
-    })
   }, [])
 
   const updateSiteFormTemperature = useCallback((formId: string, temperature: LeadTemperature) => {
@@ -247,7 +150,19 @@ export function PanelProvider({ children }: { children: ReactNode }) {
     router.push('/')
   }, [router])
 
-  const unreadCount = internalUpdates.filter((update) => update.unread).length
+  const markAlertsSeen = useCallback((ids: string[]) => {
+    setSeenAlerts((current) => Array.from(new Set([...current, ...ids])))
+  }, [])
+
+  const addNotification = useCallback((notification: StudentNotification) => {
+    setNotifications((current) => [notification, ...current])
+  }, [])
+
+  const cancelNotification = useCallback((id: string) => {
+    setNotifications((current) =>
+      current.map((item) => (item.id === id ? { ...item, status: 'cancelada' } : item)),
+    )
+  }, [])
 
   const value = useMemo<PanelState>(
     () => ({
@@ -256,14 +171,11 @@ export function PanelProvider({ children }: { children: ReactNode }) {
       currentDate,
       trail,
       setTrail,
-      internalUpdates,
-      unreadCount,
-      toggleInternalUpdate,
-      markInternalUpdateRead,
-      markAllInternalUpdatesRead,
-      replyInternalUpdate,
-      createInternalUpdate,
-      sendWorkoutReplyToInternal,
+      seenAlerts,
+      markAlertsSeen,
+      notifications,
+      addNotification,
+      cancelNotification,
       siteForms,
       updateSiteFormTemperature,
       createSiteFormSubmission,
@@ -276,14 +188,11 @@ export function PanelProvider({ children }: { children: ReactNode }) {
       currentDate,
       trail,
       setTrail,
-      internalUpdates,
-      unreadCount,
-      toggleInternalUpdate,
-      markInternalUpdateRead,
-      markAllInternalUpdatesRead,
-      replyInternalUpdate,
-      createInternalUpdate,
-      sendWorkoutReplyToInternal,
+      seenAlerts,
+      markAlertsSeen,
+      notifications,
+      addNotification,
+      cancelNotification,
       siteForms,
       updateSiteFormTemperature,
       createSiteFormSubmission,

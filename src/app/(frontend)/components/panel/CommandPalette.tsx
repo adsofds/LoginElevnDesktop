@@ -7,7 +7,7 @@ import { studentDirectory } from '../StudentsWorkspace'
 import { Kbd } from '../ui/Badge'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
-import { clubTabs, configTabs, internoTabs, panelHref, sections } from './navigation'
+import { configTabs, internoTabs, panelHref, sections } from './navigation'
 import { usePanel } from './PanelState'
 import { createActions } from './createActions'
 
@@ -56,7 +56,6 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         parent: 'Interno',
         icon: 'internal',
       })),
-      ...clubTabs.map((tab) => ({ ...tab, base: '/club', parent: 'Elevn Club', icon: 'creation' })),
       ...configTabs.map((tab) => ({
         ...tab,
         base: '/configuracoes',

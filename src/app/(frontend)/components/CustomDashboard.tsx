@@ -8,7 +8,6 @@ import {
   formatRelativeTime,
   splitReferralOrBirth,
   initialSiteFormSubmissions,
-  type InternalUpdate,
   type LeadTemperature,
   type SiteFormSubmission,
 } from '@/lib/demo-internal'
@@ -33,6 +32,7 @@ import {
   LeadsFunnel,
   TodayAgenda,
   WidgetFooterLink,
+  WorkoutAdherence,
 } from './dashboard/DashboardWidgets'
 import { TemperaturePicker } from './interno/LeadsSpreadsheet'
 import { Badge, type BadgeTone } from './ui/Badge'
@@ -79,12 +79,6 @@ const widgets: WidgetDefinition[] = [
     category: 'Gestão',
   },
   {
-    id: 'team-overview',
-    title: 'Últimas atualizações',
-    description: 'Comentários direcionados pela gestão.',
-    category: 'Gestão',
-  },
-  {
     id: 'active-students-chart',
     title: 'Alunos ativos',
     description: 'Evolução da carteira no período escolhido.',
@@ -93,7 +87,7 @@ const widgets: WidgetDefinition[] = [
   {
     id: 'adherence-chart',
     title: 'Adesão ao Check-in',
-    description: 'Percentual de check-ins respondidos e não respondidos por semana.',
+    description: 'Check-ins respondidos por semana, ou a taxa de um aluno (ex.: 14/30).',
     category: 'Gestão',
   },
   {
@@ -137,7 +131,7 @@ const widgets: WidgetDefinition[] = [
   {
     id: 'workout-adherence',
     title: 'Adesão aos treinos',
-    description: 'Frequência e conclusão dos treinos.',
+    description: 'Dias treinados no mês (ex.: 20/31), geral ou por aluno.',
     category: 'Treino',
   },
   {
@@ -513,68 +507,6 @@ function StudentsTable() {
   )
 }
 
-function InternalUpdates({
-  updates,
-  onToggleUpdate,
-  onOpen,
-}: {
-  updates: InternalUpdate[]
-  onToggleUpdate: (updateId: string) => void
-  onOpen: () => void
-}) {
-  const visible = updates.slice(0, 6)
-  return (
-    <div className="flex min-h-full flex-col px-5 pb-4">
-      {visible.length === 0 ? (
-        <p className="py-8 text-center text-sm text-ink-3">Nenhuma atualização da equipe.</p>
-      ) : (
-        <ul className="divide-y divide-line-subtle">
-          {visible.map((update) => (
-            <li key={update.id} className={cx('flex gap-3 py-3', update.completed && 'opacity-60')}>
-              <Avatar src={update.avatar} name={update.author} size={32} />
-              <div className="min-w-0 flex-1">
-                <p className="flex items-baseline gap-2 text-sm">
-                  <span className="truncate font-medium text-ink">{update.author}</span>
-                  <span className="truncate text-xs text-ink-3">{update.role}</span>
-                  <span className="ml-auto shrink-0 text-xs text-ink-3">{update.time}</span>
-                </p>
-                <p
-                  className={cx(
-                    'mt-0.5 line-clamp-2 text-[13px] leading-5 text-ink-2',
-                    update.completed && 'line-through',
-                  )}
-                >
-                  <span className="font-medium text-ink">{update.subject || update.type}</span> —{' '}
-                  {update.message}
-                </p>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  <Badge tone="neutral">{update.type}</Badge>
-                  <span className="text-xs text-ink-3">Para {update.audience}</span>
-                  <button
-                    type="button"
-                    onClick={() => onToggleUpdate(update.id)}
-                    aria-pressed={!!update.completed}
-                    className="ml-auto inline-flex h-7 items-center gap-1 rounded-control px-2 text-xs font-medium text-ink-2 hover:bg-subtle hover:text-ink"
-                  >
-                    {update.completed ? (
-                      'Reabrir'
-                    ) : (
-                      <>
-                        <Icon name="check" className="size-3.5" /> Concluir
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      <WidgetFooterLink onClick={onOpen}>Abrir atualizações no Interno</WidgetFooterLink>
-    </div>
-  )
-}
-
 type RenewalRecord = {
   id: string
   name: string
@@ -911,8 +843,6 @@ function SiteFormsDashboardWidget({
 function WidgetContent({
   id,
   period,
-  internalUpdates,
-  onToggleInternalUpdate,
   siteForms,
   onUpdateFormTemperature,
   onOpenSiteForms,
@@ -921,8 +851,6 @@ function WidgetContent({
 }: {
   id: WidgetId
   period: DashboardPeriod
-  internalUpdates: InternalUpdate[]
-  onToggleInternalUpdate: (updateId: string) => void
   siteForms: SiteFormSubmission[]
   onUpdateFormTemperature: (formId: string, temperature: LeadTemperature) => void
   onOpenSiteForms: () => void
@@ -942,17 +870,9 @@ function WidgetContent({
   if (id === 'attention-list') return <AttentionQueue onNavigate={onNavigate} />
   if (id === 'students-table') return <StudentsTable />
   if (id === 'weekly-agenda') return <TodayAgenda onNavigate={onNavigate} />
-  if (id === 'team-overview') {
-    return (
-      <InternalUpdates
-        updates={internalUpdates}
-        onToggleUpdate={onToggleInternalUpdate}
-        onOpen={onOpenInternal}
-      />
-    )
-  }
   if (id === 'active-students-chart') return <ActiveStudentsChart period={period} />
-  if (id === 'adherence-chart') return <AdherenceChart period={period} />
+  if (id === 'adherence-chart') return <AdherenceChart period={period} onNavigate={onNavigate} />
+  if (id === 'workout-adherence') return <WorkoutAdherence onNavigate={onNavigate} />
   if (id === 'renewals-overview') return <RenewalsOverview />
   if (id === 'goals-chart') return <GoalsChart />
   if (id === 'leads-funnel')
@@ -1001,20 +921,13 @@ function WidgetContent({
     )
   }
 
-  if (id === 'workout-adherence' || id === 'nutrition-adherence') {
-    const workout = id === 'workout-adherence'
-    const value = workout ? 87 : 78
-    const rows: [string, number][] = workout
-      ? [
-          ['Força e hipertrofia', 92],
-          ['Condicionamento', 84],
-          ['Mobilidade', 73],
-        ]
-      : [
-          ['Plano alimentar', 82],
-          ['Hidratação', 76],
-          ['Registro de refeições', 69],
-        ]
+  if (id === 'nutrition-adherence') {
+    const value = 78
+    const rows: [string, number][] = [
+      ['Plano alimentar', 82],
+      ['Hidratação', 76],
+      ['Registro de refeições', 69],
+    ]
     const radius = 34
     const circumference = 2 * Math.PI * radius
 
@@ -1136,8 +1049,6 @@ function withFallback(items: DashboardLayoutItem[]): DashboardLayoutItem[] {
 
 export default function CustomDashboard({
   initialLayout,
-  internalUpdates,
-  onToggleInternalUpdate,
   onOpenInternal,
   siteForms = initialSiteFormSubmissions,
   onUpdateFormTemperature,
@@ -1148,8 +1059,6 @@ export default function CustomDashboard({
   period?: DashboardPeriod
   onNavigate?: (href: string) => void
   initialLayout: DashboardLayoutItem[]
-  internalUpdates: InternalUpdate[]
-  onToggleInternalUpdate: (updateId: string) => void
   onOpenInternal: () => void
   siteForms?: SiteFormSubmission[]
   onUpdateFormTemperature?: (formId: string, temperature: LeadTemperature) => void
@@ -1691,8 +1600,6 @@ export default function CustomDashboard({
                   period={period}
                   onNavigate={onNavigate}
                   onOpenInternal={onOpenInternal}
-                  internalUpdates={internalUpdates}
-                  onToggleInternalUpdate={onToggleInternalUpdate}
                   siteForms={effectiveForms}
                   onUpdateFormTemperature={handleUpdateTemp}
                   onOpenSiteForms={onOpenSiteForms ?? onOpenInternal}

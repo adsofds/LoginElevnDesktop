@@ -20,6 +20,9 @@ import { NameDialog } from './ui/NameDialog'
 import { Sheet } from './ui/Sheet'
 import { Table, TD, TH, THead, TR } from './ui/Table'
 import { Tabs } from './ui/Tabs'
+import { FaceCheckin, getFaceHistory } from './students/FaceCheckin'
+import { FichaSection } from './students/FichaSection'
+import { downloadComparison, exportTemplates } from './students/photoExport'
 
 type CheckinState = 'Pendente' | 'Realizado' | 'Atrasado'
 
@@ -775,6 +778,8 @@ export const studentDirectory = initialStudents.map((student) => ({
   goal: student.goal,
   plan: student.plan,
   checkinState: student.checkinState,
+  status: student.status,
+  expirationDate: student.expirationDate,
 }))
 
 type QuickFilter =
@@ -1654,17 +1659,16 @@ function getStudentDietPlan(student: StudentRecord): StudentDietPlan {
   }
 }
 
+const FICHA_SECTIONS_KEY = 'elevn-ficha-secoes'
+
 type StudentsWorkspaceProps = {
-  onSendWorkoutReplyToInternal?: (payload: {
-    studentId: string
-    studentName: string
-    studentAvatar: string
-    workoutCode: 'Treino A' | 'Treino B' | 'Treino C'
-    workoutTitle: string
-    studentComment: string
-    adminReply: string
-  }) => void
-  onOpenInternalInbox?: () => void
+  /** Top-level tab of the page: the roster or the notifications center. */
+  section?: 'carteira' | 'notificacoes'
+  onSectionChange?: (section: 'carteira' | 'notificacoes') => void
+  /** Rendered in place of the roster when section is "notificacoes". */
+  notificationsContent?: ReactNode
+  /** "Notificar" in the student file. */
+  onNotifyStudent?: (studentId: string) => void
   /** Student file opened from the URL (?ficha=&aba=). null closes it. */
   ficha?: { studentId: string; tab: FichaTab } | null
   /** Saved view requested from the URL (?visao=vencendo), e.g. from a Dashboard KPI. */
@@ -1679,7 +1683,7 @@ type StudentsWorkspaceProps = {
   onStartNewHandled?: () => void
 }
 
-export type FichaTab = 'checkin' | 'treino' | 'dieta' | 'fotos'
+export type FichaTab = 'checkin' | 'treino' | 'dieta' | 'fotos' | 'acesso'
 
 function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
   if (student.appPhotos && student.appPhotos.length > 0) {
@@ -2065,8 +2069,10 @@ function PriorityRow({
 }
 
 export default function StudentsWorkspace({
-  onSendWorkoutReplyToInternal,
-  onOpenInternalInbox,
+  section = 'carteira',
+  onSectionChange,
+  notificationsContent,
+  onNotifyStudent,
   ficha,
   onFichaChange,
   startNew,
@@ -2083,7 +2089,32 @@ export default function StudentsWorkspace({
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [modalStudentId, setModalStudentId] = useState<string | null>(null)
-  const [modalTab, setModalTab] = useState<'checkin' | 'treino' | 'dieta' | 'fotos'>('checkin')
+  const [modalTab, setModalTab] = useState<FichaTab>('checkin')
+  /* Collapsible sections of the student file. Only "Check-in" starts open; what the
+     coach opens or closes is remembered per student on this browser. */
+  const [openSections, setOpenSections] = useState<Record<string, FichaTab[]>>({})
+  const [exportingTemplate, setExportingTemplate] = useState<string | null>(null)
+  const [exportError, setExportError] = useState('')
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(FICHA_SECTIONS_KEY)
+      if (stored) setOpenSections(JSON.parse(stored))
+    } catch {
+      /* no stored preference */
+    }
+  }, [])
+  const sectionsOpenFor = (studentId: string) => openSections[studentId] ?? ['checkin']
+  const setSectionsFor = (studentId: string, next: FichaTab[]) => {
+    setOpenSections((current) => {
+      const updated = { ...current, [studentId]: next }
+      try {
+        window.localStorage.setItem(FICHA_SECTIONS_KEY, JSON.stringify(updated))
+      } catch {
+        /* preference not persisted */
+      }
+      return updated
+    })
+  }
   const [photoAngleFilter, setPhotoAngleFilter] = useState<'Todos' | StudentPhotoAngle>('Todos')
   const [compareMode, setCompareMode] = useState<'side-by-side' | 'slider'>('side-by-side')
   const [sliderPosition, setSliderPosition] = useState(50)
@@ -2161,7 +2192,7 @@ export default function StudentsWorkspace({
 
   const openStudentModal = (
     studentId: string,
-    initialTab: 'checkin' | 'treino' | 'dieta' | 'fotos' = 'checkin',
+    initialTab: FichaTab = 'checkin',
   ) => {
     setModalStudentId(studentId)
     setModalTab(initialTab)
@@ -2213,6 +2244,19 @@ export default function StudentsWorkspace({
     onFichaChange?.(modalStudentId ? { studentId: modalStudentId, tab: modalTab } : null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fichaStateKey])
+
+  useEffect(() => {
+    if (!modalStudentId || modalTab === 'checkin') return
+    setOpenSections((current) => {
+      const open = current[modalStudentId] ?? ['checkin']
+      return open.includes(modalTab) ? current : { ...current, [modalStudentId]: [...open, modalTab] }
+    })
+    const timer = window.setTimeout(
+      () => document.getElementById(`ficha-${modalTab}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      60,
+    )
+    return () => window.clearTimeout(timer)
+  }, [modalStudentId, modalTab])
 
   const [prefillWhatsapp, setPrefillWhatsapp] = useState('')
 
@@ -2468,11 +2512,7 @@ export default function StudentsWorkspace({
   ) => {
     const cleanText = replyText.trim()
     if (!cleanText) return
-    const existingComments = getStudentWorkoutComments(student)
-    const targetComment =
-      existingComments.find((entry) => entry.workoutCode === workoutCode) ?? existingComments[0]
-
-    setStudents((current) =>
+        setStudents((current) =>
       current.map((item) => {
         if (item.id !== student.id) return item
         const existing = getStudentWorkoutComments(item)
@@ -2481,7 +2521,7 @@ export default function StudentsWorkspace({
             ? {
                 ...entry,
                 adminReply: cleanText,
-                repliedAt: 'Respondido agora (enviado para Interno)',
+                repliedAt: 'Respondido agora',
               }
             : entry,
         )
@@ -2491,15 +2531,6 @@ export default function StudentsWorkspace({
         }
       }),
     )
-    onSendWorkoutReplyToInternal?.({
-      studentId: student.id,
-      studentName: student.name,
-      studentAvatar: student.avatar,
-      workoutCode,
-      workoutTitle: targetComment.workoutTitle,
-      studentComment: targetComment.comment,
-      adminReply: cleanText,
-    })
     setWorkoutCommentDrafts((current) => ({ ...current, [workoutCode]: '' }))
     setLastRepliedWorkout(`${student.id}-${workoutCode}`)
   }
@@ -2955,6 +2986,22 @@ export default function StudentsWorkspace({
         </div>
       </Sheet>
 
+      <Tabs
+        label="Seções de Alunos"
+        className="mb-6"
+        value={section}
+        onChange={(next) => onSectionChange?.(next)}
+        items={[
+          { id: 'carteira', label: 'Carteira', count: students.length },
+          { id: 'notificacoes', label: 'Notificações' },
+        ]}
+      />
+
+      {section === 'notificacoes' ? (
+        notificationsContent
+      ) : (
+        <>
+
       <KpiStrip
         label="Indicadores da carteira"
         className="mb-6"
@@ -3387,6 +3434,9 @@ export default function StudentsWorkspace({
         </Table>
       </section>
 
+        </>
+      )}
+
       {viewDialogOpen && (
         <NameDialog
           title="Salvar visão da carteira"
@@ -3415,7 +3465,7 @@ export default function StudentsWorkspace({
               <div className="student-modal-identity">
                 <img src={modalStudent.avatar} alt={`Foto de ${modalStudent.name}`} />
                 <div>
-                  <span>FICHA COMPLETA DE ACOMPANHAMENTO · LIVECLIN + MFIT + WEBDIET</span>
+                  <span>FICHA DO ALUNO</span>
                   <h2>{modalStudent.name}</h2>
                   <p>
                     {modalStudent.goal} ({modalStudent.phase}) · Plano {modalStudent.plan} ·{' '}
@@ -3431,6 +3481,16 @@ export default function StudentsWorkspace({
                 >
                   Gerar chave de acesso
                 </button>
+                {onNotifyStudent && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onNotifyStudent(modalStudent.id)}
+                    title={`Enviar notificação no app para ${modalStudent.name}`}
+                  >
+                    <Icon name="bell" className="size-4" /> Notificar
+                  </Button>
+                )}
                 <a
                   href={buildWhatsAppUrl(modalStudent.whatsapp, modalStudent.name)}
                   target="_blank"
@@ -3452,65 +3512,7 @@ export default function StudentsWorkspace({
               </div>
             </header>
 
-            <div className="ficha-body">
-            <aside className="ficha-summary" aria-label="Resumo do aluno">
-              <WeightTrend photos={modalAppPhotos} current={modalLiveClin.fastingWeight} />
-            <section
-              className={`student-access-panel ${modalAccessInfo.hasLogin ? 'has-login' : 'no-login'}`}
-              aria-label="Credenciais e status de login do aluno"
-            >
-              <div className="student-access-status">
-                <span>STATUS DE ACESSO & LOGIN DO ALUNO</span>
-                <div>
-                  <em className={modalAccessInfo.hasLogin ? 'login-active' : 'login-missing'}>
-                    {modalAccessInfo.hasLogin ? 'Possui login ativo' : 'Não possui login'}
-                  </em>
-                  <strong>
-                    {modalAccessInfo.hasLogin
-                      ? `E-mail cadastrado: ${modalAccessInfo.loginEmail}`
-                      : 'Aluno ainda não possui login com e-mail cadastrado'}
-                  </strong>
-                </div>
-                <small>
-                  {modalAccessInfo.accessKey
-                    ? `Chave de acesso atual: ${modalAccessInfo.accessKey} (${modalAccessInfo.accessKeyGeneratedAt || 'Ativa'})`
-                    : 'Nenhuma chave de acesso gerada para este aluno ainda.'}
-                </small>
-              </div>
-
-              <div className="student-access-actions">
-                <div className="student-access-key-box">
-                  <span>CHAVE DE ACESSO</span>
-                  <code>{modalAccessInfo.accessKey ?? 'Não gerada'}</code>
-                </div>
-                <button
-                  type="button"
-                  className="generate-key-primary"
-                  onClick={() => generateAccessKeyForStudent(modalStudent)}
-                >
-                  Gerar chave de acesso
-                </button>
-                {!modalAccessInfo.hasLogin && (
-                  <form
-                    className="student-link-email-form"
-                    onSubmit={(event) => {
-                      event.preventDefault()
-                      saveStudentLoginEmail(modalStudent.id, loginEmailDraft)
-                    }}
-                  >
-                    <input
-                      type="email"
-                      value={loginEmailDraft}
-                      onChange={(event) => setLoginEmailDraft(event.target.value)}
-                      placeholder="Cadastrar e-mail de login..."
-                      aria-label="E-mail de login do aluno"
-                    />
-                    <button type="submit">Ativar login</button>
-                  </form>
-                )}
-              </div>
-            </section>
-
+            <div className="ficha-stack">
             <section className="student-modal-highlights">
               <div>
                 <span>ÚLTIMA ATIVIDADE DE TREINO (MFIT)</span>
@@ -3531,22 +3533,555 @@ export default function StudentsWorkspace({
               </div>
             </section>
 
-            </aside>
-            <div className="ficha-main">
-            <Tabs
-              label="Navegação da ficha do aluno"
-              className="mb-6"
-              value={modalTab}
-              onChange={setModalTab}
-              items={[
-                { id: 'checkin', label: 'Check-in LiveClin' },
-                { id: 'treino', label: 'Treino (MFIT)' },
-                { id: 'dieta', label: 'Dieta (WebDiet)' },
-                { id: 'fotos', label: 'Fotos e comparador', count: modalAppPhotos.length },
-              ]}
-            />
+              {(() => {
+                const open = sectionsOpenFor(modalStudent.id)
+                const toggle = (id: FichaTab) => {
+                  if (open.includes(id)) {
+                    setSectionsFor(modalStudent.id, open.filter((item) => item !== id))
+                  } else {
+                    setSectionsFor(modalStudent.id, [...open, id])
+                    setModalTab(id)
+                  }
+                }
+                const faces = getFaceHistory(modalStudent.id)
+                const lowThemes = Object.values(faces).filter((weeks) => weeks[weeks.length - 1] <= 2).length
+                return (
+                  <>
+                    <FichaSection
+                      id="checkin"
+                      title="Check-in semanal"
+                      open={open.includes('checkin')}
+                      onToggle={() => toggle('checkin')}
+                      badge={
+                        lowThemes > 0 ? (
+                          <Badge tone="danger" dot>
+                            {lowThemes} {lowThemes === 1 ? 'alerta' : 'alertas'}
+                          </Badge>
+                        ) : (
+                          <Badge tone="success" dot>
+                            Em ordem
+                          </Badge>
+                        )
+                      }
+                      summary={`${modalStudent.checkinState} · ${modalLiveClin.submittedAt}`}
+                    >
+              <div className="student-modal-columns">
+                <div className="min-w-0">
+                  <FaceCheckin
+                    studentId={modalStudent.id}
+                    studentName={modalStudent.name}
+                    submittedAt={modalLiveClin.submittedAt}
+                    weight={modalLiveClin.fastingWeight}
+                    note={modalLiveClin.openFeedback}
+                  />
+                  <details className="group mt-4 rounded-lg border border-line">
+                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[13px] font-medium text-ink-2 [&::-webkit-details-marker]:hidden">
+                      Respostas detalhadas do formulário anterior (LiveClin)
+                      <Icon name="chevronRight" className="size-4 text-ink-3 transition-transform group-open:rotate-90" />
+                    </summary>
+                    <div className="border-t border-line p-3">
+                <section className="modal-liveclin-section">
+                  <header>
+                    <div>
+                      <span>CHECK-IN SEMANAL LIVECLIN · 14 PERGUNTAS</span>
+                      <h3>Respostas do Check-in no LiveClin</h3>
+                    </div>
+                    <em>{modalLiveClin.protocolName}</em>
+                  </header>
+                  {(() => {
+                    const flagged = liveClinAlertFields.filter((field) => liveClinAlert(field, modalLiveClin[field]))
+                    return (
+                      <p className={`liveclin-summary ${flagged.length ? 'has-alerts' : ''}`} role="status">
+                        {flagged.length
+                          ? `${flagged.length} ${flagged.length === 1 ? 'resposta pede' : 'respostas pedem'} atenção nesta semana.`
+                          : 'Nenhuma resposta fora do padrão nesta semana.'}
+                      </p>
+                    )
+                  })()}
 
-            {modalTab === 'fotos' && (
+                  <div className="liveclin-answers-grid">
+                    <div>
+                      <span>Peso corporal</span>
+                      <small>Qual foi o seu último peso em jejum?</small>
+                      <strong>Resposta: {modalLiveClin.fastingWeight}</strong>
+                      <LiveClinFlag reason={liveClinAlert('fastingWeight', modalLiveClin.fastingWeight)} />
+                    </div>
+                    <div>
+                      <span>Refeições fora do plano alimentar</span>
+                      <small>Quantas refeições fora do planejado você fez na última semana?</small>
+                      <strong>Resposta: {modalLiveClin.offPlanMeals}</strong>
+                      <LiveClinFlag reason={liveClinAlert('offPlanMeals', modalLiveClin.offPlanMeals)} />
+                    </div>
+                    <div>
+                      <span>Níveis de fome</span>
+                      <small>
+                        Como você considera que está o seu nível de fome e apetite atualmente?
+                      </small>
+                      <strong>Resposta: {modalLiveClin.hungerLevels}</strong>
+                      <LiveClinFlag reason={liveClinAlert('hungerLevels', modalLiveClin.hungerLevels)} />
+                    </div>
+                    <div>
+                      <span>Ingestão de líquidos</span>
+                      <small>Quantos litros de água você está bebendo por dia em média?</small>
+                      <strong>Resposta: {modalLiveClin.waterIntake}</strong>
+                      <LiveClinFlag reason={liveClinAlert('waterIntake', modalLiveClin.waterIntake)} />
+                    </div>
+                    <div>
+                      <span>Frequência intestinal</span>
+                      <small>Você tem ido ao banheiro diariamente?</small>
+                      <strong>Resposta: {modalLiveClin.bowelFrequency}</strong>
+                      <LiveClinFlag reason={liveClinAlert('bowelFrequency', modalLiveClin.bowelFrequency)} />
+                    </div>
+                    <div>
+                      <span>Desconforto Abdominal</span>
+                      <small>
+                        Você sentiu desconforto abdominal, como gases ou inchaço nos últimos dias?
+                      </small>
+                      <strong>Resposta: {modalLiveClin.abdominalDiscomfort}</strong>
+                      <LiveClinFlag reason={liveClinAlert('abdominalDiscomfort', modalLiveClin.abdominalDiscomfort)} />
+                    </div>
+                    <div>
+                      <span>Treinos de Força</span>
+                      <small>
+                        Quantas sessões de treinos com pesos você realizou nos últimos 7 dias?
+                        Exemplo: Musculação, Pilates, Crossfit, Calistenia.
+                      </small>
+                      <strong>Resposta: {modalLiveClin.strengthWorkouts}</strong>
+                      <LiveClinFlag reason={liveClinAlert('strengthWorkouts', modalLiveClin.strengthWorkouts)} />
+                    </div>
+                    <div>
+                      <span>Desempenho em exercícios</span>
+                      <small>
+                        Você sente que seu desempenho em exercícios físicos está melhorando?
+                      </small>
+                      <strong>Resposta: {modalLiveClin.exercisePerformance}</strong>
+                      <LiveClinFlag reason={liveClinAlert('exercisePerformance', modalLiveClin.exercisePerformance)} />
+                    </div>
+                    <div>
+                      <span>Frequência de Aeróbico</span>
+                      <small>
+                        Você fez quantas sessões de atividade aeróbica (cardio) na semana anterior?
+                        Exemplo: Corrida, ciclismo, natação, caminhada.
+                      </small>
+                      <strong>Resposta: {modalLiveClin.aerobicSessions}</strong>
+                      <LiveClinFlag reason={liveClinAlert('aerobicSessions', modalLiveClin.aerobicSessions)} />
+                    </div>
+                    <div>
+                      <span>Horas de Sono</span>
+                      <small>Quantas horas de sono você está dormindo por noite, em média?</small>
+                      <strong>Resposta: {modalLiveClin.sleepHours}</strong>
+                      <LiveClinFlag reason={liveClinAlert('sleepHours', modalLiveClin.sleepHours)} />
+                    </div>
+                    <div>
+                      <span>Dedicação</span>
+                      <small>O quanto você se dedicou na última semana?</small>
+                      <strong>Resposta: {modalLiveClin.dedicationLevel}</strong>
+                      <LiveClinFlag reason={liveClinAlert('dedicationLevel', modalLiveClin.dedicationLevel)} />
+                    </div>
+                    <div>
+                      <span>Percepção corporal</span>
+                      <small>
+                        Você consegue notar evolução corporal em direção ao seu objetivo?
+                      </small>
+                      <strong>Resposta: {modalLiveClin.bodyPerception}</strong>
+                      <LiveClinFlag reason={liveClinAlert('bodyPerception', modalLiveClin.bodyPerception)} />
+                    </div>
+                    <div className="full-width-question">
+                      <span>Alterações no cardápio</span>
+                      <small>
+                        Você gostaria de fazer alguma alteração no seu planejamento alimentar? Por
+                        exemplo, incluir um novo alimento, adicionar ou modificar uma refeição.
+                      </small>
+                      <strong>Resposta: {modalLiveClin.menuChangesRequest}</strong>
+                      <LiveClinFlag reason={liveClinAlert('menuChangesRequest', modalLiveClin.menuChangesRequest)} />
+                    </div>
+                    <div className="full-width-question">
+                      <span>Feedback Aberto</span>
+                      <small>O que mais você gostaria de compartilhar sobre sua experiência?</small>
+                      <strong>Resposta: {modalLiveClin.openFeedback}</strong>
+                      <LiveClinFlag reason={liveClinAlert('openFeedback', modalLiveClin.openFeedback)} />
+                    </div>
+                  </div>
+                </section>
+
+                    </div>
+                  </details>
+                </div>
+                <section className="modal-app-and-coach-section">
+                  <div className="modal-quick-plans-card">
+                    <header>
+                      <span>PROTOCOLO ATUAL DO ALUNO</span>
+                      <h3>Treino (MFIT) & Dieta (WebDiet)</h3>
+                    </header>
+                    <div className="modal-quick-plans-grid">
+                      <div>
+                        <span>TREINO PRESCRITO (MFIT)</span>
+                        <strong>{modalWorkoutPlan.splitName}</strong>
+                        <small>{modalWorkoutPlan.frequency}</small>
+                        <button type="button" onClick={() => setModalTab('treino')}>
+                          Ver treino no MFIT
+                        </button>
+                      </div>
+                      <div>
+                        <span>DIETA PRESCRITA (WEBDIET)</span>
+                        <strong>{modalDietPlan.strategyName}</strong>
+                        <small>{modalDietPlan.dailyCalories}</small>
+                        <button type="button" onClick={() => setModalTab('dieta')}>
+                          Ver dieta no WebDiet
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="app-observations-card">
+                    <header>
+                      <div>
+                        <span>COMENTÁRIOS DO ALUNO POR TREINO NO APP (MFIT)</span>
+                        <h3>Comentários recebidos: Treino A, Treino B e Treino C</h3>
+                      </div>
+                      <small>A resposta aparece para o aluno no app</small>
+                    </header>
+                    <div className="app-observations-list">
+                      {modalWorkoutComments.map((wc) => (
+                        <article key={wc.workoutCode} className="workout-comment-item">
+                          <header>
+                            <span className="obs-tag tag-treino">
+                              {wc.workoutCode} · {wc.workoutTitle}
+                            </span>
+                            <time>{wc.sentAt}</time>
+                          </header>
+                          <p>{wc.comment}</p>
+
+                          {wc.adminReply && (
+                            <div className="workout-admin-reply-preview">
+                              <div>
+                                <span>SUA RESPOSTA AO ALUNO</span>
+                                <p>{wc.adminReply}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <form
+                            className="workout-comment-inline-form"
+                            onSubmit={(event) => {
+                              event.preventDefault()
+                              replyToStudentWorkoutComment(
+                                modalStudent,
+                                wc.workoutCode,
+                                workoutCommentDrafts[wc.workoutCode] || '',
+                              )
+                            }}
+                          >
+                            <input
+                              type="text"
+                              value={workoutCommentDrafts[wc.workoutCode] || ''}
+                              onChange={(event) =>
+                                setWorkoutCommentDrafts((current) => ({
+                                  ...current,
+                                  [wc.workoutCode]: event.target.value,
+                                }))
+                              }
+                              placeholder={`Responder comentário do ${wc.workoutCode}...`}
+                              aria-label={`Responder comentário do ${wc.workoutCode}`}
+                            />
+                            <button type="submit">Responder aluno</button>
+                          </form>
+
+                          {lastRepliedWorkout === `${modalStudent.id}-${wc.workoutCode}` && (
+                            <div className="workout-reply-sent-notice" role="status">
+                              <span>Resposta enviada ao aluno.</span>
+                            </div>
+                          )}
+                        </article>
+                      ))}
+                      {modalStudent.appObservations.map((obs) => (
+                        <article key={obs.id}>
+                          <header>
+                            <span className={`obs-tag tag-${obs.category.toLowerCase()}`}>
+                              {obs.category}
+                            </span>
+                            <time>{obs.when}</time>
+                          </header>
+                          <p>{obs.note}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+
+                  {modalStudent.coachFeedback && (
+                    <div className="inspector-feedback-box">
+                      <span>CONDUTA ATUAL REGISTRADA PELA EQUIPE</span>
+                      <p>{modalStudent.coachFeedback}</p>
+                    </div>
+                  )}
+
+                  {modalStudent.renewalState === 'Não renovou' && modalStudent.nonRenewalReason && (
+                    <div className="inspector-nonrenewal-box">
+                      <span>MOTIVO DA NÃO RENOVAÇÃO (REGISTRADO PELO ADMIN)</span>
+                      <p>{modalStudent.nonRenewalReason}</p>
+                    </div>
+                  )}
+
+                  <form
+                    className="inspector-checkin-form"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      completeCheckin(modalStudent.id, feedbackDraft)
+                    }}
+                  >
+                    <label>
+                      <span>Conduta do Treinador / Nutricionista (Retorno do Check-in)</span>
+                      <textarea
+                        rows={3}
+                        value={feedbackDraft}
+                        onChange={(event) => setFeedbackDraft(event.target.value)}
+                        placeholder={`Escreva os ajustes de treino e dieta para ${modalStudent.name}...`}
+                      />
+                    </label>
+                    <div className="inspector-form-buttons">
+                      <button type="submit">Salvar retorno e dar baixa no Check-in</button>
+                      {modalStudent.renewalState !== 'Recuperado' && (
+                        <button
+                          type="button"
+                          className="recover-btn"
+                          onClick={() => recoverStudentPlan(modalStudent.id)}
+                        >
+                          Confirmar renovação
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="non-renew-btn"
+                        onClick={() => {
+                          setNonRenewalOpenForId(
+                            nonRenewalOpenForId === modalStudent.id ? null : modalStudent.id,
+                          )
+                          setNonRenewalDraft(modalStudent.nonRenewalReason ?? '')
+                        }}
+                      >
+                        {modalStudent.renewalState === 'Não renovou'
+                          ? 'Editar motivo de não renovação'
+                          : 'Não renovou (escrever motivo)'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {nonRenewalOpenForId === modalStudent.id && (
+                    <div className="modal-non-renewal-box">
+                      <label>
+                        <span>Motivo da não renovação (preenchido pelo Admin)</span>
+                        <textarea
+                          rows={2}
+                          value={nonRenewalDraft}
+                          onChange={(event) => setNonRenewalDraft(event.target.value)}
+                          placeholder="Ex.: Pausa financeira, mudança para consultoria presencial, viagem..."
+                          autoFocus
+                        />
+                      </label>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => markNonRenewed(modalStudent.id, nonRenewalDraft)}
+                        >
+                          Salvar motivo da não renovação
+                        </button>
+                        <button
+                          type="button"
+                          className="cancel"
+                          onClick={() => setNonRenewalOpenForId(null)}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              </div>
+                    </FichaSection>
+
+                    <FichaSection
+                      id="treino"
+                      title="Treino"
+                      open={open.includes('treino')}
+                      onToggle={() => toggle('treino')}
+                      summary={`${modalWorkoutPlan.splitName} · ${modalWorkoutPlan.frequency}`}
+                    >
+              <section className="modal-plan-view" aria-label="Treino atual do aluno">
+                <header className="modal-plan-banner">
+                  <div>
+                    <span>PRESCRIÇÃO DE TREINO ATIVA NO MFIT</span>
+                    <h3>{modalWorkoutPlan.splitName}</h3>
+                    <p>{modalWorkoutPlan.technicalGuideline}</p>
+                  </div>
+                  <div className="modal-plan-kpis">
+                    <div>
+                      <span>FREQUÊNCIA SEMANAL</span>
+                      <strong>{modalWorkoutPlan.frequency}</strong>
+                    </div>
+                    <div>
+                      <span>PRESCRIÇÃO DE CARDIO / AERÓBICO</span>
+                      <strong>{modalWorkoutPlan.cardioPrescription}</strong>
+                    </div>
+                  </div>
+                </header>
+
+                <div className="workout-sessions-grid">
+                  {modalWorkoutPlan.sessions.map((session) => (
+                    <article key={session.code} className="workout-session-card">
+                      <header>
+                        <div>
+                          <span>{session.code}</span>
+                          <h4>{session.title}</h4>
+                        </div>
+                        <em>{session.schedule}</em>
+                      </header>
+
+                      <div className="workout-student-comment-box">
+                        <header>
+                          <span>COMENTÁRIO DO ALUNO NO APP ({session.code.toUpperCase()})</span>
+                          <time>{session.commentSentAt}</time>
+                        </header>
+                        <p>“{session.studentAppComment}”</p>
+
+                        {session.adminReply && (
+                          <div className="workout-admin-reply-preview">
+                            <div>
+                              <span>SUA RESPOSTA (O ALUNO VÊ NO APP)</span>
+                              <p>{session.adminReply}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <form
+                          className="workout-comment-inline-form"
+                          onSubmit={(event) => {
+                            event.preventDefault()
+                            const code = session.code as 'Treino A' | 'Treino B' | 'Treino C'
+                            replyToStudentWorkoutComment(
+                              modalStudent,
+                              code,
+                              workoutCommentDrafts[code] || '',
+                            )
+                          }}
+                        >
+                          <input
+                            type="text"
+                            value={
+                              workoutCommentDrafts[
+                                session.code as 'Treino A' | 'Treino B' | 'Treino C'
+                              ] || ''
+                            }
+                            onChange={(event) => {
+                              const code = session.code as 'Treino A' | 'Treino B' | 'Treino C'
+                              setWorkoutCommentDrafts((current) => ({
+                                ...current,
+                                [code]: event.target.value,
+                              }))
+                            }}
+                            placeholder={`Responder ${modalStudent.name} sobre o ${session.code}...`}
+                            aria-label={`Responder aluno sobre o ${session.code}`}
+                          />
+                          <button type="submit">Responder aluno</button>
+                        </form>
+                      </div>
+
+                      <div className="workout-exercise-list">
+                        {session.exercises.map((exercise) => (
+                          <div key={exercise.name} className="workout-exercise-row">
+                            <div>
+                              <strong>{exercise.name}</strong>
+                              <small>{exercise.loadNote}</small>
+                            </div>
+                            <div className="workout-exercise-meta">
+                              <span>{exercise.sets}</span>
+                              <em>Descanso: {exercise.rest}</em>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+                    </FichaSection>
+
+                    <FichaSection
+                      id="dieta"
+                      title="Dieta"
+                      open={open.includes('dieta')}
+                      onToggle={() => toggle('dieta')}
+                      summary={`${modalDietPlan.strategyName} · ${modalDietPlan.dailyCalories}`}
+                    >
+              <section className="modal-plan-view" aria-label="Dieta atual do aluno">
+                <header className="modal-plan-banner">
+                  <div>
+                    <span>PLANO ALIMENTAR ATIVO NO WEBDIET</span>
+                    <h3>{modalDietPlan.strategyName}</h3>
+                    <p>Suplementação: {modalDietPlan.supplements}</p>
+                  </div>
+                  <div className="diet-macros-strip">
+                    <div>
+                      <span>META CALÓRICA</span>
+                      <strong>{modalDietPlan.dailyCalories}</strong>
+                    </div>
+                    <div>
+                      <span>PROTEÍNAS</span>
+                      <strong>{modalDietPlan.proteinTarget}</strong>
+                    </div>
+                    <div>
+                      <span>CARBOIDRATOS</span>
+                      <strong>{modalDietPlan.carbsTarget}</strong>
+                    </div>
+                    <div>
+                      <span>GORDURAS & ÁGUA</span>
+                      <strong>
+                        {modalDietPlan.fatTarget} · {modalDietPlan.waterTarget}
+                      </strong>
+                    </div>
+                  </div>
+                </header>
+
+                <MacroBar
+                  protein={modalDietPlan.proteinTarget}
+                  carbs={modalDietPlan.carbsTarget}
+                  fat={modalDietPlan.fatTarget}
+                />
+
+                <div className="diet-meals-grid">
+                  {modalDietPlan.meals.map((meal) => (
+                    <article key={meal.title} className="diet-meal-card">
+                      <header>
+                        <div>
+                          <span>{meal.time}</span>
+                          <h4>{meal.title}</h4>
+                        </div>
+                        <em>{meal.macros}</em>
+                      </header>
+                      <ul>
+                        {meal.items.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                      <footer>
+                        <strong>Opções de substituição:</strong> {meal.substitutions}
+                      </footer>
+                    </article>
+                  ))}
+                </div>
+              </section>
+                    </FichaSection>
+
+                    <FichaSection
+                      id="fotos"
+                      title="Fotos e evolução"
+                      open={open.includes('fotos')}
+                      onToggle={() => toggle('fotos')}
+                      badge={<span className="text-xs text-ink-3 tabular-nums">{modalAppPhotos.length}</span>}
+                      summary={`Peso atual ${modalLiveClin.fastingWeight}`}
+                    >
+                      <div className="mb-5">
+                        <WeightTrend photos={modalAppPhotos} current={modalLiveClin.fastingWeight} />
+                      </div>
               <section
                 className="student-photos-comparator-view"
                 aria-label={`Fotos enviadas pelo aplicativo e comparador de ${modalStudent.name}`}
@@ -3589,8 +4124,58 @@ export default function StudentsWorkspace({
                     <Button size="sm" onClick={() => setAddPhotoFormOpen((open) => !open)}>
                       <Icon name="plus" className="size-4" /> Nova foto
                     </Button>
+                    {photoBefore && photoAfter && (
+                      <Menu
+                        label="Baixar comparação"
+                        items={exportTemplates.map((template) => ({
+                          id: template.id,
+                          label: template.label,
+                          description: template.description,
+                          onSelect: async () => {
+                            setExportError('')
+                            setExportingTemplate(template.id)
+                            const short = (label: string) => label.split('·')[0].trim()
+                            try {
+                              await downloadComparison(
+                                template,
+                                {
+                                  before: { url: photoBefore.imageUrl, date: short(photoBefore.dateLabel), weight: photoBefore.weightKg, label: 'Antes' },
+                                  after: { url: photoAfter.imageUrl, date: short(photoAfter.dateLabel), weight: photoAfter.weightKg, label: 'Depois' },
+                                  studentName: modalStudent.name.split(' ')[0],
+                                  accent: getComputedStyle(document.documentElement).getPropertyValue('--elevn-accent').trim() || '#6b5f2a',
+                                },
+                                `elevn-${modalStudent.id.replace('student-', '')}-antes-depois-${template.id}.png`,
+                              )
+                            } catch {
+                              setExportError('Não foi possível gerar a imagem com estas fotos. Tente outro par ou envie as fotos de novo.')
+                            } finally {
+                              setExportingTemplate(null)
+                            }
+                          },
+                        }))}
+                        trigger={({ open, toggle, id }) => (
+                          <Button
+                            size="sm"
+                            variant="accent"
+                            onClick={toggle}
+                            aria-haspopup="menu"
+                            aria-expanded={open}
+                            aria-controls={open ? id : undefined}
+                            disabled={!!exportingTemplate}
+                          >
+                            <Icon name="download" className="size-4" />
+                            {exportingTemplate ? 'Gerando…' : 'Baixar'}
+                          </Button>
+                        )}
+                      />
+                    )}
                   </div>
                 </header>
+                {exportError && (
+                  <p role="alert" className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+                    {exportError}
+                  </p>
+                )}
 
                 {addPhotoFormOpen && (
                   <form className="add-app-photo-form" onSubmit={handleAddStudentAppPhoto}>
@@ -3994,502 +4579,75 @@ export default function StudentsWorkspace({
                   </div>
                 </div>
               </section>
-            )}
+                    </FichaSection>
 
-            {modalTab === 'treino' && (
-              <section className="modal-plan-view" aria-label="Treino atual do aluno">
-                <header className="modal-plan-banner">
-                  <div>
-                    <span>PRESCRIÇÃO DE TREINO ATIVA NO MFIT</span>
-                    <h3>{modalWorkoutPlan.splitName}</h3>
-                    <p>{modalWorkoutPlan.technicalGuideline}</p>
-                  </div>
-                  <div className="modal-plan-kpis">
-                    <div>
-                      <span>FREQUÊNCIA SEMANAL</span>
-                      <strong>{modalWorkoutPlan.frequency}</strong>
-                    </div>
-                    <div>
-                      <span>PRESCRIÇÃO DE CARDIO / AERÓBICO</span>
-                      <strong>{modalWorkoutPlan.cardioPrescription}</strong>
-                    </div>
-                  </div>
-                </header>
-
-                <div className="workout-sessions-grid">
-                  {modalWorkoutPlan.sessions.map((session) => (
-                    <article key={session.code} className="workout-session-card">
-                      <header>
-                        <div>
-                          <span>{session.code}</span>
-                          <h4>{session.title}</h4>
-                        </div>
-                        <em>{session.schedule}</em>
-                      </header>
-
-                      <div className="workout-student-comment-box">
-                        <header>
-                          <span>COMENTÁRIO DO ALUNO NO APP ({session.code.toUpperCase()})</span>
-                          <time>{session.commentSentAt}</time>
-                        </header>
-                        <p>“{session.studentAppComment}”</p>
-
-                        {session.adminReply && (
-                          <div className="workout-admin-reply-preview">
-                            <div>
-                              <span>RESPOSTA DO ADMIN (SINCRONIZADA NO INTERNO)</span>
-                              <p>{session.adminReply}</p>
-                            </div>
-                            {onOpenInternalInbox && (
-                              <button type="button" onClick={onOpenInternalInbox}>
-                                Ver no Interno
-                              </button>
-                            )}
-                          </div>
-                        )}
-
-                        <form
-                          className="workout-comment-inline-form"
-                          onSubmit={(event) => {
-                            event.preventDefault()
-                            const code = session.code as 'Treino A' | 'Treino B' | 'Treino C'
-                            replyToStudentWorkoutComment(
-                              modalStudent,
-                              code,
-                              workoutCommentDrafts[code] || '',
-                            )
-                          }}
-                        >
-                          <input
-                            type="text"
-                            value={
-                              workoutCommentDrafts[
-                                session.code as 'Treino A' | 'Treino B' | 'Treino C'
-                              ] || ''
-                            }
-                            onChange={(event) => {
-                              const code = session.code as 'Treino A' | 'Treino B' | 'Treino C'
-                              setWorkoutCommentDrafts((current) => ({
-                                ...current,
-                                [code]: event.target.value,
-                              }))
-                            }}
-                            placeholder={`Responder ${modalStudent.name} sobre o ${session.code} (cai no Interno)...`}
-                            aria-label={`Responder aluno sobre o ${session.code}`}
-                          />
-                          <button type="submit">Responder aluno</button>
-                        </form>
-                      </div>
-
-                      <div className="workout-exercise-list">
-                        {session.exercises.map((exercise) => (
-                          <div key={exercise.name} className="workout-exercise-row">
-                            <div>
-                              <strong>{exercise.name}</strong>
-                              <small>{exercise.loadNote}</small>
-                            </div>
-                            <div className="workout-exercise-meta">
-                              <span>{exercise.sets}</span>
-                              <em>Descanso: {exercise.rest}</em>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </article>
-                  ))}
+                    <FichaSection
+                      id="acesso"
+                      title="Acesso e plano"
+                      open={open.includes('acesso')}
+                      onToggle={() => toggle('acesso')}
+                      summary={`${modalAccessInfo.hasLogin ? 'Login ativo' : 'Sem login'} · vence ${modalStudent.expirationDate}`}
+                    >
+            <section
+              className={`student-access-panel ${modalAccessInfo.hasLogin ? 'has-login' : 'no-login'}`}
+              aria-label="Credenciais e status de login do aluno"
+            >
+              <div className="student-access-status">
+                <span>STATUS DE ACESSO & LOGIN DO ALUNO</span>
+                <div>
+                  <em className={modalAccessInfo.hasLogin ? 'login-active' : 'login-missing'}>
+                    {modalAccessInfo.hasLogin ? 'Possui login ativo' : 'Não possui login'}
+                  </em>
+                  <strong>
+                    {modalAccessInfo.hasLogin
+                      ? `E-mail cadastrado: ${modalAccessInfo.loginEmail}`
+                      : 'Aluno ainda não possui login com e-mail cadastrado'}
+                  </strong>
                 </div>
-              </section>
-            )}
+                <small>
+                  {modalAccessInfo.accessKey
+                    ? `Chave de acesso atual: ${modalAccessInfo.accessKey} (${modalAccessInfo.accessKeyGeneratedAt || 'Ativa'})`
+                    : 'Nenhuma chave de acesso gerada para este aluno ainda.'}
+                </small>
+              </div>
 
-            {modalTab === 'dieta' && (
-              <section className="modal-plan-view" aria-label="Dieta atual do aluno">
-                <header className="modal-plan-banner">
-                  <div>
-                    <span>PLANO ALIMENTAR ATIVO NO WEBDIET</span>
-                    <h3>{modalDietPlan.strategyName}</h3>
-                    <p>Suplementação: {modalDietPlan.supplements}</p>
-                  </div>
-                  <div className="diet-macros-strip">
-                    <div>
-                      <span>META CALÓRICA</span>
-                      <strong>{modalDietPlan.dailyCalories}</strong>
-                    </div>
-                    <div>
-                      <span>PROTEÍNAS</span>
-                      <strong>{modalDietPlan.proteinTarget}</strong>
-                    </div>
-                    <div>
-                      <span>CARBOIDRATOS</span>
-                      <strong>{modalDietPlan.carbsTarget}</strong>
-                    </div>
-                    <div>
-                      <span>GORDURAS & ÁGUA</span>
-                      <strong>
-                        {modalDietPlan.fatTarget} · {modalDietPlan.waterTarget}
-                      </strong>
-                    </div>
-                  </div>
-                </header>
-
-                <MacroBar
-                  protein={modalDietPlan.proteinTarget}
-                  carbs={modalDietPlan.carbsTarget}
-                  fat={modalDietPlan.fatTarget}
-                />
-
-                <div className="diet-meals-grid">
-                  {modalDietPlan.meals.map((meal) => (
-                    <article key={meal.title} className="diet-meal-card">
-                      <header>
-                        <div>
-                          <span>{meal.time}</span>
-                          <h4>{meal.title}</h4>
-                        </div>
-                        <em>{meal.macros}</em>
-                      </header>
-                      <ul>
-                        {meal.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                      <footer>
-                        <strong>Opções de substituição:</strong> {meal.substitutions}
-                      </footer>
-                    </article>
-                  ))}
+              <div className="student-access-actions">
+                <div className="student-access-key-box">
+                  <span>CHAVE DE ACESSO</span>
+                  <code>{modalAccessInfo.accessKey ?? 'Não gerada'}</code>
                 </div>
-              </section>
-            )}
-
-            {modalTab === 'checkin' && (
-              <div className="student-modal-columns">
-                <section className="modal-liveclin-section">
-                  <header>
-                    <div>
-                      <span>CHECK-IN SEMANAL LIVECLIN · 14 PERGUNTAS</span>
-                      <h3>Respostas do Check-in no LiveClin</h3>
-                    </div>
-                    <em>{modalLiveClin.protocolName}</em>
-                  </header>
-                  {(() => {
-                    const flagged = liveClinAlertFields.filter((field) => liveClinAlert(field, modalLiveClin[field]))
-                    return (
-                      <p className={`liveclin-summary ${flagged.length ? 'has-alerts' : ''}`} role="status">
-                        {flagged.length
-                          ? `${flagged.length} ${flagged.length === 1 ? 'resposta pede' : 'respostas pedem'} atenção nesta semana.`
-                          : 'Nenhuma resposta fora do padrão nesta semana.'}
-                      </p>
-                    )
-                  })()}
-
-                  <div className="liveclin-answers-grid">
-                    <div>
-                      <span>Peso corporal</span>
-                      <small>Qual foi o seu último peso em jejum?</small>
-                      <strong>Resposta: {modalLiveClin.fastingWeight}</strong>
-                      <LiveClinFlag reason={liveClinAlert('fastingWeight', modalLiveClin.fastingWeight)} />
-                    </div>
-                    <div>
-                      <span>Refeições fora do plano alimentar</span>
-                      <small>Quantas refeições fora do planejado você fez na última semana?</small>
-                      <strong>Resposta: {modalLiveClin.offPlanMeals}</strong>
-                      <LiveClinFlag reason={liveClinAlert('offPlanMeals', modalLiveClin.offPlanMeals)} />
-                    </div>
-                    <div>
-                      <span>Níveis de fome</span>
-                      <small>
-                        Como você considera que está o seu nível de fome e apetite atualmente?
-                      </small>
-                      <strong>Resposta: {modalLiveClin.hungerLevels}</strong>
-                      <LiveClinFlag reason={liveClinAlert('hungerLevels', modalLiveClin.hungerLevels)} />
-                    </div>
-                    <div>
-                      <span>Ingestão de líquidos</span>
-                      <small>Quantos litros de água você está bebendo por dia em média?</small>
-                      <strong>Resposta: {modalLiveClin.waterIntake}</strong>
-                      <LiveClinFlag reason={liveClinAlert('waterIntake', modalLiveClin.waterIntake)} />
-                    </div>
-                    <div>
-                      <span>Frequência intestinal</span>
-                      <small>Você tem ido ao banheiro diariamente?</small>
-                      <strong>Resposta: {modalLiveClin.bowelFrequency}</strong>
-                      <LiveClinFlag reason={liveClinAlert('bowelFrequency', modalLiveClin.bowelFrequency)} />
-                    </div>
-                    <div>
-                      <span>Desconforto Abdominal</span>
-                      <small>
-                        Você sentiu desconforto abdominal, como gases ou inchaço nos últimos dias?
-                      </small>
-                      <strong>Resposta: {modalLiveClin.abdominalDiscomfort}</strong>
-                      <LiveClinFlag reason={liveClinAlert('abdominalDiscomfort', modalLiveClin.abdominalDiscomfort)} />
-                    </div>
-                    <div>
-                      <span>Treinos de Força</span>
-                      <small>
-                        Quantas sessões de treinos com pesos você realizou nos últimos 7 dias?
-                        Exemplo: Musculação, Pilates, Crossfit, Calistenia.
-                      </small>
-                      <strong>Resposta: {modalLiveClin.strengthWorkouts}</strong>
-                      <LiveClinFlag reason={liveClinAlert('strengthWorkouts', modalLiveClin.strengthWorkouts)} />
-                    </div>
-                    <div>
-                      <span>Desempenho em exercícios</span>
-                      <small>
-                        Você sente que seu desempenho em exercícios físicos está melhorando?
-                      </small>
-                      <strong>Resposta: {modalLiveClin.exercisePerformance}</strong>
-                      <LiveClinFlag reason={liveClinAlert('exercisePerformance', modalLiveClin.exercisePerformance)} />
-                    </div>
-                    <div>
-                      <span>Frequência de Aeróbico</span>
-                      <small>
-                        Você fez quantas sessões de atividade aeróbica (cardio) na semana anterior?
-                        Exemplo: Corrida, ciclismo, natação, caminhada.
-                      </small>
-                      <strong>Resposta: {modalLiveClin.aerobicSessions}</strong>
-                      <LiveClinFlag reason={liveClinAlert('aerobicSessions', modalLiveClin.aerobicSessions)} />
-                    </div>
-                    <div>
-                      <span>Horas de Sono</span>
-                      <small>Quantas horas de sono você está dormindo por noite, em média?</small>
-                      <strong>Resposta: {modalLiveClin.sleepHours}</strong>
-                      <LiveClinFlag reason={liveClinAlert('sleepHours', modalLiveClin.sleepHours)} />
-                    </div>
-                    <div>
-                      <span>Dedicação</span>
-                      <small>O quanto você se dedicou na última semana?</small>
-                      <strong>Resposta: {modalLiveClin.dedicationLevel}</strong>
-                      <LiveClinFlag reason={liveClinAlert('dedicationLevel', modalLiveClin.dedicationLevel)} />
-                    </div>
-                    <div>
-                      <span>Percepção corporal</span>
-                      <small>
-                        Você consegue notar evolução corporal em direção ao seu objetivo?
-                      </small>
-                      <strong>Resposta: {modalLiveClin.bodyPerception}</strong>
-                      <LiveClinFlag reason={liveClinAlert('bodyPerception', modalLiveClin.bodyPerception)} />
-                    </div>
-                    <div className="full-width-question">
-                      <span>Alterações no cardápio</span>
-                      <small>
-                        Você gostaria de fazer alguma alteração no seu planejamento alimentar? Por
-                        exemplo, incluir um novo alimento, adicionar ou modificar uma refeição.
-                      </small>
-                      <strong>Resposta: {modalLiveClin.menuChangesRequest}</strong>
-                      <LiveClinFlag reason={liveClinAlert('menuChangesRequest', modalLiveClin.menuChangesRequest)} />
-                    </div>
-                    <div className="full-width-question">
-                      <span>Feedback Aberto</span>
-                      <small>O que mais você gostaria de compartilhar sobre sua experiência?</small>
-                      <strong>Resposta: {modalLiveClin.openFeedback}</strong>
-                      <LiveClinFlag reason={liveClinAlert('openFeedback', modalLiveClin.openFeedback)} />
-                    </div>
-                  </div>
-                </section>
-
-                <section className="modal-app-and-coach-section">
-                  <div className="modal-quick-plans-card">
-                    <header>
-                      <span>PROTOCOLO ATUAL DO ALUNO</span>
-                      <h3>Treino (MFIT) & Dieta (WebDiet)</h3>
-                    </header>
-                    <div className="modal-quick-plans-grid">
-                      <div>
-                        <span>TREINO PRESCRITO (MFIT)</span>
-                        <strong>{modalWorkoutPlan.splitName}</strong>
-                        <small>{modalWorkoutPlan.frequency}</small>
-                        <button type="button" onClick={() => setModalTab('treino')}>
-                          Ver treino no MFIT
-                        </button>
-                      </div>
-                      <div>
-                        <span>DIETA PRESCRITA (WEBDIET)</span>
-                        <strong>{modalDietPlan.strategyName}</strong>
-                        <small>{modalDietPlan.dailyCalories}</small>
-                        <button type="button" onClick={() => setModalTab('dieta')}>
-                          Ver dieta no WebDiet
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="app-observations-card">
-                    <header>
-                      <div>
-                        <span>COMENTÁRIOS DO ALUNO POR TREINO NO APP (MFIT)</span>
-                        <h3>Comentários recebidos: Treino A, Treino B e Treino C</h3>
-                      </div>
-                      <small>Responda aqui e a conversa vai direto para a página Interno</small>
-                    </header>
-                    <div className="app-observations-list">
-                      {modalWorkoutComments.map((wc) => (
-                        <article key={wc.workoutCode} className="workout-comment-item">
-                          <header>
-                            <span className="obs-tag tag-treino">
-                              {wc.workoutCode} · {wc.workoutTitle}
-                            </span>
-                            <time>{wc.sentAt}</time>
-                          </header>
-                          <p>{wc.comment}</p>
-
-                          {wc.adminReply && (
-                            <div className="workout-admin-reply-preview">
-                              <div>
-                                <span>SUA RESPOSTA AO ALUNO (ENVIADA PARA O INTERNO)</span>
-                                <p>{wc.adminReply}</p>
-                              </div>
-                              {onOpenInternalInbox && (
-                                <button type="button" onClick={onOpenInternalInbox}>
-                                  Abrir no Interno
-                                </button>
-                              )}
-                            </div>
-                          )}
-
-                          <form
-                            className="workout-comment-inline-form"
-                            onSubmit={(event) => {
-                              event.preventDefault()
-                              replyToStudentWorkoutComment(
-                                modalStudent,
-                                wc.workoutCode,
-                                workoutCommentDrafts[wc.workoutCode] || '',
-                              )
-                            }}
-                          >
-                            <input
-                              type="text"
-                              value={workoutCommentDrafts[wc.workoutCode] || ''}
-                              onChange={(event) =>
-                                setWorkoutCommentDrafts((current) => ({
-                                  ...current,
-                                  [wc.workoutCode]: event.target.value,
-                                }))
-                              }
-                              placeholder={`Responder comentário do ${wc.workoutCode} (vai p/ Interno)...`}
-                              aria-label={`Responder comentário do ${wc.workoutCode}`}
-                            />
-                            <button type="submit">Responder aluno</button>
-                          </form>
-
-                          {lastRepliedWorkout === `${modalStudent.id}-${wc.workoutCode}` &&
-                            onOpenInternalInbox && (
-                              <div className="workout-reply-sent-notice">
-                                <span>
-                                  Resposta enviada ao aluno e registrada na página Interno!
-                                </span>
-                                <button type="button" onClick={onOpenInternalInbox}>
-                                  Ver na página Interno →
-                                </button>
-                              </div>
-                            )}
-                        </article>
-                      ))}
-                      {modalStudent.appObservations.map((obs) => (
-                        <article key={obs.id}>
-                          <header>
-                            <span className={`obs-tag tag-${obs.category.toLowerCase()}`}>
-                              {obs.category}
-                            </span>
-                            <time>{obs.when}</time>
-                          </header>
-                          <p>{obs.note}</p>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-
-                  {modalStudent.coachFeedback && (
-                    <div className="inspector-feedback-box">
-                      <span>CONDUTA ATUAL REGISTRADA PELA EQUIPE</span>
-                      <p>{modalStudent.coachFeedback}</p>
-                    </div>
-                  )}
-
-                  {modalStudent.renewalState === 'Não renovou' && modalStudent.nonRenewalReason && (
-                    <div className="inspector-nonrenewal-box">
-                      <span>MOTIVO DA NÃO RENOVAÇÃO (REGISTRADO PELO ADMIN)</span>
-                      <p>{modalStudent.nonRenewalReason}</p>
-                    </div>
-                  )}
-
+                <button
+                  type="button"
+                  className="generate-key-primary"
+                  onClick={() => generateAccessKeyForStudent(modalStudent)}
+                >
+                  Gerar chave de acesso
+                </button>
+                {!modalAccessInfo.hasLogin && (
                   <form
-                    className="inspector-checkin-form"
+                    className="student-link-email-form"
                     onSubmit={(event) => {
                       event.preventDefault()
-                      completeCheckin(modalStudent.id, feedbackDraft)
+                      saveStudentLoginEmail(modalStudent.id, loginEmailDraft)
                     }}
                   >
-                    <label>
-                      <span>Conduta do Treinador / Nutricionista (Retorno do Check-in)</span>
-                      <textarea
-                        rows={3}
-                        value={feedbackDraft}
-                        onChange={(event) => setFeedbackDraft(event.target.value)}
-                        placeholder={`Escreva os ajustes de treino e dieta para ${modalStudent.name}...`}
-                      />
-                    </label>
-                    <div className="inspector-form-buttons">
-                      <button type="submit">Salvar retorno e dar baixa no Check-in</button>
-                      {modalStudent.renewalState !== 'Recuperado' && (
-                        <button
-                          type="button"
-                          className="recover-btn"
-                          onClick={() => recoverStudentPlan(modalStudent.id)}
-                        >
-                          Confirmar renovação
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="non-renew-btn"
-                        onClick={() => {
-                          setNonRenewalOpenForId(
-                            nonRenewalOpenForId === modalStudent.id ? null : modalStudent.id,
-                          )
-                          setNonRenewalDraft(modalStudent.nonRenewalReason ?? '')
-                        }}
-                      >
-                        {modalStudent.renewalState === 'Não renovou'
-                          ? 'Editar motivo de não renovação'
-                          : 'Não renovou (escrever motivo)'}
-                      </button>
-                    </div>
+                    <input
+                      type="email"
+                      value={loginEmailDraft}
+                      onChange={(event) => setLoginEmailDraft(event.target.value)}
+                      placeholder="Cadastrar e-mail de login..."
+                      aria-label="E-mail de login do aluno"
+                    />
+                    <button type="submit">Ativar login</button>
                   </form>
-
-                  {nonRenewalOpenForId === modalStudent.id && (
-                    <div className="modal-non-renewal-box">
-                      <label>
-                        <span>Motivo da não renovação (preenchido pelo Admin)</span>
-                        <textarea
-                          rows={2}
-                          value={nonRenewalDraft}
-                          onChange={(event) => setNonRenewalDraft(event.target.value)}
-                          placeholder="Ex.: Pausa financeira, mudança para consultoria presencial, viagem..."
-                          autoFocus
-                        />
-                      </label>
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => markNonRenewed(modalStudent.id, nonRenewalDraft)}
-                        >
-                          Salvar motivo da não renovação
-                        </button>
-                        <button
-                          type="button"
-                          className="cancel"
-                          onClick={() => setNonRenewalOpenForId(null)}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </section>
+                )}
               </div>
-            )}
-            </div>
+            </section>
+
+                    </FichaSection>
+                  </>
+                )
+              })()}
             </div>
           </div>
         </div>
