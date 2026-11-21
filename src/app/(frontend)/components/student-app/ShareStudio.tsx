@@ -318,7 +318,7 @@ function ExercisesTemplate({ done, logo, id }: TemplateProps) {
         </Text>
         {legend && (
           <Text x={930} y={bottom + 70} size={32} weight={600} anchor="end" fill={GOLD}>
-            {done.prs === 1 ? 'Dourado = recorde' : `Dourado = ${done.prs} recordes`}
+            {done.prs === 1 ? '1 recorde' : `${done.prs} recordes`}
           </Text>
         )}
         <Logo logo={logo} y={bottom + 330} />
