@@ -1,6 +1,7 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 
@@ -297,6 +298,12 @@ export function Bar({
 }
 
 /** Bottom sheet inside the phone (exercise video, swaps…). */
+/**
+ * The app's root element. Sheets render there so they cover the phone screen, not the
+ * (possibly very tall) scrolling content they were opened from.
+ */
+export const SheetHostContext = createContext<HTMLElement | null>(null)
+
 export function PhoneSheet({
   open,
   onClose,
@@ -308,8 +315,28 @@ export function PhoneSheet({
   title: string
   children: ReactNode
 }) {
+  const host = useContext(SheetHostContext)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  // Esc closes; focus goes into the sheet and back to where it was on close.
+  useEffect(() => {
+    if (!open) return
+    const previous = document.activeElement as HTMLElement | null
+    closeRef.current?.focus({ preventScroll: true })
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseRef.current()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      previous?.focus?.({ preventScroll: true })
+    }
+  }, [open])
+
   if (!open) return null
-  return (
+  const sheet = (
     <div
       className="absolute inset-0 z-40 flex flex-col justify-end"
       role="dialog"
@@ -318,6 +345,7 @@ export function PhoneSheet({
     >
       <button
         type="button"
+        tabIndex={-1}
         aria-label="Fechar"
         onClick={onClose}
         className="absolute inset-0 bg-black/60"
@@ -327,10 +355,11 @@ export function PhoneSheet({
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="grid size-9 place-items-center rounded-full bg-white/10 text-white"
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-white/10 text-white"
           >
             <Icon name="close" className="size-4" />
           </button>
@@ -339,6 +368,7 @@ export function PhoneSheet({
       </div>
     </div>
   )
+  return host ? createPortal(sheet, host) : sheet
 }
 
 export const formatClock = (totalSeconds: number) => {

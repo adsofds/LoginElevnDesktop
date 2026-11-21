@@ -2,7 +2,6 @@
 
 import { studentAdherence } from '@/lib/demo-adherence'
 import {
-  dietPlan,
   nextWorkoutCode,
   studentProfile,
   workoutHistory,
@@ -11,6 +10,7 @@ import {
 import { Face, type FaceScore } from '../students/FaceCheckin'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
+import { currentMeal } from './DietTab'
 import { useStudentApp } from './StudentApp'
 import { Bar, Card, Chip, GoldButton, LetterBadge, LinkButton, SectionTitle } from './ui'
 
@@ -86,8 +86,16 @@ const moodCopy: Record<
 }
 
 export function HomeTab() {
-  const { push, setTab, session, lastFinished, notifications, startSession, mealSwaps } =
-    useStudentApp()
+  const {
+    push,
+    setTab,
+    session,
+    lastFinished,
+    notifications,
+    startSession,
+    mealSwaps,
+    eatenMeals,
+  } = useStudentApp()
   const today = new Date()
   const doneToday = lastFinished !== null
   const trained = trainedDaysThisMonth(today)
@@ -115,16 +123,12 @@ export function HomeTab() {
   const weekDone = week.filter((day) => day.done).length
 
   const minutesNow = today.getHours() * 60 + today.getMinutes()
-  const nextMeal =
-    dietPlan.meals.find((meal) => {
-      const [h, m] = meal.time.split(':').map(Number)
-      return h * 60 + m >= minutesNow - 30
-    }) ?? dietPlan.meals[0]
-  const nextSwap = nextMeal.smartSwaps?.find((swap) => swap.id === mealSwaps[nextMeal.id])
-  const nextFoods = nextSwap ? nextSwap.foods : nextMeal.foods
+  const nextMeal = currentMeal(eatenMeals, today)
+  const nextSwap = nextMeal?.smartSwaps?.find((swap) => swap.id === mealSwaps[nextMeal.id])
+  const nextFoods = nextSwap ? nextSwap.foods : (nextMeal?.foods ?? [])
   const nextKcal = nextSwap
     ? nextSwap.kcal
-    : nextMeal.foods.reduce((sum, food) => sum + food.kcal, 0)
+    : (nextMeal?.foods ?? []).reduce((sum, food) => sum + food.kcal, 0)
 
   return (
     <div className="pb-4">
@@ -323,17 +327,28 @@ export function HomeTab() {
             <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--app-gold)]/12 text-[var(--app-gold)]">
               <Icon name="nutrition" className="size-6" />
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-semibold">
-                {nextSwap ? nextSwap.name : nextMeal.name}
+            {nextMeal ? (
+              <>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">
+                    {nextSwap ? nextSwap.name : nextMeal.name}
+                  </span>
+                  <span className="block truncate text-[13px] text-white/50">
+                    {nextMeal.time} · {nextFoods.map((food) => food.name).join(', ')}
+                  </span>
+                </span>
+                <span className="text-sm font-semibold text-white/80 tabular-nums">
+                  {nextKcal} kcal
+                </span>
+              </>
+            ) : (
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">Dieta do dia completa</span>
+                <span className="block text-[13px] text-white/50">
+                  Todas as refeições de hoje foram marcadas.
+                </span>
               </span>
-              <span className="block truncate text-[13px] text-white/50">
-                {nextMeal.time} · {nextFoods.map((food) => food.name).join(', ')}
-              </span>
-            </span>
-            <span className="text-sm font-semibold text-white/80 tabular-nums">
-              {nextKcal} kcal
-            </span>
+            )}
           </Card>
         </button>
       </section>

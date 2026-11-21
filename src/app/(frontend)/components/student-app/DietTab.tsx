@@ -14,6 +14,18 @@ import { Card, Chip, GoldButton, PhoneSheet, Ring, ScreenHeader } from './ui'
 
 const mealKcal = (meal: Meal) => meal.foods.reduce((sum, food) => sum + food.kcal, 0)
 
+/**
+ * The meal to show as "Agora" / "Próxima refeição": the first one not eaten yet whose time
+ * is at most 30 minutes ago. Shared by Início and Dieta so both say the same thing.
+ */
+export function currentMeal(eatenMeals: string[], now = new Date()) {
+  const minutesNow = now.getHours() * 60 + now.getMinutes()
+  return dietPlan.meals.find((meal) => {
+    const [h, m] = meal.time.split(':').map(Number)
+    return h * 60 + m >= minutesNow - 30 && !eatenMeals.includes(meal.id)
+  })
+}
+
 export function DietTab() {
   const { eatenMeals, toggleMeal, mealSwaps, setMealSwap } = useStudentApp()
   const [open, setOpen] = useState<string | null>(null)
@@ -28,11 +40,7 @@ export function DietTab() {
     .filter((meal) => eatenMeals.includes(meal.id))
     .reduce((sum, meal) => sum + kcalOf(meal), 0)
   const doneCount = dietPlan.meals.filter((meal) => eatenMeals.includes(meal.id)).length
-  const minutesNow = new Date().getHours() * 60 + new Date().getMinutes()
-  const currentMealId = dietPlan.meals.find((meal) => {
-    const [h, m] = meal.time.split(':').map(Number)
-    return h * 60 + m >= minutesNow - 30 && !eatenMeals.includes(meal.id)
-  })?.id
+  const currentMealId = currentMeal(eatenMeals)?.id
 
   return (
     <div>

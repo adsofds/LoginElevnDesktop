@@ -10,7 +10,7 @@ import { DietTab } from './DietTab'
 import type { DoneExercise } from './history'
 import { HomeTab } from './HomeTab'
 import { ShareStudio } from './ShareStudio'
-import { appTheme, formatClock } from './ui'
+import { appTheme, formatClock, SheetHostContext } from './ui'
 import {
   CalendarScreen,
   DoneWorkoutScreen,
@@ -128,6 +128,7 @@ export default function StudentApp({
   const [now, setNow] = useState(() => Date.now())
   // Client-only: the app shows "today", streaks and timers, which differ from build time.
   const [mounted, setMounted] = useState(false)
+  const [sheetHost, setSheetHost] = useState<HTMLDivElement | null>(null)
   useEffect(() => setMounted(true), [])
 
   useEffect(() => {
@@ -383,91 +384,96 @@ export default function StudentApp({
 
   return (
     <AppContext.Provider value={value}>
-      <div
-        style={appTheme}
-        className="relative flex h-full w-full flex-col overflow-clip bg-[var(--app-bg)] font-sans text-white antialiased [-webkit-tap-highlight-color:transparent]"
-      >
-        {/* Gold glow at the top, like the Smart Fit app */}
+      <SheetHostContext.Provider value={sheetHost}>
         <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[140%] -translate-x-1/2 rounded-[50%] opacity-40 blur-3xl"
-          style={{ background: 'radial-gradient(closest-side, var(--app-gold-deep), transparent)' }}
-        />
-        {topInset > 0 && (
+          ref={setSheetHost}
+          style={appTheme}
+          className="relative flex h-full w-full flex-col overflow-clip bg-[var(--app-bg)] font-sans text-white antialiased [-webkit-tap-highlight-color:transparent]"
+        >
+          {/* Gold glow at the top, like the Smart Fit app */}
           <div
             aria-hidden="true"
-            className="relative z-30 shrink-0 bg-[var(--app-bg)]/90 backdrop-blur"
-            style={{ height: topInset }}
+            className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[140%] -translate-x-1/2 rounded-[50%] opacity-40 blur-3xl"
+            style={{
+              background: 'radial-gradient(closest-side, var(--app-gold-deep), transparent)',
+            }}
           />
-        )}
-        <main
-          key={`${tab}-${stack.length}-${route?.name ?? 'root'}`}
-          className={cx(
-            'relative min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:none] animate-[app-screen-in_200ms_ease-out] motion-reduce:animate-none',
-            fullScreen ? 'pb-6' : 'pb-28',
+          {topInset > 0 && (
+            <div
+              aria-hidden="true"
+              className="relative z-30 shrink-0 bg-[var(--app-bg)]/90 backdrop-blur"
+              style={{ height: topInset }}
+            />
           )}
-        >
-          {screen}
-        </main>
-
-        {showSessionBar && sessionWorkout && (
-          <button
-            type="button"
-            onClick={() => value.push({ name: 'session' })}
-            className="absolute inset-x-3 bottom-[84px] z-20 flex items-center gap-3 rounded-2xl bg-[var(--app-gold)] px-4 py-3 text-left text-[#0d0a21] shadow-lg"
+          <main
+            key={`${tab}-${stack.length}-${route?.name ?? 'root'}`}
+            className={cx(
+              'relative min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:none] animate-[app-screen-in_200ms_ease-out] motion-reduce:animate-none',
+              fullScreen ? 'pb-6' : 'pb-28',
+            )}
           >
-            <span className="relative flex size-2.5">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#0d0a21]/50 motion-reduce:animate-none" />
-              <span className="relative inline-flex size-2.5 rounded-full bg-[#0d0a21]" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[11px] font-semibold tracking-wide uppercase opacity-70">
-                Treino em andamento
-              </span>
-              <span className="block truncate text-sm font-semibold">
-                Treino {sessionWorkout.code} · {sessionWorkout.title}
-              </span>
-            </span>
-            <span className="font-semibold tabular-nums">
-              {formatClock(Math.round((now - session!.startedAt) / 1000))}
-            </span>
-          </button>
-        )}
+            {screen}
+          </main>
 
-        {!fullScreen && (
-          <nav
-            aria-label="Abas do app"
-            className="absolute inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-[var(--app-line)] bg-[var(--app-bg)]/95 px-2 pt-2 pb-6 backdrop-blur"
-          >
-            {tabs.map((item) => {
-              const active = tab === item.id && !route
-              const current = tab === item.id
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => value.setTab(item.id)}
-                  aria-current={current ? 'page' : undefined}
-                  className={cx(
-                    'flex flex-col items-center gap-1 rounded-xl py-1 text-[11px] font-medium transition-colors',
-                    current ? 'text-white' : 'text-white/40',
-                  )}
-                >
-                  <span
+          {showSessionBar && sessionWorkout && (
+            <button
+              type="button"
+              onClick={() => value.push({ name: 'session' })}
+              className="absolute inset-x-3 bottom-[84px] z-20 flex items-center gap-3 rounded-2xl bg-[var(--app-gold)] px-4 py-3 text-left text-[#0d0a21] shadow-lg"
+            >
+              <span className="relative flex size-2.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#0d0a21]/50 motion-reduce:animate-none" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-[#0d0a21]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] font-semibold tracking-wide uppercase opacity-70">
+                  Treino em andamento
+                </span>
+                <span className="block truncate text-sm font-semibold">
+                  Treino {sessionWorkout.code} · {sessionWorkout.title}
+                </span>
+              </span>
+              <span className="font-semibold tabular-nums">
+                {formatClock(Math.round((now - session!.startedAt) / 1000))}
+              </span>
+            </button>
+          )}
+
+          {!fullScreen && (
+            <nav
+              aria-label="Abas do app"
+              className="absolute inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-[var(--app-line)] bg-[var(--app-bg)]/95 px-2 pt-2 pb-6 backdrop-blur"
+            >
+              {tabs.map((item) => {
+                const active = tab === item.id && !route
+                const current = tab === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => value.setTab(item.id)}
+                    aria-current={current ? 'page' : undefined}
                     className={cx(
-                      'grid h-7 w-12 place-items-center rounded-full transition-colors',
-                      active ? 'bg-white/10' : '',
+                      'flex flex-col items-center gap-1 rounded-xl py-1 text-[11px] font-medium transition-colors',
+                      current ? 'text-white' : 'text-white/40',
                     )}
                   >
-                    <Icon name={item.icon} className="size-[22px]" />
-                  </span>
-                  {item.label}
-                </button>
-              )
-            })}
-          </nav>
-        )}
-      </div>
+                    <span
+                      className={cx(
+                        'grid h-7 w-12 place-items-center rounded-full transition-colors',
+                        active ? 'bg-white/10' : '',
+                      )}
+                    >
+                      <Icon name={item.icon} className="size-[22px]" />
+                    </span>
+                    {item.label}
+                  </button>
+                )
+              })}
+            </nav>
+          )}
+        </div>
+      </SheetHostContext.Provider>
     </AppContext.Provider>
   )
 }

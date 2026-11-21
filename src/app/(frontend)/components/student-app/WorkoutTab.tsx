@@ -554,7 +554,9 @@ export function WorkoutDetail({ code }: { code: Workout['code'] }) {
         </ol>
       </div>
 
-      <div className="sticky bottom-0 mt-4 bg-gradient-to-t from-[var(--app-bg)] via-[var(--app-bg)] to-transparent px-5 pt-6 pb-2">
+      {/* The solid strip below the button covers the space reserved for the tab bar,
+          so the list doesn't show between the button and the tabs. */}
+      <div className="sticky bottom-0 mt-4 bg-gradient-to-t from-[var(--app-bg)] via-[var(--app-bg)] to-transparent px-5 pt-6 pb-2 after:absolute after:inset-x-0 after:top-full after:h-28 after:bg-[var(--app-bg)]">
         {session?.code === code ? (
           <GoldButton onClick={() => push({ name: 'session' })}>Continuar treino</GoldButton>
         ) : (
@@ -997,7 +999,8 @@ export function CalendarScreen() {
   const year = today.getFullYear()
   const month = today.getMonth()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7 // Monday first
+  // Sunday first, like the week on Início (D S T Q Q S S).
+  const firstWeekday = new Date(year, month, 1).getDay()
   const isDone = (day: number) =>
     (day === today.getDate() && lastFinished) || (day <= today.getDate() && trained[day - 1])
   const monthCount = Array.from({ length: today.getDate() }, (_, i) => i + 1).filter((day) =>
@@ -1033,7 +1036,7 @@ export function CalendarScreen() {
         role="grid"
         aria-label="Dias do mês"
       >
-        {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((day, index) => (
+        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => (
           <span key={index} className="text-xs font-semibold text-white/60" aria-hidden="true">
             {day}
           </span>

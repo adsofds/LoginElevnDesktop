@@ -565,8 +565,9 @@ export type ProgressPhoto = {
 
 /** Same photos the panel shows in the student's file. */
 export const progressPhotos: ProgressPhoto[] = [
-  { id: 'p1', url: img('1518611012118-696072aa579a', 500), dateIso: '2026-01-10', pose: 'Frente' },
-  { id: 'p2', url: img('1571019613454-1cb2f99b2d8b', 500), dateIso: '2026-01-10', pose: 'Costas' },
-  { id: 'p3', url: img('1548690312-e3b507d8c110', 500), dateIso: '2026-02-22', pose: 'Lado' },
-  { id: 'p4', url: img('1594381898411-846e7d193883', 500), dateIso: '2026-04-12', pose: 'Frente' },
+  { id: 'p1', url: img('1583454110551-21f2fa2afe61', 500), dateIso: '2026-01-08', pose: 'Frente' },
+  { id: 'p2', url: img('1605296867304-46d5465a13f1', 500), dateIso: '2026-01-08', pose: 'Costas' },
+  { id: 'p3', url: img('1571019614242-c5c5dee9f50b', 500), dateIso: '2026-02-20', pose: 'Lado' },
+  { id: 'p4', url: img('1637430308606-86576d8fef3c', 500), dateIso: '2026-04-12', pose: 'Frente' },
+  { id: 'p5', url: img('1672344048213-76b6e77304bd', 500), dateIso: '2026-04-12', pose: 'Costas' },
 ]
