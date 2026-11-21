@@ -7,10 +7,13 @@ import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 import { AccountTab, NotificationsScreen, PhotosScreen } from './AccountTab'
 import { DietTab } from './DietTab'
+import type { DoneExercise } from './history'
 import { HomeTab } from './HomeTab'
+import { ShareStudio } from './ShareStudio'
 import { appTheme, formatClock } from './ui'
 import {
   CalendarScreen,
+  DoneWorkoutScreen,
   HistoryScreen,
   SessionScreen,
   SummaryScreen,
@@ -28,6 +31,10 @@ export type AppRoute =
   | { name: 'history' }
   | { name: 'photos' }
   | { name: 'notifications' }
+  /** A finished workout from the history ('hoje' = the one just finished). */
+  | { name: 'done'; key: string }
+  /** Share studio (Strava-style stickers) for a finished workout. */
+  | { name: 'share'; key: string }
 
 export type SetLog = PlannedSet & { kgInput: string; repsInput: string; done: boolean }
 
@@ -40,10 +47,13 @@ export type Session = {
 
 export type FinishedSession = {
   code: Workout['code']
+  finishedAt: number
   seconds: number
   volume: number
   sets: number
   prs: number
+  /** What was actually logged, set by set. */
+  log: DoneExercise[]
 }
 
 type AppContextValue = {
@@ -266,18 +276,25 @@ export default function StudentApp({
         let volume = 0
         let sets = 0
         let prs = 0
+        const log: DoneExercise[] = []
         for (const exercise of workout.exercises) {
+          const done: DoneExercise['sets'] = []
           for (const set of session.sets[exercise.id] ?? []) {
             if (!set.done) continue
             const kg = Number(set.kgInput.replace(',', '.')) || 0
             const reps = Number(set.repsInput) || 0
             sets += 1
             if (exercise.muscle !== 'Cardio') volume += kg * reps
-            if (set.previous && kg * reps > set.previous.kg * set.previous.reps && kg > 0) prs += 1
+            const pr = !!set.previous && kg > 0 && kg * reps > set.previous.kg * set.previous.reps
+            if (pr) prs += 1
+            done.push({ type: set.type, kg, reps, pr })
           }
+          log.push({ id: exercise.id, name: exercise.name, muscle: exercise.muscle, sets: done })
         }
         setLastFinished({
           code: session.code,
+          finishedAt: Date.now(),
+          log,
           seconds: Math.round((Date.now() - session.startedAt) / 1000),
           volume: Math.round(volume),
           sets,
@@ -310,7 +327,8 @@ export default function StudentApp({
   }, [tab, session, now, lastFinished, eatenMeals, mealSwaps, notifications])
 
   const route = stack[stack.length - 1]
-  const fullScreen = route?.name === 'session' || route?.name === 'summary'
+  const fullScreen =
+    route?.name === 'session' || route?.name === 'summary' || route?.name === 'share'
 
   let screen: ReactNode
   if (route) {
@@ -335,6 +353,12 @@ export default function StudentApp({
         break
       case 'notifications':
         screen = <NotificationsScreen />
+        break
+      case 'done':
+        screen = <DoneWorkoutScreen doneKey={route.key} />
+        break
+      case 'share':
+        screen = <ShareStudio doneKey={route.key} />
         break
     }
   } else {

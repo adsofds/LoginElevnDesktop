@@ -341,7 +341,6 @@ export type HistoryEntry = {
   daysAgo: number
   code: Workout['code']
   minutes: number
-  sets: number
   prs: number
   comment?: string
 }
@@ -351,23 +350,19 @@ export const workoutHistory: HistoryEntry[] = [
     daysAgo: 1,
     code: 'A',
     minutes: 58,
-
-    sets: 19,
     prs: 1,
     comment: 'Supino inclinado rendeu muito bem com 22 kg.',
   },
-  { daysAgo: 3, code: 'D', minutes: 41, sets: 10, prs: 0 },
-  { daysAgo: 4, code: 'C', minutes: 63, sets: 15, prs: 2 },
+  { daysAgo: 3, code: 'D', minutes: 41, prs: 0 },
+  { daysAgo: 4, code: 'C', minutes: 63, prs: 2 },
   {
     daysAgo: 6,
     code: 'B',
     minutes: 49,
-
-    sets: 15,
     prs: 0,
     comment: 'Senti o lombar na remada curvada.',
   },
-  { daysAgo: 8, code: 'A', minutes: 55, sets: 19, prs: 0 },
+  { daysAgo: 8, code: 'A', minutes: 55, prs: 0 },
 ]
 
 export type Food = { name: string; amount: string; kcal: number; p: number; c: number; g: number }

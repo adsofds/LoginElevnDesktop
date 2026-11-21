@@ -14,7 +14,7 @@ const shortcuts: { group: string; items: Shortcut[] }[] = [
     group: 'Abas',
     items: [
       { id: 'inicio', label: 'Início', hint: 'Semana, treino de hoje, adesão', tab: 'inicio' },
-      { id: 'treino', label: 'Treino', hint: 'Plano A, B, C e D', tab: 'treino' },
+      { id: 'treino', label: 'Treino', hint: 'Plano A–D e histórico', tab: 'treino' },
       { id: 'dieta', label: 'Dieta', hint: 'Refeições, calorias e trocas', tab: 'dieta' },
       { id: 'conta', label: 'Conta', hint: 'Plano, renovação e fotos', tab: 'conta' },
     ],
@@ -35,6 +35,20 @@ const shortcuts: { group: string; items: Shortcut[] }[] = [
         hint: 'Registro de séries e descanso',
         tab: 'treino',
         route: { name: 'session' },
+      },
+      {
+        id: 'feito',
+        label: 'Treino feito',
+        hint: 'Histórico: séries que o aluno fez',
+        tab: 'treino',
+        route: { name: 'done', key: 'h3' },
+      },
+      {
+        id: 'compartilhar',
+        label: 'Compartilhar treino',
+        hint: '5 modelos transparentes (Stories)',
+        tab: 'treino',
+        route: { name: 'share', key: 'h3' },
       },
       {
         id: 'calendario',

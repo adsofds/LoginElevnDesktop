@@ -34,7 +34,6 @@ export type StudentAppPhoto = {
   dateLabel: string
   cycleLabel: string
   weightKg: string
-  waistCm?: string
   imageUrl: string
   studentNote: string
   adminObservation?: string
@@ -1689,7 +1688,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
         dateLabel: '10/01/2026 · 07:45',
         cycleLabel: 'Avaliação Inicial (Semana 1)',
         weightKg: '68,4 kg',
-        waistCm: '74 cm',
         imageUrl:
           'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80',
         studentNote: 'Foto enviada pelo aplicativo em jejum logo após acordar.',
@@ -1701,7 +1699,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
         dateLabel: '10/01/2026 · 07:47',
         cycleLabel: 'Avaliação Inicial (Semana 1)',
         weightKg: '68,4 kg',
-        waistCm: '74 cm',
         imageUrl:
           'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=80',
         studentNote: 'Registro de costas relaxada no primeiro check-in do app.',
@@ -1712,7 +1709,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
         dateLabel: '22/02/2026 · 08:10',
         cycleLabel: 'Check-in Intermediário (Semana 6)',
         weightKg: '65,9 kg',
-        waistCm: '70 cm',
         imageUrl:
           'https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=900&q=80',
         studentNote: 'Já sentindo muita diferença na retenção abdominal e disposição!',
@@ -1724,7 +1720,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
         dateLabel: '12/04/2026 · 07:50',
         cycleLabel: 'Check-in Atual (Semana 12)',
         weightKg: '63,8 kg',
-        waistCm: '67 cm',
         imageUrl:
           'https://images.unsplash.com/photo-1594381898411-846e7d193883?auto=format&fit=crop&w=900&q=80',
         studentNote: 'Foto atual enviada pelo aplicativo hoje cedo em jejum.',
@@ -1736,7 +1731,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
         dateLabel: '12/04/2026 · 07:52',
         cycleLabel: 'Check-in Atual (Semana 12)',
         weightKg: '63,8 kg',
-        waistCm: '67 cm',
         imageUrl:
           'https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=900&q=80',
         studentNote: 'Costas e posteriores bem mais marcados neste ciclo.',
@@ -1761,7 +1755,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
       dateLabel: '08/01/2026 · 07:30',
       cycleLabel: 'Avaliação Inicial (Semana 1)',
       weightKg: '84,6 kg',
-      waistCm: '88 cm',
       imageUrl:
         'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=900&q=80',
       studentNote: 'Primeira foto enviada pelo aplicativo Elevn em jejum.',
@@ -1773,7 +1766,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
       dateLabel: '08/01/2026 · 07:32',
       cycleLabel: 'Avaliação Inicial (Semana 1)',
       weightKg: '84,6 kg',
-      waistCm: '88 cm',
       imageUrl:
         'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=900&q=80',
       studentNote: 'Costas relaxado na primeira semana do protocolo.',
@@ -1784,7 +1776,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
       dateLabel: '20/02/2026 · 08:00',
       cycleLabel: 'Check-in Intermediário (Semana 6)',
       weightKg: '81,2 kg',
-      waistCm: '83 cm',
       imageUrl:
         'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=900&q=80',
       studentNote: 'Metade do protocolo concluída, cintura diminuiu bastante.',
@@ -1796,7 +1787,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
       dateLabel: '12/04/2026 · 07:40',
       cycleLabel: 'Check-in Atual (Semana 12)',
       weightKg: '78,4 kg',
-      waistCm: '79 cm',
       imageUrl:
         'https://images.unsplash.com/photo-1637430308606-86576d8fef3c?auto=format&fit=crop&w=900&q=80',
       studentNote: 'Foto enviada hoje pelo aplicativo em jejum. Densidade muito melhor!',
@@ -1808,7 +1798,6 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
       dateLabel: '12/04/2026 · 07:42',
       cycleLabel: 'Check-in Atual (Semana 12)',
       weightKg: '78,4 kg',
-      waistCm: '79 cm',
       imageUrl:
         'https://images.unsplash.com/photo-1672344048213-76b6e77304bd?auto=format&fit=crop&w=900&q=80',
       studentNote: 'Costas atual após 12 semanas de Treino B focado em largura dorsal.',
@@ -1897,20 +1886,17 @@ function parsePhotoDate(label: string) {
   return match ? new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1])) : null
 }
 
-/** What changed between photo A and photo B: weight, waist and time. */
+/** What changed between photo A and photo B: weight and time. */
 function ComparisonDeltas({ before, after }: { before: StudentAppPhoto; after: StudentAppPhoto }) {
   const fmt = (value: number, unit: string) =>
     `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${unit}`
   const weightA = parseMeasure(before.weightKg)
   const weightB = parseMeasure(after.weightKg)
-  const waistA = parseMeasure(before.waistCm)
-  const waistB = parseMeasure(after.waistCm)
   const dateA = parsePhotoDate(before.dateLabel)
   const dateB = parsePhotoDate(after.dateLabel)
   const weeks = dateA && dateB ? Math.round(Math.abs(dateB.getTime() - dateA.getTime()) / (7 * 864e5)) : null
   const items = [
     weightA !== null && weightB !== null ? { label: 'Peso', value: fmt(weightB - weightA, 'kg') } : null,
-    waistA !== null && waistB !== null ? { label: 'Cintura', value: fmt(waistB - waistA, 'cm') } : null,
     weeks !== null ? { label: 'Intervalo', value: `${weeks} ${weeks === 1 ? 'semana' : 'semanas'}` } : null,
   ].filter(Boolean) as { label: string; value: string }[]
   if (!items.length) return null
@@ -2137,7 +2123,6 @@ export default function StudentsWorkspace({
   /** Day the photo was taken (yyyy-mm-dd); empty means today. */
   const [newPhotoDate, setNewPhotoDate] = useState('')
   const [newPhotoWeight, setNewPhotoWeight] = useState('78,0 kg')
-  const [newPhotoWaist, setNewPhotoWaist] = useState('78 cm')
   const [newPhotoCycle, setNewPhotoCycle] = useState('Novo Envio pelo App')
   const [newPhotoNote, setNewPhotoNote] = useState('')
   const [newPhotoUrl, setNewPhotoUrl] = useState(
@@ -2450,7 +2435,6 @@ export default function StudentsWorkspace({
       dateLabel,
       cycleLabel: newPhotoCycle.trim() || 'Enviada pelo Aplicativo',
       weightKg: newPhotoWeight.trim() || modalLiveClin?.fastingWeight || '78,0 kg',
-      waistCm: newPhotoWaist.trim() || undefined,
       imageUrl: newPhotoUrl,
       studentNote:
         newPhotoNote.trim() || 'Foto cadastrada pelo aluno diretamente no aplicativo Elevn.',
@@ -4094,15 +4078,6 @@ export default function StudentsWorkspace({
                           placeholder="Ex.: 77,2 kg"
                         />
                       </label>
-                      <label>
-                        <span>Cintura (opcional)</span>
-                        <input
-                          type="text"
-                          value={newPhotoWaist}
-                          onChange={(e) => setNewPhotoWaist(e.target.value)}
-                          placeholder="Ex.: 77 cm"
-                        />
-                      </label>
                       <label className="upload-file-label">
                         <span>Subir foto do dispositivo</span>
                         <input type="file" accept="image/*" onChange={handleNewPhotoFileUpload} />
@@ -4136,9 +4111,6 @@ export default function StudentsWorkspace({
                             <span className="pane-tag before-tag">FOTO A · ANTES</span>
                             <span className="pane-angle">{photoBefore.angle}</span>
                             <span className="pane-weight">{photoBefore.weightKg}</span>
-                            {photoBefore.waistCm && (
-                              <span className="pane-waist">Cintura: {photoBefore.waistCm}</span>
-                            )}
                           </div>
                           <div className="pane-image-frame">
                             <img
@@ -4158,9 +4130,6 @@ export default function StudentsWorkspace({
                             <span className="pane-tag after-tag">FOTO B · DEPOIS (ATUAL)</span>
                             <span className="pane-angle">{photoAfter.angle}</span>
                             <span className="pane-weight">{photoAfter.weightKg}</span>
-                            {photoAfter.waistCm && (
-                              <span className="pane-waist">Cintura: {photoAfter.waistCm}</span>
-                            )}
                           </div>
                           <div className="pane-image-frame">
                             <img
