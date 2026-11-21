@@ -7,21 +7,6 @@
 const img = (id: string, w = 480) =>
   `https://images.unsplash.com/photo-${id}?w=${w}&q=70&auto=format&fit=crop`
 
-export const appImages = {
-  gym: img('1637430308606-86576d8fef3c', 900),
-  barbell: img('1672344048213-76b6e77304bd'),
-  dumbbells: img('1734630341082-0fec0e10126c'),
-  deadlift: img('1605296867304-46d5465a13f1'),
-  dumbbellGrab: img('1583454110551-21f2fa2afe61'),
-  pushup: img('1571019614242-c5c5dee9f50b'),
-  crunch: img('1571019613454-1cb2f99b2d8b'),
-  rack: img('1534438327276-14e5300c3a48'),
-  legs: img('1518611012118-696072aa579a'),
-  floorBarbell: img('1517838277536-f5f99be501cd'),
-  mealPrep: img('1543352632-5a4b24e4d2a6', 900),
-  plate: img('1547592180-85f173990554', 900),
-}
-
 export type SetType = 'aquecimento' | 'normal' | 'falha'
 
 export type PlannedSet = {
@@ -37,9 +22,8 @@ export type Exercise = {
   name: string
   muscle: string
   equipment: string
-  image: string
   restSec: number
-  /** Video from the exercise library (MFIT). */
+  /** Length of Breno's own video for the exercise. */
   videoLength: string
   trainerNote?: string
   sets: PlannedSet[]
@@ -50,7 +34,9 @@ export type Workout = {
   title: string
   focus: string
   minutes: number
-  cover: string
+  /** Times the student has done this workout so far. */
+  timesDone: number
+  muscles: string[]
   exercises: Exercise[]
 }
 
@@ -66,15 +52,15 @@ export const workouts: Workout[] = [
     code: 'A',
     title: 'Peito, Ombro e Tríceps',
     focus: 'Empurrar',
+    timesDone: 8,
+    muscles: ['Peito', 'Ombros', 'Tríceps'],
     minutes: 55,
-    cover: appImages.barbell,
     exercises: [
       {
         id: 'supino-reto',
         name: 'Supino reto com barra',
         muscle: 'Peitoral',
         equipment: 'Barra',
-        image: appImages.barbell,
         restSec: 120,
         videoLength: '0:48',
         trainerNote: 'Desce controlando em 3 segundos. Escápulas presas no banco.',
@@ -90,7 +76,6 @@ export const workouts: Workout[] = [
         name: 'Supino inclinado com halteres',
         muscle: 'Peitoral superior',
         equipment: 'Halteres',
-        image: appImages.dumbbells,
         restSec: 90,
         videoLength: '0:41',
         sets: [
@@ -104,7 +89,6 @@ export const workouts: Workout[] = [
         name: 'Desenvolvimento com halteres',
         muscle: 'Ombros',
         equipment: 'Halteres',
-        image: appImages.dumbbellGrab,
         restSec: 90,
         videoLength: '0:36',
         sets: [
@@ -118,7 +102,6 @@ export const workouts: Workout[] = [
         name: 'Elevação lateral',
         muscle: 'Ombros',
         equipment: 'Halteres',
-        image: appImages.rack,
         restSec: 60,
         videoLength: '0:29',
         trainerNote: 'Bi-set com o próximo exercício.',
@@ -133,7 +116,6 @@ export const workouts: Workout[] = [
         name: 'Tríceps na polia com corda',
         muscle: 'Tríceps',
         equipment: 'Polia',
-        image: appImages.gym,
         restSec: 60,
         videoLength: '0:33',
         sets: [
@@ -147,7 +129,6 @@ export const workouts: Workout[] = [
         name: 'Flexão de braço',
         muscle: 'Peitoral',
         equipment: 'Peso corporal',
-        image: appImages.pushup,
         restSec: 60,
         videoLength: '0:25',
         sets: [s('falha', 0, 15, [0, 14]), s('falha', 0, 12, [0, 12])],
@@ -158,15 +139,15 @@ export const workouts: Workout[] = [
     code: 'B',
     title: 'Dorsal e Bíceps',
     focus: 'Puxar',
+    timesDone: 7,
+    muscles: ['Costas', 'Bíceps'],
     minutes: 50,
-    cover: appImages.dumbbellGrab,
     exercises: [
       {
         id: 'puxada',
         name: 'Puxada frontal na polia',
         muscle: 'Dorsal',
         equipment: 'Polia',
-        image: appImages.gym,
         restSec: 90,
         videoLength: '0:44',
         trainerNote: 'Peito alto, puxe com os cotovelos e não balance o tronco.',
@@ -182,7 +163,6 @@ export const workouts: Workout[] = [
         name: 'Remada curvada com barra',
         muscle: 'Dorsal',
         equipment: 'Barra',
-        image: appImages.floorBarbell,
         restSec: 120,
         videoLength: '0:52',
         sets: [
@@ -196,7 +176,6 @@ export const workouts: Workout[] = [
         name: 'Remada unilateral com halter',
         muscle: 'Dorsal',
         equipment: 'Halter',
-        image: appImages.dumbbellGrab,
         restSec: 60,
         videoLength: '0:38',
         sets: [
@@ -210,7 +189,6 @@ export const workouts: Workout[] = [
         name: 'Rosca direta com barra',
         muscle: 'Bíceps',
         equipment: 'Barra',
-        image: appImages.barbell,
         restSec: 60,
         videoLength: '0:31',
         sets: [
@@ -224,7 +202,6 @@ export const workouts: Workout[] = [
         name: 'Rosca martelo',
         muscle: 'Bíceps',
         equipment: 'Halteres',
-        image: appImages.rack,
         restSec: 60,
         videoLength: '0:27',
         sets: [s('normal', 12, 12, [12, 12]), s('normal', 12, 12, [12, 10])],
@@ -235,15 +212,15 @@ export const workouts: Workout[] = [
     code: 'C',
     title: 'Pernas',
     focus: 'Membros inferiores',
+    timesDone: 7,
+    muscles: ['Quadríceps', 'Posterior', 'Glúteos'],
     minutes: 60,
-    cover: appImages.deadlift,
     exercises: [
       {
         id: 'agachamento',
         name: 'Agachamento livre',
         muscle: 'Quadríceps',
         equipment: 'Barra',
-        image: appImages.deadlift,
         restSec: 150,
         videoLength: '0:58',
         trainerNote: 'Profundidade até a coxa paralela. Joelhos acompanham a ponta dos pés.',
@@ -259,7 +236,6 @@ export const workouts: Workout[] = [
         name: 'Leg press 45°',
         muscle: 'Quadríceps',
         equipment: 'Máquina',
-        image: appImages.gym,
         restSec: 120,
         videoLength: '0:40',
         sets: [
@@ -273,7 +249,6 @@ export const workouts: Workout[] = [
         name: 'Stiff com barra',
         muscle: 'Posterior de coxa',
         equipment: 'Barra',
-        image: appImages.floorBarbell,
         restSec: 90,
         videoLength: '0:46',
         sets: [
@@ -287,7 +262,6 @@ export const workouts: Workout[] = [
         name: 'Glúteo em 4 apoios',
         muscle: 'Glúteos',
         equipment: 'Caneleira',
-        image: appImages.legs,
         restSec: 45,
         videoLength: '0:22',
         sets: [s('normal', 5, 15, [5, 15]), s('normal', 5, 15, [5, 15])],
@@ -297,7 +271,6 @@ export const workouts: Workout[] = [
         name: 'Panturrilha em pé',
         muscle: 'Panturrilhas',
         equipment: 'Máquina',
-        image: appImages.rack,
         restSec: 45,
         videoLength: '0:20',
         sets: [
@@ -312,15 +285,15 @@ export const workouts: Workout[] = [
     code: 'D',
     title: 'Cardio e Abdômen',
     focus: 'Condicionamento',
+    timesDone: 5,
+    muscles: ['Cardio', 'Abdômen'],
     minutes: 40,
-    cover: appImages.crunch,
     exercises: [
       {
         id: 'esteira',
         name: 'Esteira intervalada (min)',
         muscle: 'Cardio',
         equipment: 'Esteira',
-        image: appImages.gym,
         restSec: 0,
         videoLength: '0:35',
         trainerNote: '1 minuto forte, 2 minutos leve. O "kg" aqui é a velocidade (km/h).',
@@ -336,7 +309,6 @@ export const workouts: Workout[] = [
         name: 'Abdominal supra',
         muscle: 'Abdômen',
         equipment: 'Peso corporal',
-        image: appImages.crunch,
         restSec: 45,
         videoLength: '0:24',
         sets: [
@@ -350,7 +322,6 @@ export const workouts: Workout[] = [
         name: 'Prancha (segundos)',
         muscle: 'Core',
         equipment: 'Peso corporal',
-        image: appImages.pushup,
         restSec: 45,
         videoLength: '0:18',
         sets: [
@@ -370,7 +341,6 @@ export type HistoryEntry = {
   daysAgo: number
   code: Workout['code']
   minutes: number
-  volumeKg: number
   sets: number
   prs: number
   comment?: string
@@ -381,41 +351,50 @@ export const workoutHistory: HistoryEntry[] = [
     daysAgo: 1,
     code: 'A',
     minutes: 58,
-    volumeKg: 6420,
+
     sets: 19,
     prs: 1,
     comment: 'Supino inclinado rendeu muito bem com 22 kg.',
   },
-  { daysAgo: 3, code: 'D', minutes: 41, volumeKg: 0, sets: 10, prs: 0 },
-  { daysAgo: 4, code: 'C', minutes: 63, volumeKg: 9850, sets: 15, prs: 2 },
+  { daysAgo: 3, code: 'D', minutes: 41, sets: 10, prs: 0 },
+  { daysAgo: 4, code: 'C', minutes: 63, sets: 15, prs: 2 },
   {
     daysAgo: 6,
     code: 'B',
     minutes: 49,
-    volumeKg: 5310,
+
     sets: 15,
     prs: 0,
     comment: 'Senti o lombar na remada curvada.',
   },
-  { daysAgo: 8, code: 'A', minutes: 55, volumeKg: 6180, sets: 19, prs: 0 },
+  { daysAgo: 8, code: 'A', minutes: 55, sets: 19, prs: 0 },
 ]
 
 export type Food = { name: string; amount: string; kcal: number; p: number; c: number; g: number }
+export type SmartSwap = {
+  id: string
+  name: string
+  /** Why it fits: eating out, no time to cook… */
+  context: string
+  kcal: number
+  foods: { name: string; amount: string }[]
+}
+
 export type Meal = {
   id: string
   name: string
   time: string
   foods: Food[]
+  /** Food-by-food substitutions approved by the nutritionist. */
   swaps?: string[]
+  /** Whole-meal alternatives with similar calories ("Trocas inteligentes"). */
+  smartSwaps?: SmartSwap[]
 }
 
 export const dietPlan = {
   strategy: 'Déficit calórico estruturado',
-  nutritionist: 'Dra. Paula Nunes',
   targets: { kcal: 1850, p: 150, c: 170, g: 55 },
-  waterGoalMl: 3000,
   note: 'Nos dias de perna, some 1 banana no pré-treino (+100 kcal).',
-  cover: appImages.plate,
   meals: [
     {
       id: 'cafe',
@@ -427,6 +406,31 @@ export const dietPlan = {
         { name: 'Mamão', amount: '1 fatia média', kcal: 55, p: 1, c: 13, g: 0 },
       ],
       swaps: ['Pão integral ↔ 4 col. de tapioca', 'Mamão ↔ 1 banana pequena'],
+      smartSwaps: [
+        {
+          id: 'cafe-padaria',
+          name: 'Café na padaria',
+          context: 'Saiu cedo de casa',
+          kcal: 400,
+          foods: [
+            { name: 'Pão na chapa sem manteiga', amount: '1 unidade' },
+            { name: 'Omelete simples', amount: '2 ovos' },
+            { name: 'Café com leite desnatado', amount: '1 copo' },
+          ],
+        },
+        {
+          id: 'cafe-rapido',
+          name: 'Shake rápido',
+          context: 'Sem tempo de cozinhar',
+          kcal: 390,
+          foods: [
+            { name: 'Whey protein', amount: '1 scoop' },
+            { name: 'Banana', amount: '1 unidade' },
+            { name: 'Aveia', amount: '3 col. sopa' },
+            { name: 'Leite desnatado', amount: '200 ml' },
+          ],
+        },
+      ],
     },
     {
       id: 'lanche1',
@@ -455,6 +459,31 @@ export const dietPlan = {
         },
       ],
       swaps: ['Frango ↔ 150 g de patinho moído', 'Arroz ↔ 150 g de batata-doce'],
+      smartSwaps: [
+        {
+          id: 'almoco-restaurante',
+          name: 'Prato feito no restaurante',
+          context: 'Almoço fora de casa',
+          kcal: 540,
+          foods: [
+            { name: 'Grelhado (frango, peixe ou carne magra)', amount: '1 filé médio' },
+            { name: 'Arroz', amount: '4 col. sopa' },
+            { name: 'Feijão', amount: '1 concha' },
+            { name: 'Salada', amount: 'metade do prato' },
+          ],
+        },
+        {
+          id: 'almoco-japones',
+          name: 'Japonês',
+          context: 'Encontro com amigos',
+          kcal: 520,
+          foods: [
+            { name: 'Sashimi de salmão', amount: '8 fatias' },
+            { name: 'Sushi', amount: '6 peças' },
+            { name: 'Sunomono', amount: '1 porção' },
+          ],
+        },
+      ],
     },
     {
       id: 'pre',
@@ -475,6 +504,29 @@ export const dietPlan = {
         { name: 'Azeite de oliva', amount: '1 col. sopa', kcal: 90, p: 0, c: 0, g: 10 },
       ],
       swaps: ['Tilápia ↔ 150 g de frango'],
+      smartSwaps: [
+        {
+          id: 'jantar-delivery',
+          name: 'Delivery de poke',
+          context: 'Cansado para cozinhar',
+          kcal: 380,
+          foods: [
+            { name: 'Poke de atum', amount: 'tamanho pequeno' },
+            { name: 'Base de folhas no lugar do arroz', amount: '—' },
+          ],
+        },
+        {
+          id: 'jantar-omelete',
+          name: 'Omelete de legumes',
+          context: 'Geladeira vazia',
+          kcal: 340,
+          foods: [
+            { name: 'Ovos', amount: '3 unidades' },
+            { name: 'Legumes picados', amount: '1 xícara' },
+            { name: 'Queijo branco', amount: '1 fatia' },
+          ],
+        },
+      ],
     },
     {
       id: 'ceia',
@@ -492,16 +544,15 @@ export const studentProfile = {
   name: 'Lucas Andrade',
   firstName: 'Lucas',
   avatar: '/people/gustavo-lima.jpg',
-  enrollment: '24077213',
   plan: 'Trimestral',
   planPrice: 'R$ 420/mês',
-  expiration: '18 nov',
   daysToExpire: 3,
   goal: 'Emagrecimento',
   phase: 'Déficit',
   frequency: '5x por semana',
-  experience: 'Treina há 2 anos',
-  coach: 'Prof. Rafael Costa',
+  weeklyTarget: 5,
+  coach: 'Breno Monteiro',
+  coachFirstName: 'Breno',
   coachWhatsapp: '5584999990000',
   weight: '81,4 kg',
   weightDelta: '-1,1 kg na quinzena',
@@ -512,39 +563,15 @@ export const studentProfile = {
 export type ProgressPhoto = {
   id: string
   url: string
-  label: string
-  date: string
+  /** Day the photo was taken (yyyy-mm-dd), chosen by whoever uploads it. */
+  dateIso: string
   pose: 'Frente' | 'Lado' | 'Costas'
 }
 
 /** Same photos the panel shows in the student's file. */
 export const progressPhotos: ProgressPhoto[] = [
-  {
-    id: 'p1',
-    url: img('1518611012118-696072aa579a', 500),
-    label: 'Início do plano',
-    date: '10 jan',
-    pose: 'Frente',
-  },
-  {
-    id: 'p2',
-    url: img('1571019613454-1cb2f99b2d8b', 500),
-    label: 'Início do plano',
-    date: '10 jan',
-    pose: 'Costas',
-  },
-  {
-    id: 'p3',
-    url: img('1548690312-e3b507d8c110', 500),
-    label: 'Mês 2',
-    date: '22 fev',
-    pose: 'Lado',
-  },
-  {
-    id: 'p4',
-    url: img('1594381898411-846e7d193883', 500),
-    label: 'Mês 3',
-    date: '12 abr',
-    pose: 'Frente',
-  },
+  { id: 'p1', url: img('1518611012118-696072aa579a', 500), dateIso: '2026-01-10', pose: 'Frente' },
+  { id: 'p2', url: img('1571019613454-1cb2f99b2d8b', 500), dateIso: '2026-01-10', pose: 'Costas' },
+  { id: 'p3', url: img('1548690312-e3b507d8c110', 500), dateIso: '2026-02-22', pose: 'Lado' },
+  { id: 'p4', url: img('1594381898411-846e7d193883', 500), dateIso: '2026-04-12', pose: 'Frente' },
 ]

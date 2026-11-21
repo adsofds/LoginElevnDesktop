@@ -13,10 +13,10 @@ const shortcuts: { group: string; items: Shortcut[] }[] = [
   {
     group: 'Abas',
     items: [
-      { id: 'inicio', label: 'Início', hint: 'Semana, treino de hoje, check-in', tab: 'inicio' },
+      { id: 'inicio', label: 'Início', hint: 'Semana, treino de hoje, adesão', tab: 'inicio' },
       { id: 'treino', label: 'Treino', hint: 'Plano A, B, C e D', tab: 'treino' },
-      { id: 'dieta', label: 'Dieta', hint: 'Macros, água e refeições', tab: 'dieta' },
-      { id: 'conta', label: 'Conta', hint: 'Plano, renovação e menu', tab: 'conta' },
+      { id: 'dieta', label: 'Dieta', hint: 'Refeições, calorias e trocas', tab: 'dieta' },
+      { id: 'conta', label: 'Conta', hint: 'Plano, renovação e fotos', tab: 'conta' },
     ],
   },
   {
@@ -25,7 +25,7 @@ const shortcuts: { group: string; items: Shortcut[] }[] = [
       {
         id: 'detalhe',
         label: 'Detalhe do treino',
-        hint: 'Exercícios com vídeo',
+        hint: 'Exercícios com os vídeos do Breno',
         tab: 'treino',
         route: { name: 'workout', code: 'B' },
       },
@@ -39,21 +39,14 @@ const shortcuts: { group: string; items: Shortcut[] }[] = [
       {
         id: 'calendario',
         label: 'Calendário',
-        hint: 'Dias treinados no mês',
+        hint: 'Dias treinados no mês (toque na semana)',
         tab: 'treino',
         route: { name: 'calendar' },
       },
       {
-        id: 'checkin',
-        label: 'Check-in semanal',
-        hint: 'Carinhas, peso e observação',
-        tab: 'inicio',
-        route: { name: 'checkin' },
-      },
-      {
         id: 'fotos',
         label: 'Minhas fotos',
-        hint: 'Enviar e comparar',
+        hint: 'Enviar com data e comparar',
         tab: 'conta',
         route: { name: 'photos' },
       },
@@ -234,30 +227,32 @@ export default function AppAlunoView() {
               <div>
                 <dt className="font-medium text-ink">Início</dt>
                 <dd className="text-ink-2">
-                  Semana com dias treinados e sequência, treino de hoje, check-in semanal em
-                  carinhas e próxima refeição.
+                  Semana com os dias treinados (toque para abrir o calendário), treino de hoje, como
+                  está a adesão aos treinos com uma carinha feliz, neutra ou triste, e a próxima
+                  refeição.
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-ink">Treino</dt>
                 <dd className="text-ink-2">
-                  Plano A–D. No treino em andamento o aluno vê a carga da última vez, marca cada
-                  série e o descanso começa sozinho. No fim, pode deixar um comentário que aparece
-                  na ficha.
+                  Plano A–D com quantas vezes cada treino foi feito. Cada exercício tem o vídeo
+                  gravado pelo Breno. No treino em andamento o aluno vê a carga da última vez, marca
+                  cada série e o descanso começa sozinho. No fim, pode deixar um comentário que
+                  aparece na ficha.
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-ink">Dieta</dt>
                 <dd className="text-ink-2">
-                  Calorias e macros do dia, copos de água, refeições com horário, alimentos e
-                  substituições.
+                  Calorias do dia e de cada refeição, alimentos com as porções, substituições e
+                  trocas inteligentes. Proteína, carboidrato e gordura ficam só com a nutri.
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-ink">Conta</dt>
                 <dd className="text-ink-2">
-                  Plano e renovação, dados do objetivo, envio de fotos de evolução, avisos da equipe
-                  e lembretes.
+                  Plano e renovação, objetivo, fotos de evolução com data, avisos da equipe e
+                  lembretes. O check-in continua no LiveClin.
                 </dd>
               </div>
             </dl>

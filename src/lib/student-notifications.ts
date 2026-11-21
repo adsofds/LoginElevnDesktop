@@ -31,7 +31,7 @@ export const notificationTemplates: NotificationTemplate[] = [
     id: 'checkin',
     label: 'Lembrete de check-in',
     title: 'Hora do check-in semanal',
-    message: '{nome}, seu check-in vence hoje ({data}). Leva menos de 1 minuto: são só carinhas.',
+    message: '{nome}, seu check-in no LiveClin vence hoje ({data}). Responda por lá quando puder.',
   },
   {
     id: 'plano',
@@ -85,7 +85,7 @@ export function demoNotificationHistory(now: Date): StudentNotification[] {
       id: 'notif-demo-1',
       templateId: 'checkin',
       title: 'Hora do check-in semanal',
-      message: 'Seu check-in vence hoje. Leva menos de 1 minuto: são só carinhas.',
+      message: 'Seu check-in no LiveClin vence hoje. Responda por lá quando puder.',
       audience: {
         kind: 'filtro',
         filter: 'checkin-pendente',
@@ -102,7 +102,7 @@ export function demoNotificationHistory(now: Date): StudentNotification[] {
       title: 'Treino novo no app 💪',
       message: 'Seu treino foi atualizado. Abra o app para ver os exercícios e as cargas.',
       audience: { kind: 'alunos', studentIds: ['student-camila'] },
-      sentBy: 'Prof. Rafael Costa',
+      sentBy: 'Breno Monteiro',
       atIso: at(-3, 18),
       status: 'enviada',
     },
