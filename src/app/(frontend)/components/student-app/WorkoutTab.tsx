@@ -16,12 +16,14 @@ import { trainedDaysThisMonth, weekStreak } from './HomeTab'
 import { useStudentApp } from './StudentApp'
 import {
   Card,
+  Chip,
   formatClock,
   GhostButton,
   GoldButton,
   LetterBadge,
   PhoneSheet,
   ScreenHeader,
+  VideoTile,
 } from './ui'
 
 const workoutOf = (code: Workout['code']) => workouts.find((item) => item.code === code)!
@@ -51,56 +53,29 @@ function ExerciseVideoSheet({
   exercise: Exercise | null
   onClose: () => void
 }) {
-  const [playing, setPlaying] = useState(false)
   return (
     <PhoneSheet open={!!exercise} onClose={onClose} title={exercise?.name ?? ''}>
       {exercise && (
         <>
-          <button
-            type="button"
-            onClick={() => setPlaying((value) => !value)}
-            className="relative block aspect-[4/3] w-full overflow-hidden rounded-2xl bg-black"
-            aria-label={playing ? 'Pausar vídeo' : 'Reproduzir vídeo'}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={exercise.image}
-              alt=""
-              className={cx(
-                'size-full object-cover transition-opacity',
-                playing ? 'opacity-60' : 'opacity-90',
-              )}
-            />
-            <span className="absolute inset-0 grid place-items-center">
-              <span className="grid size-16 place-items-center rounded-full bg-black/60 text-white backdrop-blur">
-                {playing ? (
-                  <span className="flex gap-1.5" aria-hidden="true">
-                    <span className="h-5 w-1.5 rounded bg-white" />
-                    <span className="h-5 w-1.5 rounded bg-white" />
-                  </span>
-                ) : (
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="ml-1 size-7"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path d="M7 4.5v15l13-7.5z" />
-                  </svg>
-                )}
+          <div className="relative mx-auto grid aspect-[4/5] w-full max-w-[300px] place-items-center overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.10),transparent_60%),linear-gradient(160deg,#2a2536,#121019)] ring-1 ring-white/10 ring-inset">
+            <div className="text-center">
+              <span className="mx-auto grid size-16 place-items-center rounded-full bg-[var(--app-gold)] text-[#0d0a21] shadow-[0_8px_30px_-8px_var(--app-gold)]">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="ml-1 size-7"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M7 4.5v15l13-7.5z" />
+                </svg>
               </span>
-            </span>
-            <span className="absolute right-3 bottom-3 rounded-md bg-black/70 px-2 py-0.5 text-xs text-white tabular-nums">
-              {exercise.videoLength}
-            </span>
-            {playing && (
-              <span className="absolute inset-x-0 bottom-0 h-1 bg-white/20">
-                <span className="block h-full w-1/3 bg-[var(--app-gold)]" />
-              </span>
-            )}
-          </button>
-          <p className="mt-2 text-[11px] text-white/45">
-            Vídeo da biblioteca de exercícios (MFIT). Na demonstração, só a capa.
+              <p className="mt-4 text-sm font-semibold">Vídeo do {studentProfile.coachFirstName}</p>
+              <p className="text-xs text-white/50 tabular-nums">{exercise.videoLength}</p>
+            </div>
+          </div>
+          <p className="mt-3 text-center text-[11px] text-white/45">
+            O {studentProfile.coachFirstName} grava a execução de cada exercício. Na demonstração, o
+            espaço do vídeo.
           </p>
           <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
             {[
@@ -108,16 +83,16 @@ function ExerciseVideoSheet({
               ['Equipamento', exercise.equipment],
               ['Descanso', restLabel(exercise.restSec)],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-xl bg-white/[0.05] px-2 py-2.5">
+              <div key={label} className="rounded-2xl bg-white/[0.05] px-2 py-2.5">
                 <dt className="text-[11px] text-white/50">{label}</dt>
                 <dd className="mt-0.5 text-[13px] font-semibold">{value}</dd>
               </div>
             ))}
           </dl>
           {exercise.trainerNote && (
-            <p className="mt-4 rounded-xl border-l-2 border-[var(--app-gold)] bg-white/[0.04] px-3 py-2.5 text-sm leading-5 text-white/80">
+            <p className="mt-4 rounded-2xl border-l-2 border-[var(--app-gold)] bg-white/[0.04] px-3 py-2.5 text-sm leading-5 text-white/80">
               <span className="block text-[11px] font-semibold text-[var(--app-gold)]">
-                Dica do treinador
+                Dica do {studentProfile.coachFirstName}
               </span>
               {exercise.trainerNote}
             </p>
@@ -125,41 +100,6 @@ function ExerciseVideoSheet({
         </>
       )}
     </PhoneSheet>
-  )
-}
-
-function ExerciseThumb({
-  exercise,
-  onPlay,
-  size = 'md',
-}: {
-  exercise: Exercise
-  onPlay: () => void
-  size?: 'md' | 'sm'
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onPlay}
-      aria-label={`Ver vídeo: ${exercise.name}`}
-      className={cx(
-        'relative shrink-0 overflow-hidden rounded-xl bg-white/5',
-        size === 'md' ? 'size-14' : 'size-11',
-      )}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={exercise.image} alt="" className="size-full object-cover" />
-      <span className="absolute inset-0 grid place-items-center bg-black/35">
-        <svg
-          viewBox="0 0 24 24"
-          className="size-4 text-white"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path d="M7 4.5v15l13-7.5z" />
-        </svg>
-      </span>
-    </button>
   )
 }
 
@@ -177,7 +117,7 @@ export function WorkoutTab() {
           <button
             type="button"
             onClick={() => push({ name: 'calendar' })}
-            className="flex h-10 items-center gap-2 rounded-full border border-white/20 px-4 text-sm font-medium"
+            className="flex h-10 items-center gap-2 rounded-full bg-white/[0.06] px-4 text-sm font-medium ring-1 ring-white/10 ring-inset"
           >
             <Icon name="calendar" className="size-4" /> Calendário
           </button>
@@ -186,7 +126,7 @@ export function WorkoutTab() {
       <div
         role="tablist"
         aria-label="Treinos"
-        className="flex gap-6 border-b border-[var(--app-line)] px-5"
+        className="mx-5 grid grid-cols-2 rounded-full bg-white/[0.06] p-1"
       >
         {(
           [
@@ -201,57 +141,47 @@ export function WorkoutTab() {
             aria-selected={view === id}
             onClick={() => setView(id)}
             className={cx(
-              'relative pb-3 text-[17px] font-semibold transition-colors',
-              view === id ? 'text-white' : 'text-white/40',
+              'h-9 rounded-full text-sm font-semibold transition-colors',
+              view === id ? 'bg-white text-[#0d0a21]' : 'text-white/55',
             )}
           >
             {label}
-            {view === id && (
-              <span className="absolute inset-x-0 -bottom-px h-[3px] rounded-full bg-[var(--app-gold)]" />
-            )}
           </button>
         ))}
       </div>
 
       {view === 'plano' ? (
         <div className="px-5 pt-5">
-          <p className="text-sm leading-5 text-white/60">
-            Plano montado pelo {studentProfile.coach} para {studentProfile.goal.toLowerCase()}. Siga
-            na ordem e repita: A → B → C → D.
+          <p className="text-[13px] leading-5 text-white/55">
+            Montado pelo {studentProfile.coach}. Siga na ordem e repita: A → B → C → D.
           </p>
           <ul className="mt-4 space-y-3">
             {workouts.map((workout) => {
               const recommended = workout.code === nextWorkoutCode
-              const sets = workout.exercises.reduce(
-                (sum, exercise) => sum + exercise.sets.length,
-                0,
-              )
               return (
                 <li key={workout.code}>
                   <button
                     type="button"
                     onClick={() => push({ name: 'workout', code: workout.code })}
                     className={cx(
-                      'flex w-full items-center gap-4 rounded-[20px] bg-[var(--app-card)] p-4 text-left active:bg-[var(--app-card-2)]',
-                      recommended && 'ring-1 ring-[var(--app-gold)]/50',
+                      'flex w-full items-center gap-4 rounded-[24px] bg-[var(--app-card)] p-4 text-left ring-1 ring-inset active:bg-[var(--app-card-2)]',
+                      recommended ? 'ring-[var(--app-gold)]/45' : 'ring-white/[0.06]',
                     )}
                   >
                     <LetterBadge code={workout.code} size="lg" />
                     <span className="min-w-0 flex-1">
-                      {recommended && (
-                        <span className="mb-1 inline-block rounded-md bg-black px-2 py-0.5 text-[11px] font-semibold text-[var(--app-gold)]">
-                          Próximo treino
-                        </span>
-                      )}
-                      <span className="block truncate text-[17px] font-semibold">
-                        {workout.title}
+                      <span className="flex items-center gap-2">
+                        <span className="truncate text-[17px] font-semibold">{workout.title}</span>
                       </span>
-                      <span className="text-[13px] text-white/55">
-                        {workout.minutes} min · {workout.exercises.length} exercícios · {sets}{' '}
-                        séries
+                      <span className="mt-0.5 block text-[13px] text-white/50">
+                        {workout.minutes} min · {workout.exercises.length} exercícios
+                      </span>
+                      <span className="mt-2 flex flex-wrap gap-1.5">
+                        {recommended && <Chip tone="gold">Próximo</Chip>}
+                        <Chip>Feito {workout.timesDone}x</Chip>
                       </span>
                     </span>
-                    <Icon name="chevronRight" className="size-5 shrink-0 text-white/40" />
+                    <Icon name="chevronRight" className="size-5 shrink-0 text-white/35" />
                   </button>
                 </li>
               )
@@ -274,7 +204,6 @@ function HistoryList() {
             daysAgo: 0,
             code: lastFinished.code,
             minutes: Math.max(1, Math.round(lastFinished.seconds / 60)),
-            volumeKg: lastFinished.volume,
             sets: lastFinished.sets,
             prs: lastFinished.prs,
             comment: undefined as string | undefined,
@@ -283,6 +212,15 @@ function HistoryList() {
       : []),
     ...workoutHistory,
   ]
+  // Most recent first: the newest session of each workout is its highest count.
+  const counters = Object.fromEntries(
+    workouts.map((workout) => [
+      workout.code,
+      workout.timesDone + (lastFinished?.code === workout.code ? 1 : 0),
+    ]),
+  ) as Record<Workout['code'], number>
+  const numbered = entries.map((entry) => ({ ...entry, nth: counters[entry.code]-- }))
+
   const dayLabel = (daysAgo: number) => {
     if (daysAgo === 0) return 'Hoje'
     if (daysAgo === 1) return 'Ontem'
@@ -292,54 +230,65 @@ function HistoryList() {
       .format(date)
       .replaceAll('.', '')
   }
+
   return (
-    <ul className="space-y-3 px-5 pt-5">
-      {entries.map((entry, index) => {
-        const workout = workoutOf(entry.code)
-        return (
-          <li key={index}>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <LetterBadge code={entry.code} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{workout.title}</p>
-                  <p className="text-xs text-white/50 first-letter:uppercase">
-                    {dayLabel(entry.daysAgo)}
-                  </p>
-                </div>
-                {entry.prs > 0 && (
-                  <span className="rounded-full bg-[var(--app-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--app-gold)]">
-                    🏆 {entry.prs} {entry.prs === 1 ? 'recorde' : 'recordes'}
-                  </span>
-                )}
-              </div>
-              <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
-                <div>
-                  <dt className="text-[11px] text-white/45">Duração</dt>
-                  <dd className="font-semibold tabular-nums">{entry.minutes} min</dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] text-white/45">Volume</dt>
-                  <dd className="font-semibold tabular-nums">
-                    {entry.volumeKg ? `${formatKg(entry.volumeKg)} kg` : '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] text-white/45">Séries</dt>
-                  <dd className="font-semibold tabular-nums">{entry.sets}</dd>
-                </div>
-              </dl>
-              {entry.comment && (
-                <p className="mt-3 rounded-xl bg-white/[0.04] px-3 py-2 text-[13px] text-white/70">
-                  <span className="text-white/45">Seu comentário: </span>
-                  {entry.comment}
-                </p>
-              )}
+    <div className="px-5 pt-5">
+      <ul className="grid grid-cols-4 gap-2" aria-label="Vezes que você fez cada treino">
+        {workouts.map((workout) => (
+          <li key={workout.code}>
+            <Card className="flex flex-col items-center py-3">
+              <LetterBadge code={workout.code} />
+              <span className="mt-2 text-lg font-bold tabular-nums">
+                {workout.timesDone + (lastFinished?.code === workout.code ? 1 : 0)}x
+              </span>
             </Card>
           </li>
-        )
-      })}
-    </ul>
+        ))}
+      </ul>
+      <ul className="mt-4 space-y-3">
+        {numbered.map((entry, index) => {
+          const workout = workoutOf(entry.code)
+          return (
+            <li key={index}>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <LetterBadge code={entry.code} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{workout.title}</p>
+                    <p className="text-xs text-white/50 first-letter:uppercase">
+                      {dayLabel(entry.daysAgo)}
+                    </p>
+                  </div>
+                  <Chip tone="gold">{entry.nth}ª vez</Chip>
+                </div>
+                <dl className="mt-3 flex gap-6 text-sm">
+                  <div>
+                    <dt className="text-[11px] text-white/45">Duração</dt>
+                    <dd className="font-semibold tabular-nums">{entry.minutes} min</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-white/45">Séries</dt>
+                    <dd className="font-semibold tabular-nums">{entry.sets}</dd>
+                  </div>
+                  {entry.prs > 0 && (
+                    <div>
+                      <dt className="text-[11px] text-white/45">Recordes</dt>
+                      <dd className="font-semibold tabular-nums">🏆 {entry.prs}</dd>
+                    </div>
+                  )}
+                </dl>
+                {entry.comment && (
+                  <p className="mt-3 rounded-2xl bg-white/[0.04] px-3 py-2 text-[13px] text-white/70">
+                    <span className="text-white/45">Seu comentário: </span>
+                    {entry.comment}
+                  </p>
+                )}
+              </Card>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 
@@ -364,36 +313,29 @@ export function WorkoutDetail({ code }: { code: Workout['code'] }) {
 
   return (
     <div className="relative">
-      <div className="relative h-56">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={workout.cover} alt="" className="absolute inset-0 size-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--app-bg)] via-[var(--app-bg)]/30 to-black/30" />
-        <button
-          type="button"
-          onClick={pop}
-          aria-label="Voltar"
-          className="absolute top-3 left-3 grid size-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
-        >
-          <Icon name="arrowLeft" className="size-5" />
-        </button>
-      </div>
-      <div className="relative -mt-10 px-5">
-        <div className="flex items-center gap-3">
-          <LetterBadge code={workout.code} size="lg" />
+      <ScreenHeader title={`Treino ${workout.code}`} onBack={pop} />
+      <div className="px-5">
+        <div className="flex items-center gap-4">
+          <LetterBadge code={workout.code} size="xl" />
           <div className="min-w-0">
-            <p className="text-[13px] text-white/55">
+            <p className="text-[13px] text-white/50">
               Treino {workout.code} · {workout.focus}
             </p>
-            <h1 className="text-[24px] leading-7 font-semibold tracking-[-0.02em]">
+            <h2 className="text-[26px] leading-8 font-semibold tracking-[-0.02em]">
               {workout.title}
-            </h1>
+            </h2>
           </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {workout.muscles.map((muscle) => (
+            <Chip key={muscle}>{muscle}</Chip>
+          ))}
         </div>
         <dl className="mt-5 grid grid-cols-3 gap-2">
           {[
             ['Duração', `${workout.minutes} min`],
-            ['Exercícios', String(workout.exercises.length)],
             ['Séries', String(sets)],
+            ['Já fez', `${workout.timesDone}x`],
           ].map(([label, value]) => (
             <Card key={label} className="py-3 text-center">
               <dd className="text-lg font-bold tabular-nums">{value}</dd>
@@ -402,17 +344,24 @@ export function WorkoutDetail({ code }: { code: Workout['code'] }) {
           ))}
         </dl>
 
-        <h2 className="mt-7 mb-2 text-[17px] font-semibold">Exercícios</h2>
+        <h2 className="mt-7 mb-1 text-[17px] font-semibold">Exercícios</h2>
+        <p className="mb-2 text-xs text-white/45">
+          Toque no vídeo para ver a execução gravada pelo {studentProfile.coachFirstName}.
+        </p>
         <ol className="divide-y divide-[var(--app-line)]">
           {workout.exercises.map((exercise, index) => (
             <li key={exercise.id} className="flex items-center gap-3 py-3">
-              <ExerciseThumb exercise={exercise} onPlay={() => setVideo(exercise)} />
+              <VideoTile
+                label={exercise.name}
+                length={exercise.videoLength}
+                onPlay={() => setVideo(exercise)}
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">
-                  <span className="text-white/40 tabular-nums">{index + 1}. </span>
+                  <span className="text-white/35 tabular-nums">{index + 1}. </span>
                   {exercise.name}
                 </p>
-                <p className="text-[13px] text-white/55">
+                <p className="text-[13px] text-white/50">
                   {exercise.sets.length} séries · {repRange(exercise)} reps ·{' '}
                   {restLabel(exercise.restSec)}
                 </p>
@@ -556,7 +505,12 @@ export function SessionScreen() {
           return (
             <section key={exercise.id} aria-label={exercise.name}>
               <div className="flex items-center gap-3">
-                <ExerciseThumb exercise={exercise} size="sm" onPlay={() => setVideo(exercise)} />
+                <VideoTile
+                  label={exercise.name}
+                  length={exercise.videoLength}
+                  size="sm"
+                  onPlay={() => setVideo(exercise)}
+                />
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate text-[15px] font-semibold text-[var(--app-gold)]">
                     {exercise.name}
@@ -795,6 +749,7 @@ export function SummaryScreen() {
   const [share, setShare] = useState(false)
   if (!lastFinished) return null
   const workout = workoutOf(lastFinished.code)
+  const times = workout.timesDone + 1
 
   return (
     <div className="px-5 pt-8">
@@ -813,8 +768,8 @@ export function SummaryScreen() {
       <dl className="mt-6 grid grid-cols-2 gap-2">
         {[
           ['Duração', formatClock(lastFinished.seconds)],
-          ['Volume', `${formatKg(lastFinished.volume)} kg`],
           ['Séries', String(lastFinished.sets)],
+          ['Vezes neste treino', `${times}ª`],
           ['Recordes', lastFinished.prs ? `🏆 ${lastFinished.prs}` : '—'],
         ].map(([label, value]) => (
           <Card key={label} className="px-4 py-4">
@@ -828,12 +783,12 @@ export function SummaryScreen() {
         {sent ? (
           <p className="flex items-center gap-2 text-sm text-[var(--app-green)]">
             <Icon name="check" className="size-4" /> Comentário enviado para o{' '}
-            {studentProfile.coach}.
+            {studentProfile.coachFirstName}.
           </p>
         ) : (
           <>
             <label htmlFor="treino-comentario" className="text-sm font-semibold">
-              Comentário para o treinador{' '}
+              Comentário para o {studentProfile.coachFirstName}{' '}
               <span className="font-normal text-white/45">(opcional)</span>
             </label>
             <textarea
@@ -843,7 +798,7 @@ export function SummaryScreen() {
               rows={3}
               maxLength={280}
               placeholder="Como foi? Sentiu alguma dor, alguma carga ficou leve?"
-              className="mt-2 w-full resize-none rounded-xl bg-white/[0.06] px-3 py-2.5 text-sm text-white placeholder:text-white/35 focus:bg-white/10 focus:outline-none"
+              className="mt-2 w-full resize-none rounded-2xl bg-white/[0.06] px-3 py-2.5 text-sm text-white placeholder:text-white/35 focus:bg-white/10 focus:outline-none"
             />
             <p className="mt-1 text-[11px] text-white/45">
               Ele vê na sua ficha. Para conversar, use o WhatsApp.
@@ -863,22 +818,17 @@ export function SummaryScreen() {
       </div>
 
       <PhoneSheet open={share} onClose={() => setShare(false)} title="Compartilhar">
-        <div className="relative mx-auto aspect-[4/5] w-full max-w-[280px] overflow-hidden rounded-2xl">
+        <div className="relative mx-auto aspect-[4/5] w-full max-w-[280px] overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_80%_0%,var(--app-gold-deep),transparent_55%),linear-gradient(170deg,#1f1c2a,#0b0a12)] p-5 ring-1 ring-white/10 ring-inset">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={workout.cover} alt="" className="absolute inset-0 size-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/wordmark-beige.png"
-            alt="Elevn"
-            className="absolute top-4 left-4 h-5 w-auto"
-          />
-          <div className="absolute inset-x-4 bottom-4">
-            <p className="text-xs font-semibold text-[var(--app-gold)]">TREINO {workout.code}</p>
-            <p className="text-lg leading-6 font-semibold">{workout.title}</p>
-            <p className="mt-2 text-sm text-white/80 tabular-nums">
-              {formatClock(lastFinished.seconds)} · {formatKg(lastFinished.volume)} kg ·{' '}
-              {lastFinished.sets} séries
+          <img src="/brand/wordmark-beige.png" alt="Elevn" className="h-5 w-auto" />
+          <div className="absolute inset-x-5 bottom-5">
+            <LetterBadge code={workout.code} size="lg" />
+            <p className="mt-3 text-xs font-semibold text-[var(--app-gold)]">
+              TREINO {workout.code} · {times}ª VEZ
+            </p>
+            <p className="text-xl leading-6 font-semibold">{workout.title}</p>
+            <p className="mt-2 text-sm text-white/75 tabular-nums">
+              {formatClock(lastFinished.seconds)} · {lastFinished.sets} séries
             </p>
           </div>
         </div>

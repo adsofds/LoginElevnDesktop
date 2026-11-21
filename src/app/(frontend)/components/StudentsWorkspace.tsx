@@ -2134,6 +2134,8 @@ export default function StudentsWorkspace({
   const [compareAfterId, setCompareAfterId] = useState<string>('')
   const [addPhotoFormOpen, setAddPhotoFormOpen] = useState(false)
   const [newPhotoAngle, setNewPhotoAngle] = useState<StudentPhotoAngle>('Frente')
+  /** Day the photo was taken (yyyy-mm-dd); empty means today. */
+  const [newPhotoDate, setNewPhotoDate] = useState('')
   const [newPhotoWeight, setNewPhotoWeight] = useState('78,0 kg')
   const [newPhotoWaist, setNewPhotoWaist] = useState('78 cm')
   const [newPhotoCycle, setNewPhotoCycle] = useState('Novo Envio pelo App')
@@ -2436,10 +2438,12 @@ export default function StudentsWorkspace({
     if (!modalStudent) return
     const existingPhotos = getStudentDefaultAppPhotos(modalStudent)
     const now = new Date()
-    const dateLabel = `${now.toLocaleDateString('pt-BR')} · ${now.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`
+    const dateLabel = newPhotoDate
+      ? new Date(`${newPhotoDate}T12:00:00`).toLocaleDateString('pt-BR')
+      : `${now.toLocaleDateString('pt-BR')} · ${now.toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`
     const createdPhoto: StudentAppPhoto = {
       id: `${modalStudent.id}-photo-${Date.now()}`,
       angle: newPhotoAngle,
@@ -2459,6 +2463,7 @@ export default function StudentsWorkspace({
     )
     setCompareAfterId(createdPhoto.id)
     setNewPhotoNote('')
+    setNewPhotoDate('')
     setAddPhotoFormOpen(false)
   }
 
@@ -4039,7 +4044,7 @@ export default function StudentsWorkspace({
                 {addPhotoFormOpen && (
                   <form className="add-app-photo-form" onSubmit={handleAddStudentAppPhoto}>
                     <div className="add-app-photo-head">
-                      <strong>Adicionar nova foto de evolução do aluno (App Elevn)</strong>
+                      <strong>Adicionar foto de evolução</strong>
                       <button type="button" onClick={() => setAddPhotoFormOpen(false)}>
                         Fechar
                       </button>
@@ -4057,6 +4062,19 @@ export default function StudentsWorkspace({
                           <option value="Perfil Direito">Perfil Direito</option>
                           <option value="Pós-Treino">Pós-Treino</option>
                         </select>
+                      </label>
+                      <label>
+                        <span>Data da foto</span>
+                        <input
+                          type="date"
+                          value={newPhotoDate}
+                          max={new Date().toISOString().slice(0, 10)}
+                          onChange={(e) => setNewPhotoDate(e.target.value)}
+                          aria-describedby="photo-date-hint"
+                        />
+                        <small id="photo-date-hint" style={{ fontSize: 11, color: 'var(--color-ink-3)' }}>
+                          Em branco: hoje
+                        </small>
                       </label>
                       <label>
                         <span>Etapa / Ciclo</span>

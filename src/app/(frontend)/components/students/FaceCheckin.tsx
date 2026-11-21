@@ -242,7 +242,7 @@ export function FaceCheckin({
       {showStudentView && (
         <div className="mt-4 rounded-card border border-dashed border-line p-4">
           <p className="text-xs font-semibold text-ink-3">
-            No app, o aluno responde assim (um toque por tema):
+            No LiveClin, o aluno responde assim (um toque por tema):
           </p>
           <p className="mt-2 text-sm font-medium text-ink">{faceThemes[0].question}</p>
           <div className="mt-2 flex gap-2" aria-hidden="true">

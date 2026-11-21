@@ -11,10 +11,10 @@ import { Icon } from '../ui/icons'
  */
 
 export const appTheme = {
-  '--app-bg': '#09080f',
-  '--app-card': '#17151f',
-  '--app-card-2': '#211e2c',
-  '--app-line': 'rgba(255,255,255,0.08)',
+  '--app-bg': '#0b0a12',
+  '--app-card': '#16141e',
+  '--app-card-2': '#1f1c2a',
+  '--app-line': 'rgba(255,255,255,0.07)',
   '--app-gold': 'var(--elevn-accent-light)',
   '--app-gold-deep': 'var(--elevn-accent)',
   '--app-green': '#4cc38a',
@@ -61,7 +61,16 @@ export function ScreenHeader({
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('rounded-[20px] bg-[var(--app-card)]', className)}>{children}</div>
+  return (
+    <div
+      className={cx(
+        'rounded-[24px] bg-[var(--app-card)] ring-1 ring-white/[0.06] ring-inset',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
 }
 
 export function GoldButton({
@@ -83,7 +92,7 @@ export function GoldButton({
       onClick={onClick}
       disabled={disabled}
       className={cx(
-        'flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--app-gold)] text-[15px] font-semibold text-[#0d0a21] transition-transform active:scale-[0.98] disabled:opacity-40',
+        'flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(180deg,color-mix(in_srgb,var(--app-gold)_80%,white),var(--app-gold))] text-[15px] font-semibold text-[#0d0a21] shadow-[0_8px_24px_-12px_var(--app-gold)] transition-transform active:scale-[0.98] disabled:opacity-40 disabled:shadow-none',
         className,
       )}
     >
@@ -118,7 +127,7 @@ export function GhostButton({
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-3 flex items-end justify-between gap-3 px-5">
-      <h2 className="text-[19px] font-semibold tracking-[-0.01em] text-white">{children}</h2>
+      <h2 className="text-[18px] font-semibold tracking-[-0.01em] text-white">{children}</h2>
       {action}
     </div>
   )
@@ -137,17 +146,79 @@ export function LinkButton({ children, onClick }: { children: ReactNode; onClick
   )
 }
 
-/** Workout letter badge (Smart Fit style). */
-export function LetterBadge({ code, size = 'md' }: { code: string; size?: 'md' | 'lg' }) {
+/** Workout letter badge (Smart Fit style), in Elevn gold. */
+export function LetterBadge({ code, size = 'md' }: { code: string; size?: 'md' | 'lg' | 'xl' }) {
   return (
     <span
       className={cx(
-        'grid shrink-0 place-items-center rounded-lg bg-[var(--app-gold-deep)] font-bold text-[var(--app-gold)]',
-        size === 'lg' ? 'size-11 text-lg' : 'size-8 text-sm',
+        'grid shrink-0 place-items-center bg-[linear-gradient(145deg,var(--app-gold),var(--app-gold-deep))] font-bold text-[#0d0a21] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]',
+        size === 'xl'
+          ? 'size-16 rounded-2xl text-[28px]'
+          : size === 'lg'
+            ? 'size-12 rounded-[14px] text-xl'
+            : 'size-9 rounded-[10px] text-sm',
       )}
     >
       {code}
     </span>
+  )
+}
+
+export function Chip({
+  children,
+  tone = 'muted',
+}: {
+  children: ReactNode
+  tone?: 'muted' | 'gold' | 'green'
+}) {
+  return (
+    <span
+      className={cx(
+        'inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold',
+        tone === 'gold' && 'bg-[var(--app-gold)]/15 text-[var(--app-gold)]',
+        tone === 'green' && 'bg-[var(--app-green)]/15 text-[var(--app-green)]',
+        tone === 'muted' && 'bg-white/[0.07] text-white/70',
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+/**
+ * Placeholder for Breno's own exercise videos: shows where the video goes, its length,
+ * and a play affordance. Swap the inner content for the real thumbnail when uploaded.
+ */
+export function VideoTile({
+  label,
+  length,
+  size = 'md',
+  onPlay,
+}: {
+  label: string
+  length: string
+  size?: 'sm' | 'md'
+  onPlay: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPlay}
+      aria-label={`Ver vídeo: ${label}`}
+      className={cx(
+        'relative grid shrink-0 place-items-center overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_60%),linear-gradient(160deg,#2a2536,#15131c)] ring-1 ring-white/10 ring-inset',
+        size === 'md' ? 'h-16 w-14 rounded-2xl' : 'h-12 w-11 rounded-xl',
+      )}
+    >
+      <span className="grid size-7 place-items-center rounded-full bg-[var(--app-gold)] text-[#0d0a21]">
+        <svg viewBox="0 0 24 24" className="ml-0.5 size-3.5" fill="currentColor" aria-hidden="true">
+          <path d="M7 4.5v15l13-7.5z" />
+        </svg>
+      </span>
+      <span className="absolute bottom-1 text-[9px] font-semibold text-white/70 tabular-nums">
+        {length}
+      </span>
+    </button>
   )
 }
 

@@ -5,7 +5,7 @@ import { workouts, type PlannedSet, type Workout } from '@/lib/demo-student-app'
 import type { StudentNotification } from '@/lib/student-notifications'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
-import { AccountTab, CheckinFlow, NotificationsScreen, PhotosScreen } from './AccountTab'
+import { AccountTab, NotificationsScreen, PhotosScreen } from './AccountTab'
 import { DietTab } from './DietTab'
 import { HomeTab } from './HomeTab'
 import { appTheme, formatClock } from './ui'
@@ -26,7 +26,6 @@ export type AppRoute =
   | { name: 'summary' }
   | { name: 'calendar' }
   | { name: 'history' }
-  | { name: 'checkin' }
   | { name: 'photos' }
   | { name: 'notifications' }
 
@@ -64,12 +63,11 @@ type AppContextValue = {
   finishSession: () => void
   discardSession: () => void
   lastFinished: FinishedSession | null
-  checkinDone: boolean
-  setCheckinDone: (done: boolean) => void
   eatenMeals: string[]
   toggleMeal: (mealId: string) => void
-  waterGlasses: number
-  setWaterGlasses: (glasses: number) => void
+  /** Smart swap chosen for a meal today (meal id → swap id). */
+  mealSwaps: Record<string, string>
+  setMealSwap: (mealId: string, swapId: string | null) => void
   notifications: StudentNotification[]
 }
 
@@ -115,9 +113,8 @@ export default function StudentApp({
   const [stack, setStack] = useState<AppRoute[]>(startAt?.route ? [startAt.route] : [])
   const [session, setSession] = useState<Session | null>(null)
   const [lastFinished, setLastFinished] = useState<FinishedSession | null>(null)
-  const [checkinDone, setCheckinDone] = useState(false)
   const [eatenMeals, setEatenMeals] = useState<string[]>(['cafe', 'lanche1'])
-  const [waterGlasses, setWaterGlasses] = useState(3)
+  const [mealSwaps, setMealSwaps] = useState<Record<string, string>>({})
   const [now, setNow] = useState(() => Date.now())
   // Client-only: the app shows "today", streaks and timers, which differ from build time.
   const [mounted, setMounted] = useState(false)
@@ -295,22 +292,25 @@ export default function StudentApp({
         setStack([])
       },
       lastFinished,
-      checkinDone,
-      setCheckinDone,
       eatenMeals,
       toggleMeal: (mealId) =>
         setEatenMeals((current) =>
           current.includes(mealId) ? current.filter((id) => id !== mealId) : [...current, mealId],
         ),
-      waterGlasses,
-      setWaterGlasses,
+      mealSwaps,
+      setMealSwap: (mealId, swapId) =>
+        setMealSwaps((current) => {
+          const next = { ...current }
+          if (swapId) next[mealId] = swapId
+          else delete next[mealId]
+          return next
+        }),
       notifications,
     }
-  }, [tab, session, now, lastFinished, checkinDone, eatenMeals, waterGlasses, notifications])
+  }, [tab, session, now, lastFinished, eatenMeals, mealSwaps, notifications])
 
   const route = stack[stack.length - 1]
-  const fullScreen =
-    route?.name === 'session' || route?.name === 'summary' || route?.name === 'checkin'
+  const fullScreen = route?.name === 'session' || route?.name === 'summary'
 
   let screen: ReactNode
   if (route) {
@@ -329,9 +329,6 @@ export default function StudentApp({
         break
       case 'history':
         screen = <HistoryScreen />
-        break
-      case 'checkin':
-        screen = <CheckinFlow />
         break
       case 'photos':
         screen = <PhotosScreen />
@@ -364,7 +361,7 @@ export default function StudentApp({
     <AppContext.Provider value={value}>
       <div
         style={appTheme}
-        className="relative flex h-full w-full flex-col overflow-hidden bg-[var(--app-bg)] font-sans text-white antialiased [-webkit-tap-highlight-color:transparent]"
+        className="relative flex h-full w-full flex-col overflow-clip bg-[var(--app-bg)] font-sans text-white antialiased [-webkit-tap-highlight-color:transparent]"
       >
         {/* Gold glow at the top, like the Smart Fit app */}
         <div
