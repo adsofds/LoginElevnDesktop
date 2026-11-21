@@ -54,6 +54,8 @@ export type FinishedSession = {
   prs: number
   /** What was actually logged, set by set. */
   log: DoneExercise[]
+  /** Observation for the coach written when finishing. */
+  note?: string
 }
 
 type AppContextValue = {
@@ -70,7 +72,8 @@ type AppContextValue = {
   addSet: (exerciseId: string) => void
   adjustRest: (deltaSec: number) => void
   skipRest: () => void
-  finishSession: () => void
+  /** Saves the session. `note` goes to the coach (required when no set was marked). */
+  finishSession: (note?: string) => void
   discardSession: () => void
   lastFinished: FinishedSession | null
   eatenMeals: string[]
@@ -271,7 +274,7 @@ export default function StudentApp({
             : current,
         ),
       skipRest: () => setSession((current) => (current ? { ...current, rest: null } : current)),
-      finishSession: () => {
+      finishSession: (note?: string) => {
         if (!session) return
         const workout = workoutOf(session.code)
         let volume = 0
@@ -296,6 +299,7 @@ export default function StudentApp({
           code: session.code,
           finishedAt: Date.now(),
           log,
+          note: note?.trim() || undefined,
           seconds: Math.round((Date.now() - session.startedAt) / 1000),
           volume: Math.round(volume),
           sets,
