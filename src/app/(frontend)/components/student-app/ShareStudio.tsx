@@ -12,7 +12,7 @@ import {
   musclesOf,
   useDoneWorkouts,
   exercisesDone,
-  liftedKg,
+  seriesLabel,
   workLabel,
   useTimesDone,
   workoutOf,
@@ -39,7 +39,6 @@ type Background = 'sem-fundo' | 'cor' | 'foto'
 const templates = [
   'Músculos',
   'Card',
-  'Resumo',
   'Números',
   'Treino',
   'Exercícios',
@@ -180,86 +179,6 @@ function MusclesTemplate({ done, logo, id }: TemplateProps) {
   )
 }
 
-/** Strava-like summary that works with or without records: exercises, sets, weight, time. */
-function SummaryTemplate({ done, logo, id }: TemplateProps) {
-  const workout = workoutOf(done.code)
-  const kg = liftedKg(done)
-  const cells: [string, string, string?][] = [
-    ['Exercícios', String(exercisesDone(done).length)],
-    ['Séries', done.sets ? String(done.sets) : '—'],
-    ['Peso levantado', kg ? kg.toLocaleString('pt-BR') : '—', kg ? ' kg' : undefined],
-    ['Tempo', durationLabel(done.seconds)],
-  ]
-  const left = 150
-  // Two centered columns.
-  const centers = [W / 2 - 230, W / 2 + 230]
-  return (
-    <>
-      <defs>
-        <Shadow id={id} />
-      </defs>
-      <g filter={`url(#${id})`}>
-        <Text y={500} size={40} weight={700} fill={GOLD} spacing={6}>
-          {`TREINO ${done.code} · ${done.nth}ª VEZ`}
-        </Text>
-        <Text y={590} size={70} weight={700}>
-          {short(workout.title, 24)}
-        </Text>
-        <line
-          x1={left}
-          x2={W - left}
-          y1={680}
-          y2={680}
-          stroke="#fff"
-          strokeOpacity={0.3}
-          strokeWidth={3}
-        />
-        {cells.map(([label, value, unit], index) => {
-          const x = centers[index % 2]
-          const y = 780 + Math.floor(index / 2) * 270
-          return (
-            <g key={label}>
-              <Text x={x} y={y} size={36} weight={500} opacity={0.8}>
-                {label}
-              </Text>
-              <text
-                x={x}
-                y={y + 112}
-                fontSize={100}
-                fontWeight={800}
-                fill="#fff"
-                textAnchor="middle"
-              >
-                {value}
-                {unit && (
-                  <tspan fontSize={48} fontWeight={600}>
-                    {unit}
-                  </tspan>
-                )}
-              </text>
-            </g>
-          )
-        })}
-        <line
-          x1={left}
-          x2={W - left}
-          y1={1330}
-          y2={1330}
-          stroke="#fff"
-          strokeOpacity={0.3}
-          strokeWidth={3}
-        />
-        {done.prs > 0 && (
-          <Text y={1410} size={40} weight={700} fill={GOLD}>
-            {done.prs === 1 ? '1 recorde pessoal' : `${done.prs} recordes pessoais`}
-          </Text>
-        )}
-        <Logo logo={logo} y={done.prs > 0 ? 1540 : 1450} />
-      </g>
-    </>
-  )
-}
-
 function NumbersTemplate({ done, logo, id }: TemplateProps) {
   const workout = workoutOf(done.code)
   const exercises = String(exercisesDone(done).length)
@@ -337,8 +256,9 @@ function ExercisesTemplate({ done, logo, id }: TemplateProps) {
   // Without marked sets, list the plan's exercises (with no load).
   const rows = exercisesDone(done).slice(0, 6)
   const top = 640
-  const step = 118
+  const step = 128
   const bottom = top + rows.length * step
+  const legend = done.prs > 0
   return (
     <>
       <defs>
@@ -374,12 +294,15 @@ function ExercisesTemplate({ done, logo, id }: TemplateProps) {
                 strokeOpacity={0.18}
                 strokeWidth={2}
               />
-              <Text x={150} y={y + 58} size={38} weight={500} anchor="start">
+              <Text x={150} y={y + 46} size={38} weight={500} anchor="start">
                 {short(exercise.name, 25)}
+              </Text>
+              <Text x={150} y={y + 92} size={30} weight={500} anchor="start" opacity={0.6}>
+                {exercise.sets.length ? seriesLabel(exercise.sets.length) : 'séries não anotadas'}
               </Text>
               <Text
                 x={930}
-                y={y + 58}
+                y={y + 66}
                 size={36}
                 weight={700}
                 anchor="end"
@@ -393,6 +316,11 @@ function ExercisesTemplate({ done, logo, id }: TemplateProps) {
         <Text x={150} y={bottom + 70} size={38} weight={500} anchor="start" opacity={0.85}>
           {`${durationLabel(done.seconds)} · ${workLabel(done)}`}
         </Text>
+        {legend && (
+          <Text x={930} y={bottom + 70} size={32} weight={600} anchor="end" fill={GOLD}>
+            {done.prs === 1 ? '1 recorde' : `${done.prs} recordes`}
+          </Text>
+        )}
         <Logo logo={logo} y={bottom + 330} />
       </g>
     </>
@@ -634,7 +562,6 @@ function StripTemplate({ done, logo, id }: TemplateProps) {
 const templateComponents = [
   MusclesTemplate,
   CardTemplate,
-  SummaryTemplate,
   NumbersTemplate,
   LetterTemplate,
   ExercisesTemplate,

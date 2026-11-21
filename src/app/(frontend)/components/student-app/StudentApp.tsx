@@ -99,11 +99,21 @@ const tabs: { id: AppTab; label: string; icon: string }[] = [
   { id: 'conta', label: 'Conta', icon: 'settings' },
 ]
 
-function freshSets(workout: Workout): Record<string, SetLog[]> {
+/**
+ * Empty log for a session. On the first time doing a workout there is nothing to
+ * compare with, so "Anterior" stays empty and no set can count as a record.
+ */
+function freshSets(workout: Workout, firstTime = false): Record<string, SetLog[]> {
   return Object.fromEntries(
     workout.exercises.map((exercise) => [
       exercise.id,
-      exercise.sets.map((set) => ({ ...set, kgInput: '', repsInput: '', done: false })),
+      exercise.sets.map((set) => ({
+        ...set,
+        previous: firstTime ? undefined : set.previous,
+        kgInput: '',
+        repsInput: '',
+        done: false,
+      })),
     ]),
   )
 }
@@ -188,7 +198,9 @@ export default function StudentApp({
       session,
       now,
       startSession: (code) => {
-        setSession({ code, startedAt: Date.now(), sets: freshSets(workoutOf(code)), rest: null })
+        const workout = workoutOf(code)
+        const firstTime = workout.timesDone + (lastFinished?.code === code ? 1 : 0) === 0
+        setSession({ code, startedAt: Date.now(), sets: freshSets(workout, firstTime), rest: null })
         setNow(Date.now())
         setStack((current) => [...current, { name: 'session' }])
       },

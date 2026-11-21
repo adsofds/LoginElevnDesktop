@@ -97,7 +97,20 @@ export function useDoneWorkouts(): DoneWorkout[] {
       workout.timesDone + (lastFinished?.code === workout.code ? 1 : 0),
     ]),
   ) as Record<Workout['code'], number>
-  return list.map((item) => ({ ...item, nth: counters[item.code]-- }))
+  return list.map((item) => {
+    const nth = counters[item.code]--
+    // The first time a workout is done there is nothing to beat: no records.
+    if (nth > 1) return { ...item, nth }
+    return {
+      ...item,
+      nth,
+      prs: 0,
+      exercises: item.exercises.map((exercise) => ({
+        ...exercise,
+        sets: exercise.sets.map((set) => ({ ...set, pr: false })),
+      })),
+    }
+  })
 }
 
 /** Times each workout has been done (including today's session). */

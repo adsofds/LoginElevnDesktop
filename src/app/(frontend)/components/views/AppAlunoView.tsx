@@ -46,7 +46,7 @@ const shortcuts: { group: string; items: Shortcut[] }[] = [
       {
         id: 'compartilhar',
         label: 'Compartilhar treino',
-        hint: '8 modelos para Stories',
+        hint: '7 modelos para Stories',
         tab: 'treino',
         route: { name: 'share', key: 'h3' },
       },
