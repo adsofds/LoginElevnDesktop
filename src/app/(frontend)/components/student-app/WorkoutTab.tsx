@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   nextWorkoutCode,
   studentProfile,
-  workoutHistory,
   workouts,
   type Exercise,
   type SetType,
@@ -12,6 +11,17 @@ import {
 } from '@/lib/demo-student-app'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
+import { BodyMap, workedLabel } from './BodyMap'
+import {
+  dayLabel,
+  durationLabel,
+  formatSet,
+  musclesOf,
+  useDoneWorkouts,
+  useTimesDone,
+  workoutOf,
+  type DoneWorkout,
+} from './history'
 import { trainedDaysThisMonth, weekStreak } from './HomeTab'
 import { useStudentApp } from './StudentApp'
 import {
@@ -25,8 +35,6 @@ import {
   ScreenHeader,
   VideoTile,
 } from './ui'
-
-const workoutOf = (code: Workout['code']) => workouts.find((item) => item.code === code)!
 
 const formatKg = (kg: number) => kg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
 
@@ -196,94 +204,93 @@ export function WorkoutTab() {
 }
 
 function HistoryList() {
-  const { lastFinished } = useStudentApp()
-  const entries = [
-    ...(lastFinished
-      ? [
-          {
-            daysAgo: 0,
-            code: lastFinished.code,
-            minutes: Math.max(1, Math.round(lastFinished.seconds / 60)),
-            sets: lastFinished.sets,
-            prs: lastFinished.prs,
-            comment: undefined as string | undefined,
-          },
-        ]
-      : []),
-    ...workoutHistory,
-  ]
-  // Most recent first: the newest session of each workout is its highest count.
-  const counters = Object.fromEntries(
-    workouts.map((workout) => [
-      workout.code,
-      workout.timesDone + (lastFinished?.code === workout.code ? 1 : 0),
-    ]),
-  ) as Record<Workout['code'], number>
-  const numbered = entries.map((entry) => ({ ...entry, nth: counters[entry.code]-- }))
-
-  const dayLabel = (daysAgo: number) => {
-    if (daysAgo === 0) return 'Hoje'
-    if (daysAgo === 1) return 'Ontem'
-    const date = new Date()
-    date.setDate(date.getDate() - daysAgo)
-    return new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
-      .format(date)
-      .replaceAll('.', '')
-  }
+  const { push } = useStudentApp()
+  const done = useDoneWorkouts()
+  const times = useTimesDone()
+  const total = Object.values(times).reduce((sum, value) => sum + value, 0)
+  const max = Math.max(...Object.values(times))
 
   return (
     <div className="px-5 pt-5">
-      <ul className="grid grid-cols-4 gap-2" aria-label="Vezes que você fez cada treino">
-        {workouts.map((workout) => (
-          <li key={workout.code}>
-            <Card className="flex flex-col items-center py-3">
-              <LetterBadge code={workout.code} />
-              <span className="mt-2 text-lg font-bold tabular-nums">
-                {workout.timesDone + (lastFinished?.code === workout.code ? 1 : 0)}x
-              </span>
-            </Card>
-          </li>
-        ))}
-      </ul>
-      <ul className="mt-4 space-y-3">
-        {numbered.map((entry, index) => {
-          const workout = workoutOf(entry.code)
-          return (
-            <li key={index}>
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <LetterBadge code={entry.code} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{workout.title}</p>
-                    <p className="text-xs text-white/50 first-letter:uppercase">
-                      {dayLabel(entry.daysAgo)}
+      <Card className="p-5">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[13px] text-white/55">Desde o início do plano</p>
+            <p className="mt-0.5 text-[28px] leading-8 font-bold tracking-[-0.02em] tabular-nums">
+              {total} <span className="text-base font-semibold text-white/60">treinos</span>
+            </p>
+          </div>
+          <Chip tone="gold">A → B → C → D</Chip>
+        </div>
+        <ul className="mt-5 space-y-4" aria-label="Quantas vezes você fez cada treino">
+          {workouts.map((workout) => {
+            const last = done.find((item) => item.code === workout.code)
+            return (
+              <li key={workout.code} className="flex items-center gap-3">
+                <LetterBadge code={workout.code} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-sm font-semibold">{workout.title}</p>
+                    <p className="shrink-0 text-lg leading-none font-bold tabular-nums">
+                      {times[workout.code]}
+                      <span className="text-xs font-semibold text-white/50">x</span>
                     </p>
                   </div>
-                  <Chip tone="gold">{entry.nth}ª vez</Chip>
-                </div>
-                <dl className="mt-3 flex gap-6 text-sm">
-                  <div>
-                    <dt className="text-[11px] text-white/45">Duração</dt>
-                    <dd className="font-semibold tabular-nums">{entry.minutes} min</dd>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+                    <div
+                      className="h-full rounded-full bg-[linear-gradient(90deg,var(--app-gold-deep),var(--app-gold))]"
+                      style={{ width: `${(times[workout.code] / max) * 100}%` }}
+                    />
                   </div>
-                  <div>
-                    <dt className="text-[11px] text-white/45">Séries</dt>
-                    <dd className="font-semibold tabular-nums">{entry.sets}</dd>
-                  </div>
-                  {entry.prs > 0 && (
-                    <div>
-                      <dt className="text-[11px] text-white/45">Recordes</dt>
-                      <dd className="font-semibold tabular-nums">🏆 {entry.prs}</dd>
-                    </div>
-                  )}
-                </dl>
-                {entry.comment && (
-                  <p className="mt-3 rounded-2xl bg-white/[0.04] px-3 py-2 text-[13px] text-white/70">
-                    <span className="text-white/45">Seu comentário: </span>
-                    {entry.comment}
+                  <p className="mt-1 text-[11px] text-white/45 first-letter:uppercase">
+                    {last ? `Último: ${dayLabel(last.date).toLowerCase()}` : 'Sem registro recente'}
                   </p>
-                )}
-              </Card>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </Card>
+
+      <h2 className="mt-7 mb-3 text-[17px] font-semibold">Treinos feitos</h2>
+      <ul className="space-y-2.5">
+        {done.map((item) => {
+          const workout = workoutOf(item.code)
+          return (
+            <li key={item.key}>
+              <button
+                type="button"
+                onClick={() => push({ name: 'done', key: item.key })}
+                className="flex w-full items-center gap-3.5 rounded-[22px] bg-[var(--app-card)] p-3.5 text-left ring-1 ring-white/[0.06] ring-inset active:bg-[var(--app-card-2)]"
+              >
+                <span className="flex w-11 shrink-0 flex-col items-center border-r border-white/10 pr-3">
+                  <span className="text-[10px] font-semibold tracking-wide text-white/50 uppercase">
+                    {new Intl.DateTimeFormat('pt-BR', { weekday: 'short' })
+                      .format(item.date)
+                      .replace('.', '')}
+                  </span>
+                  <span className="text-xl leading-6 font-bold tabular-nums">
+                    {item.date.getDate()}
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-semibold text-[var(--app-gold)]">
+                    Treino {item.code} · {item.nth}ª vez
+                    {item.key === 'hoje' && ' · hoje'}
+                  </span>
+                  <span className="block truncate font-semibold">{workout.title}</span>
+                  <span className="mt-0.5 block text-xs text-white/50 tabular-nums">
+                    {Math.round(item.seconds / 60)} min · {item.sets} séries
+                    {item.prs > 0 && ` · 🏆 ${item.prs}`}
+                  </span>
+                </span>
+                <BodyMap
+                  muscles={musclesOf(item)}
+                  width={52}
+                  height={52}
+                  className="-mr-1 shrink-0"
+                />
+              </button>
             </li>
           )
         })}
@@ -298,6 +305,177 @@ export function HistoryScreen() {
     <div>
       <ScreenHeader title="Histórico" onBack={pop} />
       <HistoryList />
+    </div>
+  )
+}
+
+/* ---------------------------------------------------------------- Recap card (MFIT) */
+
+/** The card shown after finishing a workout and in the history: what was done, at a glance. */
+function RecapCard({ done, children }: { done: DoneWorkout; children?: ReactNode }) {
+  const workout = workoutOf(done.code)
+  const muscles = musclesOf(done)
+  return (
+    <section
+      aria-label={`Resumo do treino ${done.code}`}
+      className="relative overflow-hidden rounded-[28px] bg-[radial-gradient(110%_70%_at_100%_0%,color-mix(in_srgb,var(--app-gold-deep)_75%,transparent),transparent_65%),linear-gradient(165deg,#231f2f,#121019)] p-5 ring-1 ring-white/10 ring-inset"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] font-bold tracking-[0.25em] text-[var(--app-gold)]">
+          ELEVN
+        </span>
+        <span className="text-xs text-white/60 first-letter:uppercase">
+          {dayLabel(done.date)} ·{' '}
+          {done.date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      </div>
+      <div className="mt-4 flex items-center gap-3.5">
+        <LetterBadge code={done.code} size="lg" />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-[var(--app-gold)]">
+            Treino {done.code} · {done.nth}ª vez
+          </p>
+          <h2 className="text-[22px] leading-7 font-semibold tracking-[-0.01em]">
+            {workout.title}
+          </h2>
+        </div>
+      </div>
+      <BodyMap
+        muscles={muscles}
+        className="mx-auto mt-4 h-[176px] w-auto"
+        label={`Músculos trabalhados: ${workedLabel(muscles)}`}
+      />
+      <p className="mt-2 flex items-center justify-center gap-4 text-[11px] text-white/55">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-[#ff3b30]" aria-hidden="true" /> Trabalhado
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-[#ff3b30]/45" aria-hidden="true" /> Auxiliar
+        </span>
+      </p>
+      <dl className="mt-4 grid grid-cols-3 divide-x divide-white/10 rounded-2xl bg-black/25 py-3 text-center">
+        {[
+          ['Duração', durationLabel(done.seconds)],
+          ['Séries', String(done.sets)],
+          ['Recordes', done.prs ? `🏆 ${done.prs}` : '—'],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <dd className="text-[17px] font-bold tabular-nums">{value}</dd>
+            <dt className="text-[11px] text-white/50">{label}</dt>
+          </div>
+        ))}
+      </dl>
+      {children}
+    </section>
+  )
+}
+
+function ShareButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-semibold text-[#0d0a21] active:scale-[0.98]"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="size-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden="true"
+      >
+        <path
+          d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M5 12v6.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V12"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      Compartilhar
+    </button>
+  )
+}
+
+/* ---------------------------------------------------------------- Done workout (history detail) */
+
+export function DoneWorkoutScreen({ doneKey }: { doneKey: string }) {
+  const { pop, push } = useStudentApp()
+  const done = useDoneWorkouts().find((item) => item.key === doneKey)
+  if (!done) return null
+  const setTagLabel = (type: SetType, normal: number) =>
+    type === 'aquecimento' ? 'A' : type === 'falha' ? 'F' : String(normal)
+
+  return (
+    <div>
+      <ScreenHeader
+        title={dayLabel(done.date).replace(/^./, (letter) => letter.toUpperCase())}
+        subtitle={`Treino ${done.code} · ${done.nth}ª vez`}
+        onBack={pop}
+      />
+      <div className="px-5">
+        <RecapCard done={done}>
+          <ShareButton onClick={() => push({ name: 'share', key: done.key })} />
+        </RecapCard>
+
+        {done.comment && (
+          <Card className="mt-3 p-4">
+            <p className="text-[11px] font-semibold text-white/45">
+              Seu comentário para o {studentProfile.coachFirstName}
+            </p>
+            <p className="mt-1 text-sm leading-5 text-white/80">{done.comment}</p>
+          </Card>
+        )}
+
+        <h2 className="mt-7 mb-3 text-[17px] font-semibold">O que você fez</h2>
+        <ol className="space-y-2.5">
+          {done.exercises.map((exercise, index) => {
+            let normal = 0
+            return (
+              <li key={exercise.id}>
+                <Card className="p-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="min-w-0 truncate font-semibold">
+                      <span className="text-white/35 tabular-nums">{index + 1}. </span>
+                      {exercise.name}
+                    </p>
+                    <span className="shrink-0 text-[11px] text-white/45">{exercise.muscle}</span>
+                  </div>
+                  {exercise.sets.length ? (
+                    <ul className="mt-2.5 space-y-1">
+                      {exercise.sets.map((set, setIndex) => {
+                        if (set.type !== 'aquecimento') normal += 1
+                        return (
+                          <li
+                            key={setIndex}
+                            className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-3 py-2 text-sm"
+                          >
+                            <span
+                              className={cx(
+                                'w-4 text-center text-xs font-bold',
+                                set.type === 'aquecimento' && 'text-[var(--app-gold)]',
+                                set.type === 'falha' && 'text-[var(--app-red)]',
+                                set.type === 'normal' && 'text-white/50',
+                              )}
+                            >
+                              {setTagLabel(set.type, normal)}
+                            </span>
+                            <span className="flex-1 font-medium tabular-nums">
+                              {formatSet(exercise, set)}
+                            </span>
+                            {set.pr && <Chip tone="gold">🏆 Recorde</Chip>}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-[13px] text-white/45">Não feito neste dia.</p>
+                  )}
+                </Card>
+              </li>
+            )
+          })}
+        </ol>
+      </div>
     </div>
   )
 }
@@ -743,41 +921,29 @@ export function SessionScreen() {
 /* ---------------------------------------------------------------- Summary */
 
 export function SummaryScreen() {
-  const { lastFinished, setTab } = useStudentApp()
+  const { setTab, push } = useStudentApp()
+  const done = useDoneWorkouts().find((item) => item.key === 'hoje')
   const [comment, setComment] = useState('')
   const [sent, setSent] = useState(false)
-  const [share, setShare] = useState(false)
-  if (!lastFinished) return null
-  const workout = workoutOf(lastFinished.code)
-  const times = workout.timesDone + 1
+  if (!done) return null
 
   return (
-    <div className="px-5 pt-8">
+    <div className="px-5 pt-6">
       <div className="text-center">
-        <span
-          className="mx-auto grid size-20 place-items-center rounded-full bg-[var(--app-gold)]/15 text-4xl"
-          aria-hidden="true"
-        >
-          🏆
-        </span>
-        <h1 className="mt-4 text-[26px] font-semibold tracking-[-0.02em]">Treino concluído!</h1>
+        <p className="text-3xl" aria-hidden="true">
+          🎉
+        </p>
+        <h1 className="mt-2 text-[26px] font-semibold tracking-[-0.02em]">Treino concluído!</h1>
         <p className="mt-1 text-sm text-white/60">
-          Treino {workout.code} · {workout.title}
+          Boa, {studentProfile.firstName}. Esse foi seu {done.nth}º treino {done.code}.
         </p>
       </div>
-      <dl className="mt-6 grid grid-cols-2 gap-2">
-        {[
-          ['Duração', formatClock(lastFinished.seconds)],
-          ['Séries', String(lastFinished.sets)],
-          ['Vezes neste treino', `${times}ª`],
-          ['Recordes', lastFinished.prs ? `🏆 ${lastFinished.prs}` : '—'],
-        ].map(([label, value]) => (
-          <Card key={label} className="px-4 py-4">
-            <dt className="text-xs text-white/50">{label}</dt>
-            <dd className="mt-0.5 text-2xl font-bold tabular-nums">{value}</dd>
-          </Card>
-        ))}
-      </dl>
+
+      <div className="mt-5">
+        <RecapCard done={done}>
+          <ShareButton onClick={() => push({ name: 'share', key: 'hoje' })} />
+        </RecapCard>
+      </div>
 
       <Card className="mt-4 p-4">
         {sent ? (
@@ -810,32 +976,12 @@ export function SummaryScreen() {
         )}
       </Card>
 
-      <div className="mt-6 space-y-2">
-        <GoldButton onClick={() => setShare(true)}>Compartilhar treino</GoldButton>
-        <GhostButton className="w-full" onClick={() => setTab('inicio')}>
-          Voltar ao início
+      <div className="mt-5 space-y-2">
+        <GhostButton className="w-full" onClick={() => push({ name: 'done', key: 'hoje' })}>
+          Ver séries do treino
         </GhostButton>
+        <GoldButton onClick={() => setTab('inicio')}>Voltar ao início</GoldButton>
       </div>
-
-      <PhoneSheet open={share} onClose={() => setShare(false)} title="Compartilhar">
-        <div className="relative mx-auto aspect-[4/5] w-full max-w-[280px] overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_80%_0%,var(--app-gold-deep),transparent_55%),linear-gradient(170deg,#1f1c2a,#0b0a12)] p-5 ring-1 ring-white/10 ring-inset">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/wordmark-beige.png" alt="Elevn" className="h-5 w-auto" />
-          <div className="absolute inset-x-5 bottom-5">
-            <LetterBadge code={workout.code} size="lg" />
-            <p className="mt-3 text-xs font-semibold text-[var(--app-gold)]">
-              TREINO {workout.code} · {times}ª VEZ
-            </p>
-            <p className="text-xl leading-6 font-semibold">{workout.title}</p>
-            <p className="mt-2 text-sm text-white/75 tabular-nums">
-              {formatClock(lastFinished.seconds)} · {lastFinished.sets} séries
-            </p>
-          </div>
-        </div>
-        <p className="mt-3 text-center text-[11px] text-white/45">
-          Rascunho. Os modelos finais de compartilhamento estão com a Lunaris.
-        </p>
-      </PhoneSheet>
     </div>
   )
 }
@@ -843,7 +989,8 @@ export function SummaryScreen() {
 /* ---------------------------------------------------------------- Calendar (Smart Fit) */
 
 export function CalendarScreen() {
-  const { pop, setTab, lastFinished } = useStudentApp()
+  const { pop, setTab, push, lastFinished } = useStudentApp()
+  const doneList = useDoneWorkouts()
   const today = new Date()
   const [selected, setSelected] = useState(today.getDate())
   const trained = trainedDaysThisMonth()
@@ -858,7 +1005,9 @@ export function CalendarScreen() {
   ).length
   const streak = weekStreak(trained, today)
   const selectedDate = new Date(year, month, selected)
-  const history = workoutHistory.find((entry) => today.getDate() - entry.daysAgo === selected)
+  const history = doneList.find(
+    (entry) => entry.date.getMonth() === month && entry.date.getDate() === selected,
+  )
   const doneSelected = isDone(selected)
   const code = history?.code ?? (['A', 'B', 'C', 'D'] as const)[selected % 4]
 
@@ -934,15 +1083,23 @@ export function CalendarScreen() {
           )}
         </div>
         {doneSelected ? (
-          <Card className="mt-3 flex items-center gap-3 p-4">
+          <button
+            type="button"
+            disabled={!history}
+            onClick={() => history && push({ name: 'done', key: history.key })}
+            className="mt-3 flex w-full items-center gap-3 rounded-[24px] bg-[var(--app-card)] p-4 text-left ring-1 ring-white/[0.06] ring-inset active:bg-[var(--app-card-2)]"
+          >
             <LetterBadge code={code} />
-            <div>
-              <p className="font-semibold">{workoutOf(code).title}</p>
-              <p className="text-xs text-white/55">
-                {history ? `${history.minutes} min · ${history.sets} séries` : 'Treino registrado'}
-              </p>
-            </div>
-          </Card>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">{workoutOf(code).title}</span>
+              <span className="block text-xs text-white/55">
+                {history
+                  ? `${history.nth}ª vez · ${Math.round(history.seconds / 60)} min · ${history.sets} séries`
+                  : 'Treino registrado'}
+              </span>
+            </span>
+            {history && <Icon name="chevronRight" className="size-4 text-white/35" />}
+          </button>
         ) : (
           <p className="mt-6 text-center text-sm text-white/50">
             Nenhum treino registrado nesta data
