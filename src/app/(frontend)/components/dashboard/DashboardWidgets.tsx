@@ -33,11 +33,13 @@ import {
 } from '@/lib/demo-adherence'
 import type { SiteFormSubmission } from '@/lib/demo-internal'
 import { panelHref } from '../panel/navigation'
+import { usePanel } from '../panel/PanelState'
 import { Button } from '../ui/Button'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 import { KpiStrip, type KpiItem } from '../ui/KpiStrip'
 import { Kbd } from '../ui/Badge'
+import { NotifyDialog, WhatsAppGlyph, whatsappUrl, type AttentionNotify } from './AttentionActions'
 import { Menu } from '../ui/Menu'
 
 /* ------------------------------------------------------------------ hooks */
@@ -247,7 +249,12 @@ export type AttentionItem = {
   student: string
   studentId?: string
   avatar?: string
-  action: string
+  /** Student's WhatsApp (DDI + DDD + número). */
+  whatsapp: string
+  /** Message ready to send on WhatsApp. */
+  whatsappText: string
+  /** Notification for the student's app; absent when only a conversation makes sense. */
+  notify?: AttentionNotify
 }
 
 export const attentionItems: AttentionItem[] = [
@@ -259,7 +266,14 @@ export const attentionItems: AttentionItem[] = [
     student: 'Lucas Andrade',
     studentId: 'student-lucas',
     avatar: '/people/gustavo-lima.jpg',
-    action: 'Enviar mensagem',
+    whatsapp: '5511998123401',
+    whatsappText:
+      'Oi Lucas, tudo bem? Vi que faz 5 dias que você não registra treino no app. Aconteceu alguma coisa? Posso ajustar algo para facilitar?',
+    notify: {
+      templateId: 'treino',
+      title: 'Bora voltar pro treino? 💪',
+      message: '{nome}, faz 5 dias sem treino registrado. Abra o app e marque o próximo treino.',
+    },
   },
   {
     id: 'at-2',
@@ -269,7 +283,15 @@ export const attentionItems: AttentionItem[] = [
     student: 'Pedro Lima',
     studentId: 'student-pedro',
     avatar: '/people/breno-monteiro.png',
-    action: 'Ver cobrança',
+    whatsapp: '5511995027741',
+    whatsappText:
+      'Oi Pedro, tudo bem? Consta um pagamento em aberto do seu plano. Consegue verificar? Se já pagou, me manda o comprovante por aqui.',
+    notify: {
+      templateId: 'plano',
+      title: 'Pagamento pendente',
+      message:
+        '{nome}, consta um pagamento em aberto do seu plano. Se já pagou, desconsidere este aviso.',
+    },
   },
   {
     id: 'at-3',
@@ -279,7 +301,15 @@ export const attentionItems: AttentionItem[] = [
     student: 'Rafael Souza',
     studentId: 'student-rafael',
     avatar: '/people/gustavo-lima.jpg',
-    action: 'Renovar',
+    whatsapp: '5511994189920',
+    whatsappText:
+      'Oi Rafael, tudo bem? Seu plano de dieta vence em 2 dias. Quer renovar para seguirmos sem pausa?',
+    notify: {
+      templateId: 'plano',
+      title: 'Seu plano está acabando',
+      message:
+        '{nome}, seu plano de dieta vence em 2 dias. Fale com a gente para renovar sem pausa.',
+    },
   },
   {
     id: 'at-4',
@@ -289,7 +319,14 @@ export const attentionItems: AttentionItem[] = [
     student: 'Camila Rocha',
     studentId: 'student-camila',
     avatar: '/people/renata-alves.jpg',
-    action: 'Revisar',
+    whatsapp: '5511997451290',
+    whatsappText:
+      'Oi Camila! Recebi seu check-in e suas fotos. Vou analisar e já te passo os ajustes da semana.',
+    notify: {
+      templateId: 'checkin',
+      title: 'Recebemos seu check-in ✅',
+      message: '{nome}, recebi seu check-in com fotos. Os ajustes da semana chegam em breve.',
+    },
   },
   {
     id: 'at-5',
@@ -299,23 +336,40 @@ export const attentionItems: AttentionItem[] = [
     student: 'Juliana Costa',
     studentId: 'student-juliana',
     avatar: '/people/paula-nunes.jpg',
-    action: 'Responder',
+    whatsapp: '5511996338812',
+    whatsappText: 'Oi Juliana, desculpa a demora! Vi sua mensagem e já te respondo por aqui.',
   },
   {
     id: 'at-6',
     area: 'Treino',
     priority: 'baixa',
     description: 'Treino precisa de ajuste de carga',
-    student: 'Sofia Ribeiro',
-    action: 'Ajustar',
+    student: 'Aline Moraes',
+    studentId: 'student-aline',
+    whatsapp: '5511993114509',
+    whatsappText:
+      'Oi Aline! Vou ajustar as cargas do seu treino. Me conta: alguma série ficou leve ou pesada demais?',
+    notify: {
+      templateId: 'treino',
+      title: 'Treino novo no app 💪',
+      message: '{nome}, ajustei as cargas do seu treino. Confira no app antes do próximo.',
+    },
   },
   {
     id: 'at-7',
     area: 'Check-in',
     priority: 'baixa',
     description: 'Avaliação mensal ainda não revisada',
-    student: 'Diego Castro',
-    action: 'Revisar',
+    student: 'Thiago Nunes',
+    studentId: 'student-thiago',
+    whatsapp: '5511992083317',
+    whatsappText:
+      'Oi Thiago! Revisei sua avaliação mensal. Quer marcar uns minutos para eu te explicar os ajustes?',
+    notify: {
+      templateId: 'livre',
+      title: 'Avaliação revisada',
+      message: '{nome}, revisei sua avaliação mensal. Os ajustes já estão no seu app.',
+    },
   },
 ]
 
@@ -332,7 +386,34 @@ export function AttentionQueue({ onNavigate }: { onNavigate: (href: string) => v
   const [leaving, setLeaving] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
   const [toast, setToast] = useState<{ id: string; text: string } | null>(null)
+  const [notifying, setNotifying] = useState<AttentionItem | null>(null)
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
+  const { addNotification, user } = usePanel()
+
+  const openWhatsApp = (item: AttentionItem) => {
+    window.open(whatsappUrl(item.whatsapp, item.whatsappText), '_blank', 'noopener,noreferrer')
+    complete(item, 'conversa aberta no WhatsApp')
+  }
+
+  /** Notification when there is one; otherwise the conversation on WhatsApp. */
+  const primaryAction = (item: AttentionItem) =>
+    item.notify && item.studentId ? setNotifying(item) : openWhatsApp(item)
+
+  const sendNotification = (item: AttentionItem, value: { title: string; message: string }) => {
+    if (!item.notify || !item.studentId) return
+    addNotification({
+      id: `notif-${Date.now().toString(36)}`,
+      templateId: item.notify.templateId,
+      title: value.title,
+      message: value.message,
+      audience: { kind: 'alunos', studentIds: [item.studentId] },
+      sentBy: user.name,
+      atIso: new Date().toISOString(),
+      status: 'enviada',
+    })
+    setNotifying(null)
+    complete(item, 'notificação enviada para o app')
+  }
 
   const open = attentionItems.filter((item) => !done.includes(item.id))
   const visible = expanded ? open : open.slice(0, VISIBLE_ATTENTION)
@@ -383,9 +464,12 @@ export function AttentionQueue({ onNavigate }: { onNavigate: (href: string) => v
     } else if (key === 'k' || key === 'arrowup') {
       event.preventDefault()
       focusRow(visible[index - 1]?.id)
-    } else if (key === 'e' || key === 'enter') {
+    } else if (key === 'e') {
       event.preventDefault()
       complete(item)
+    } else if (key === 'enter') {
+      event.preventDefault()
+      primaryAction(item)
     }
   }
 
@@ -398,7 +482,7 @@ export function AttentionQueue({ onNavigate }: { onNavigate: (href: string) => v
         </span>
         <span className="hidden items-center gap-1 lg:inline-flex" aria-hidden="true">
           <Kbd>J</Kbd>
-          <Kbd>K</Kbd> navegar · <Kbd>E</Kbd> concluir
+          <Kbd>K</Kbd> navegar · <Kbd>↵</Kbd> agir · <Kbd>E</Kbd> concluir
         </span>
       </div>
 
@@ -447,18 +531,56 @@ export function AttentionQueue({ onNavigate }: { onNavigate: (href: string) => v
                     {item.area} · {item.student}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="shrink-0 max-sm:hidden"
-                  onClick={() => complete(item)}
-                >
-                  {item.action}
-                </Button>
+                {item.notify && item.studentId ? (
+                  <>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-8 shrink-0 text-[#1f9d55] hover:text-[#1f9d55] max-sm:hidden"
+                      onClick={() => openWhatsApp(item)}
+                      aria-label={`Abrir WhatsApp com ${item.student}`}
+                      title="Abrir no WhatsApp"
+                    >
+                      <WhatsAppGlyph className="size-[18px]" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="shrink-0 gap-1.5 max-sm:hidden"
+                      onClick={() => setNotifying(item)}
+                    >
+                      <Icon name="bell" className="size-3.5" />
+                      Notificar
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="shrink-0 gap-1.5 max-sm:hidden"
+                    onClick={() => openWhatsApp(item)}
+                  >
+                    <WhatsAppGlyph className="size-3.5 text-[#1f9d55]" />
+                    Responder no WhatsApp
+                  </Button>
+                )}
                 <Menu
                   label={`Mais ações para ${item.student}`}
                   items={[
-                    { id: 'primary', label: item.action, onSelect: () => complete(item) },
+                    ...(item.notify && item.studentId
+                      ? [
+                          {
+                            id: 'notify',
+                            label: 'Notificar no app',
+                            onSelect: () => setNotifying(item),
+                          },
+                        ]
+                      : []),
+                    {
+                      id: 'whatsapp',
+                      label: 'Abrir no WhatsApp',
+                      onSelect: () => openWhatsApp(item),
+                    },
                     ...(item.studentId
                       ? [
                           {
@@ -507,6 +629,17 @@ export function AttentionQueue({ onNavigate }: { onNavigate: (href: string) => v
           {expanded ? 'Mostrar menos' : `Ver todas (${open.length})`}
         </WidgetFooterLink>
       )}
+
+      {notifying?.notify &&
+        createPortal(
+          <NotifyDialog
+            student={notifying.student}
+            notify={notifying.notify}
+            onCancel={() => setNotifying(null)}
+            onSend={(value) => sendNotification(notifying, value)}
+          />,
+          document.body,
+        )}
 
       {toast &&
         createPortal(

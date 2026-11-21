@@ -399,7 +399,11 @@ function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
     return { date, done: all.some((item) => sameDay(item.date, date)) }
   })
   const count = days.filter((day) => day.done).length
-  const left = 160
+  // Card spans x 80–1000; content keeps 70px inside it. The week bar sits inside that
+  // padding and the circles keep their own gap from the bar's rounded ends.
+  const pad = 150
+  const barHeight = 128
+  const left = pad + barHeight / 2
   const step = (W - left * 2) / 6
   return (
     <>
@@ -408,9 +412,9 @@ function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
       </defs>
       <rect
         x={80}
-        y={250}
+        y={230}
         width={920}
-        height={1440}
+        height={1530}
         rx={72}
         fill="#0d0b14"
         fillOpacity={0.94}
@@ -438,11 +442,11 @@ function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
         </Text>
       ))}
       <rect
-        x={left - 72}
-        y={1355}
-        width={W - (left - 72) * 2}
-        height={132}
-        rx={66}
+        x={pad}
+        y={1357}
+        width={W - pad * 2}
+        height={barHeight}
+        rx={barHeight / 2}
         fill="#fff"
         fillOpacity={0.06}
       />
@@ -450,9 +454,9 @@ function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
         const cx = left + index * step
         return day.done ? (
           <g key={`d${index}`}>
-            <circle cx={cx} cy={1421} r={44} fill={GOLD} />
+            <circle cx={cx} cy={1421} r={40} fill={GOLD} />
             <path
-              d={`M${cx - 19} 1421 l12 12 l25 -26`}
+              d={`M${cx - 17} 1421 l11 11 l23 -24`}
               fill="none"
               stroke={INK}
               strokeWidth={8}
@@ -469,8 +473,8 @@ function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
         <tspan fontWeight={800}>{count === 1 ? '1 vez' : `${count} vezes`}</tspan>
         {' nos últimos 7 dias'}
       </text>
-      <Logo logo={logo} y={1630} width={200} left={140} />
-      <Text x={940} y={1642} size={36} weight={600} anchor="end" opacity={0.8}>
+      <Logo logo={logo} y={1668} width={200} left={pad} />
+      <Text x={W - pad} y={1680} size={36} weight={600} anchor="end" opacity={0.8}>
         {`Treino ${done.code} · ${done.nth}ª vez`}
       </Text>
     </>

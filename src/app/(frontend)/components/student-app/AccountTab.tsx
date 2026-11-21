@@ -11,9 +11,25 @@ import { Card, Chip, GhostButton, GoldButton, PhoneSheet, ScreenHeader } from '.
 
 /* ---------------------------------------------------------------- Account (Smart Fit "Conta") */
 
+const renewalPlans: [string, string, string?][] = [
+  ['Mensal', 'R$ 490/mês'],
+  ['Trimestral', 'R$ 420/mês', 'Seu plano'],
+  ['Semestral', 'R$ 380/mês', 'Mais escolhido'],
+]
+
+/** Conversations happen on WhatsApp: opens the team's chat with a message ready. */
+function openCoachWhatsApp(text: string) {
+  window.open(
+    `https://wa.me/${studentProfile.coachWhatsapp}?text=${encodeURIComponent(text)}`,
+    '_blank',
+    'noopener,noreferrer',
+  )
+}
+
 export function AccountTab() {
   const { push } = useStudentApp()
   const [sheet, setSheet] = useState<'renovar' | 'whatsapp' | 'config' | null>(null)
+  const [renewPlan, setRenewPlan] = useState(studentProfile.plan)
   const [prefs, setPrefs] = useState({ treino: true, som: true })
 
   const menu = [
@@ -126,26 +142,42 @@ export function AccountTab() {
       </button>
 
       <PhoneSheet open={sheet === 'renovar'} onClose={() => setSheet(null)} title="Renovar plano">
-        <ul className="space-y-2">
-          {[
-            ['Mensal', 'R$ 490/mês'],
-            ['Trimestral', 'R$ 420/mês', 'Seu plano'],
-            ['Semestral', 'R$ 380/mês', 'Mais escolhido'],
-          ].map(([name, price, tag]) => (
-            <li
+        <div role="radiogroup" aria-label="Plano" className="space-y-2">
+          {renewalPlans.map(([name, price, tag]) => (
+            <button
               key={name}
-              className="flex items-center justify-between rounded-2xl bg-white/[0.05] px-4 py-3.5"
+              type="button"
+              role="radio"
+              aria-checked={renewPlan === name}
+              onClick={() => setRenewPlan(name)}
+              className={cx(
+                'flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-left ring-1 transition-colors ring-inset',
+                renewPlan === name
+                  ? 'bg-[var(--app-gold)]/12 ring-[var(--app-gold)]'
+                  : 'bg-white/[0.05] ring-transparent',
+              )}
             >
               <span>
                 <span className="block font-semibold">{name}</span>
                 {tag && <span className="text-xs text-[var(--app-gold)]">{tag}</span>}
               </span>
               <span className="font-semibold tabular-nums">{price}</span>
-            </li>
+            </button>
           ))}
-        </ul>
-        <p className="mt-3 text-xs text-white/45">
-          Na versão final, a renovação abre a conversa com a equipe no WhatsApp ou o pagamento.
+        </div>
+        <GoldButton
+          className="mt-5"
+          onClick={() => {
+            openCoachWhatsApp(
+              `Oi ${studentProfile.coachFirstName}! Quero renovar meu acompanhamento no plano ${renewPlan}.`,
+            )
+            setSheet(null)
+          }}
+        >
+          Renovar pelo WhatsApp
+        </GoldButton>
+        <p className="mt-2 text-center text-xs text-white/45">
+          A equipe confirma o valor e envia o pagamento por lá.
         </p>
       </PhoneSheet>
 
@@ -158,10 +190,13 @@ export function AccountTab() {
           Dúvidas, ajustes e conversas acontecem no WhatsApp. Por aqui você recebe só os avisos da
           equipe.
         </p>
-        <p className="mt-3 text-xs text-white/45">
-          Na versão final este botão abre o WhatsApp da equipe Elevn.
-        </p>
-        <GoldButton className="mt-5" onClick={() => setSheet(null)}>
+        <GoldButton
+          className="mt-5"
+          onClick={() => {
+            openCoachWhatsApp(`Oi ${studentProfile.coachFirstName}, tudo bem?`)
+            setSheet(null)
+          }}
+        >
           Abrir WhatsApp
         </GoldButton>
       </PhoneSheet>
@@ -225,7 +260,13 @@ export function PhotosScreen() {
   const [date, setDate] = useState(todayIso)
   const sorted = [...photos].sort((a, b) => a.dateIso.localeCompare(b.dateIso))
   const [beforeId, setBeforeId] = useState(sorted[0]?.id ?? '')
-  const [afterId, setAfterId] = useState(sorted[sorted.length - 1]?.id ?? '')
+  // Default comparison: first photo vs. the latest one in the same pose.
+  const [afterId, setAfterId] = useState(
+    () =>
+      [...sorted].reverse().find((photo) => photo.pose === sorted[0]?.pose)?.id ??
+      sorted[sorted.length - 1]?.id ??
+      '',
+  )
   const [compare, setCompare] = useState(50)
   const input = useRef<HTMLInputElement>(null)
   const before = photos.find((photo) => photo.id === beforeId)
@@ -446,8 +487,11 @@ export function NotificationsScreen() {
       <p className="mt-5 px-5 text-center text-xs text-white/40">
         Para responder, fale com sua equipe no WhatsApp.
       </p>
-      <GhostButton className="mx-auto mt-3" onClick={pop}>
-        Voltar
+      <GhostButton
+        className="mx-auto mt-3"
+        onClick={() => openCoachWhatsApp(`Oi ${studentProfile.coachFirstName}, vi o aviso no app.`)}
+      >
+        Falar no WhatsApp
       </GhostButton>
     </div>
   )
