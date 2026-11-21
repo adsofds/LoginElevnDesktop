@@ -348,10 +348,10 @@ function RecapCard({ done, children }: { done: DoneWorkout; children?: ReactNode
       />
       <p className="mt-2 flex items-center justify-center gap-4 text-[11px] text-white/55">
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-[#ff3b30]" aria-hidden="true" /> Trabalhado
+          <span className="size-2 rounded-full bg-[#f26a5d]" aria-hidden="true" /> Trabalhado
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-[#ff3b30]/45" aria-hidden="true" /> Auxiliar
+          <span className="size-2 rounded-full bg-[#f7bcb4]" aria-hidden="true" /> Auxiliar
         </span>
       </p>
       <dl className="mt-4 grid grid-cols-3 divide-x divide-white/10 rounded-2xl bg-black/25 py-3 text-center">

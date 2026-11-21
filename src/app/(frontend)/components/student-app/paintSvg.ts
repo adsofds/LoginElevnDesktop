@@ -177,14 +177,17 @@ export async function paintSvg(svg: SVGSVGElement, ctx: CanvasRenderingContext2D
     if (!screen) return false
     const m = rootInverse.multiply(screen)
     ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f)
+    // Canvas shadows ignore the transform; scale them like the SVG filter would be.
+    shadowScale = Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) || 1
     return true
   }
+  let shadowScale = 1
 
   const applyShadow = (shadow: Shadow) => {
     ctx.shadowColor = shadow ? shadow.color : 'transparent'
-    ctx.shadowBlur = shadow ? shadow.blur : 0
-    ctx.shadowOffsetX = shadow ? shadow.dx : 0
-    ctx.shadowOffsetY = shadow ? shadow.dy : 0
+    ctx.shadowBlur = shadow ? shadow.blur * shadowScale : 0
+    ctx.shadowOffsetX = shadow ? shadow.dx * shadowScale : 0
+    ctx.shadowOffsetY = shadow ? shadow.dy * shadowScale : 0
   }
 
   const fillOrStroke = (

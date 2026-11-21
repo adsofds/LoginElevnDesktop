@@ -94,16 +94,33 @@ const regionSlugs: Record<MuscleRegion, string[]> = {
 
 const skinSlugs = new Set(['head', 'neck', 'hands', 'feet', 'knees', 'ankles'])
 
-export const muscleRed = '#ff3b30'
+export const muscleRed = '#f26a5d'
 
+/*
+ * Look: black body with a white glowing outline, light-gray muscles, coral for the
+ * muscles worked and black gaps between muscles (high-contrast "muscle map" style).
+ * Head, hands and feet are gray (not black) so they don't vanish on dark backgrounds.
+ */
 const tones = {
   // On the app's dark cards.
-  app: { body: '#1f1c27', muscle: ['#77728a', '#3d394b'], skin: ['#5e5a70', '#383445'] },
+  app: {
+    body: '#0c0b10',
+    muscle: ['#e4e4ea', '#b8b8c2'],
+    skin: ['#a9a9b3', '#7f7f8a'],
+    hair: '#5f5f69',
+    glow: 0.55,
+  },
   // On share stickers, which may sit over a photo or a transparent background.
-  sticker: { body: '#2a2633', muscle: ['#8e89a2', '#4b4759'], skin: ['#6c6880', '#403c4d'] },
+  sticker: {
+    body: '#0c0b10',
+    muscle: ['#ececf1', '#c2c2cb'],
+    skin: ['#b3b3bd', '#888893'],
+    hair: '#66666f',
+    glow: 0.7,
+  },
 }
 
-const reds = { main: ['#ff7d70', '#cf2318'], assist: ['#b9574f', '#6a2a26'] }
+const reds = { main: ['#ff8a7d', '#ee5446'], assist: ['#fbd0ca', '#f2a69d'] }
 
 function Shade({ id, colors }: { id: string; colors: string[] }) {
   return (
@@ -145,7 +162,7 @@ export function BodyMap({
   const warm = slugsOf(assist)
   const palette = tones[tone]
   const fillFor = (slug: string) => {
-    if (slug === 'hair') return palette.body
+    if (slug === 'hair') return palette.hair
     if (skinSlugs.has(slug)) return `url(#${uid}-skin)`
     if (hot.has(slug)) return `url(#${uid}-hot)`
     if (warm.has(slug)) return `url(#${uid}-warm)`
@@ -168,10 +185,31 @@ export function BodyMap({
         <Shade id={`${uid}-skin`} colors={palette.skin} />
         <Shade id={`${uid}-hot`} colors={reds.main} />
         <Shade id={`${uid}-warm`} colors={reds.assist} />
+        <filter id={`${uid}-glow`} x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow
+            dx="0"
+            dy="0"
+            stdDeviation="9"
+            floodColor="#fff"
+            floodOpacity={palette.glow}
+          />
+        </filter>
       </defs>
       {/* The silhouette shows through the gaps between muscles as definition lines. */}
-      <path d={outlineFront} fill={palette.body} />
-      <path d={outlineBack} fill={palette.body} />
+      {/* Silhouette: black body, white outline with a soft glow. Its fill also shows
+          through the gaps between muscles as definition lines. */}
+      {[outlineFront, outlineBack].map((d) => (
+        <path
+          key={d.slice(0, 24)}
+          d={d}
+          fill={palette.body}
+          stroke="#fff"
+          strokeOpacity={0.9}
+          strokeWidth={5}
+          strokeLinejoin="round"
+          filter={`url(#${uid}-glow)`}
+        />
+      ))}
       {[...anatomyFront, ...anatomyBack].map((part, index) => (
         <g key={`${part.slug}-${index}`} fill={fillFor(part.slug)}>
           {part.paths.map((d, pathIndex) => (
