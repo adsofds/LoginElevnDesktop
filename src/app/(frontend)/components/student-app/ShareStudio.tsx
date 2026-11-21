@@ -11,6 +11,7 @@ import {
   formatSet,
   musclesOf,
   useDoneWorkouts,
+  useTimesDone,
   workoutOf,
   type DoneWorkout,
 } from './history'
@@ -31,9 +32,25 @@ const FONT = 'var(--font-figtree), Figtree, ui-sans-serif, system-ui, sans-serif
 
 type Background = 'transparente' | 'foto' | 'escuro'
 
-const templates = ['Músculos', 'Números', 'Treino', 'Exercícios', 'Semana'] as const
+const templates = [
+  'Músculos',
+  'Card',
+  'Números',
+  'Treino',
+  'Exercícios',
+  'Semana',
+  'Faixa',
+] as const
 
-type TemplateProps = { done: DoneWorkout; logo: string | null; id: string }
+type TemplateProps = {
+  done: DoneWorkout
+  logo: string | null
+  id: string
+  /** Every finished workout, newest first. */
+  all: DoneWorkout[]
+  /** Which workout overall this was (29 = 29º treino). */
+  overall: number
+}
 
 /* ---------------------------------------------------------------- Pieces */
 
@@ -74,20 +91,40 @@ function Text({
   )
 }
 
-function Logo({ logo, y, width = 250 }: { logo: string | null; y: number; width?: number }) {
+function Logo({
+  logo,
+  y,
+  width = 250,
+  left,
+}: {
+  logo: string | null
+  y: number
+  width?: number
+  /** Left edge; centered on the canvas when omitted. */
+  left?: number
+}) {
+  const x = left ?? (W - width) / 2
   if (logo)
     return (
       <image
         href={logo}
-        x={(W - width) / 2}
+        x={x}
         y={y - width * 0.18}
         width={width}
         height={width * 0.36}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio={left === undefined ? 'xMidYMid meet' : 'xMinYMid meet'}
       />
     )
   return (
-    <Text y={y + 18} size={width * 0.2} weight={700} spacing={width * 0.06} fill={GOLD}>
+    <Text
+      x={left ?? W / 2}
+      anchor={left === undefined ? 'middle' : 'start'}
+      y={y + 18}
+      size={width * 0.2}
+      weight={700}
+      spacing={width * 0.06}
+      fill={GOLD}
+    >
       ELEVN
     </Text>
   )
@@ -353,12 +390,166 @@ function WeekTemplate({ done, logo, id }: TemplateProps) {
   )
 }
 
+/** Hevy-like card: the body map, the last 7 days and how often the student trained. */
+function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(done.date)
+    date.setDate(done.date.getDate() - 6 + index)
+    return { date, done: all.some((item) => sameDay(item.date, date)) }
+  })
+  const count = days.filter((day) => day.done).length
+  const left = 160
+  const step = (W - left * 2) / 6
+  return (
+    <>
+      <defs>
+        <Shadow id={id} />
+      </defs>
+      <rect
+        x={80}
+        y={250}
+        width={920}
+        height={1440}
+        rx={72}
+        fill="#0d0b14"
+        fillOpacity={0.94}
+        stroke="#fff"
+        strokeOpacity={0.1}
+        strokeWidth={3}
+      />
+      <Text y={400} size={76} weight={800}>
+        Mandou bem!
+      </Text>
+      <Text y={470} size={40} weight={500} opacity={0.8}>
+        {`Esse foi seu ${overall}º treino`}
+      </Text>
+      <BodyMap muscles={musclesOf(done)} x={150} y={540} width={780} height={690} tone="sticker" />
+      {days.map((day, index) => (
+        <Text
+          key={`l${index}`}
+          x={left + index * step}
+          y={1320}
+          size={34}
+          weight={600}
+          opacity={0.75}
+        >
+          {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'][day.date.getDay()]}
+        </Text>
+      ))}
+      <rect
+        x={left - 72}
+        y={1355}
+        width={W - (left - 72) * 2}
+        height={132}
+        rx={66}
+        fill="#fff"
+        fillOpacity={0.06}
+      />
+      {days.map((day, index) => {
+        const cx = left + index * step
+        return day.done ? (
+          <g key={`d${index}`}>
+            <circle cx={cx} cy={1421} r={44} fill={GOLD} />
+            <path
+              d={`M${cx - 19} 1421 l12 12 l25 -26`}
+              fill="none"
+              stroke={INK}
+              strokeWidth={8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </g>
+        ) : (
+          <circle key={`d${index}`} cx={cx} cy={1421} r={13} fill="#fff" fillOpacity={0.25} />
+        )
+      })}
+      <text x={W / 2} y={1570} fontSize={40} fontWeight={500} fill="#fff" textAnchor="middle">
+        {'Você treinou '}
+        <tspan fontWeight={800}>{count === 1 ? '1 vez' : `${count} vezes`}</tspan>
+        {' nos últimos 7 dias'}
+      </text>
+      <Logo logo={logo} y={1630} width={200} left={140} />
+      <Text x={940} y={1642} size={36} weight={600} anchor="end" opacity={0.8}>
+        {`Treino ${done.code} · ${done.nth}ª vez`}
+      </Text>
+    </>
+  )
+}
+
+/** Strava-like strip at the bottom, meant to sit over the student's photo. */
+function StripTemplate({ done, logo, id }: TemplateProps) {
+  const workout = workoutOf(done.code)
+  const stats: [string, string][] = [
+    ['Tempo', durationLabel(done.seconds)],
+    ['Séries', String(done.sets)],
+    done.prs ? ['Recordes', String(done.prs)] : ['Vez', `${done.nth}ª`],
+  ]
+  return (
+    <>
+      <defs>
+        <Shadow id={id} />
+        <linearGradient id={`${id}-fade`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity={0} />
+          <stop offset="1" stopColor="#000" stopOpacity={0.72} />
+        </linearGradient>
+        <linearGradient id={`${id}-gold`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#e2d9a6" />
+          <stop offset="1" stopColor="#6b6133" />
+        </linearGradient>
+      </defs>
+      <rect x={0} y={1180} width={W} height={H - 1180} fill={`url(#${id}-fade)`} />
+      <g filter={`url(#${id})`}>
+        <Logo logo={logo} y={190} width={210} left={90} />
+        <rect x={90} y={1430} width={150} height={150} rx={40} fill={`url(#${id}-gold)`} />
+        <Text x={165} y={1540} size={96} weight={800} fill={INK}>
+          {done.code}
+        </Text>
+        <Text x={275} y={1495} size={58} weight={700} anchor="start">
+          {short(workout.title, 22)}
+        </Text>
+        <Text x={275} y={1560} size={36} weight={500} anchor="start" opacity={0.85}>
+          {`Treino ${done.code} · ${done.nth}ª vez · ${dayLabel(done.date)}`}
+        </Text>
+        <line
+          x1={90}
+          x2={990}
+          y1={1640}
+          y2={1640}
+          stroke="#fff"
+          strokeOpacity={0.25}
+          strokeWidth={3}
+        />
+        {stats.map(([label, value], index) => (
+          <g key={label}>
+            <Text
+              x={90 + index * 310}
+              y={1712}
+              size={32}
+              weight={500}
+              anchor="start"
+              opacity={0.75}
+            >
+              {label}
+            </Text>
+            <Text x={90 + index * 310} y={1790} size={66} weight={700} anchor="start">
+              {value}
+            </Text>
+          </g>
+        ))}
+      </g>
+    </>
+  )
+}
+
 const templateComponents = [
   MusclesTemplate,
+  CardTemplate,
   NumbersTemplate,
   LetterTemplate,
   ExercisesTemplate,
   WeekTemplate,
+  StripTemplate,
 ]
 
 /* ---------------------------------------------------------------- Export */
@@ -473,7 +664,12 @@ function download(blob: Blob, name: string) {
 
 export function ShareStudio({ doneKey }: { doneKey: string }) {
   const { pop } = useStudentApp()
-  const done = useDoneWorkouts().find((item) => item.key === doneKey)
+  const all = useDoneWorkouts()
+  const times = useTimesDone()
+  const done = all.find((item) => item.key === doneKey)
+  const overall =
+    Object.values(times).reduce((sum, value) => sum + value, 0) -
+    all.findIndex((item) => item.key === doneKey)
   const [index, setIndex] = useState(0)
   const [background, setBackground] = useState<Background>('transparente')
   const [photo, setPhoto] = useState<string | null>(null)
@@ -640,7 +836,13 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
                     : `Modelo ${templates[position]}`
                 }
               >
-                <Template done={done} logo={logo} id={`share-${position}`} />
+                <Template
+                  done={done}
+                  logo={logo}
+                  id={`share-${position}`}
+                  all={all}
+                  overall={overall}
+                />
               </svg>
             </div>
           </div>

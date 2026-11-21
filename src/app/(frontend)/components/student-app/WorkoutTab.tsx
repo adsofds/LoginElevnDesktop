@@ -342,7 +342,7 @@ function RecapCard({ done, children }: { done: DoneWorkout; children?: ReactNode
       </div>
       <BodyMap
         muscles={muscles}
-        className="mx-auto mt-4 h-[176px] w-auto"
+        className="mx-auto mt-4 h-[220px] w-auto"
         label={`Músculos trabalhados: ${workedLabel(muscles)}`}
       />
       <p className="mt-2 flex items-center justify-center gap-4 text-[11px] text-white/55">
