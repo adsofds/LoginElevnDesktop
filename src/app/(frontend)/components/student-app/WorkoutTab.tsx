@@ -17,7 +17,7 @@ import {
   durationLabel,
   formatSet,
   musclesOf,
-  seriesLabel,
+  workLabel,
   useDoneWorkouts,
   useTimesDone,
   workoutOf,
@@ -281,7 +281,7 @@ function HistoryList() {
                   </span>
                   <span className="block truncate font-semibold">{workout.title}</span>
                   <span className="mt-0.5 block text-xs text-white/50 tabular-nums">
-                    {Math.round(item.seconds / 60)} min · {seriesLabel(item.sets)}
+                    {Math.round(item.seconds / 60)} min · {workLabel(item)}
                     {item.prs > 0 && ` · 🏆 ${item.prs}`}
                   </span>
                 </span>
@@ -357,7 +357,7 @@ function RecapCard({ done, children }: { done: DoneWorkout; children?: ReactNode
       <dl className="mt-4 grid grid-cols-3 divide-x divide-white/10 rounded-2xl bg-black/25 py-3 text-center">
         {[
           ['Duração', durationLabel(done.seconds)],
-          ['Séries', String(done.sets)],
+          ['Séries', done.sets ? String(done.sets) : '—'],
           ['Recordes', done.prs ? `🏆 ${done.prs}` : '—'],
         ].map(([label, value]) => (
           <div key={label}>
@@ -421,61 +421,80 @@ export function DoneWorkoutScreen({ doneKey }: { doneKey: string }) {
         {done.comment && (
           <Card className="mt-3 p-4">
             <p className="text-[11px] font-semibold text-white/45">
-              Seu comentário para o {studentProfile.coachFirstName}
+              Observação para o {studentProfile.coachFirstName}
             </p>
             <p className="mt-1 text-sm leading-5 text-white/80">{done.comment}</p>
           </Card>
         )}
 
         <h2 className="mt-7 mb-3 text-[17px] font-semibold">O que você fez</h2>
-        <ol className="space-y-2.5">
-          {done.exercises.map((exercise, index) => {
-            let normal = 0
-            return (
-              <li key={exercise.id}>
-                <Card className="p-4">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="min-w-0 truncate font-semibold">
-                      <span className="text-white/35 tabular-nums">{index + 1}. </span>
-                      {exercise.name}
-                    </p>
-                    <span className="shrink-0 text-[11px] text-white/45">{exercise.muscle}</span>
-                  </div>
-                  {exercise.sets.length ? (
-                    <ul className="mt-2.5 space-y-1">
-                      {exercise.sets.map((set, setIndex) => {
-                        if (set.type !== 'aquecimento') normal += 1
-                        return (
-                          <li
-                            key={setIndex}
-                            className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-3 py-2 text-sm"
-                          >
-                            <span
-                              className={cx(
-                                'w-4 text-center text-xs font-bold',
-                                set.type === 'aquecimento' && 'text-[var(--app-gold)]',
-                                set.type === 'falha' && 'text-[var(--app-red)]',
-                                set.type === 'normal' && 'text-white/50',
-                              )}
+        {done.sets === 0 ? (
+          <Card className="p-4">
+            <p className="text-sm text-white/70">
+              Treino registrado sem séries anotadas. Exercícios do plano:
+            </p>
+            <ul className="mt-3 space-y-1.5">
+              {done.exercises.map((exercise, index) => (
+                <li key={exercise.id} className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate">
+                    <span className="text-white/35 tabular-nums">{index + 1}. </span>
+                    {exercise.name}
+                  </span>
+                  <span className="shrink-0 text-[11px] text-white/45">{exercise.muscle}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : (
+          <ol className="space-y-2.5">
+            {done.exercises.map((exercise, index) => {
+              let normal = 0
+              return (
+                <li key={exercise.id}>
+                  <Card className="p-4">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="min-w-0 truncate font-semibold">
+                        <span className="text-white/35 tabular-nums">{index + 1}. </span>
+                        {exercise.name}
+                      </p>
+                      <span className="shrink-0 text-[11px] text-white/45">{exercise.muscle}</span>
+                    </div>
+                    {exercise.sets.length ? (
+                      <ul className="mt-2.5 space-y-1">
+                        {exercise.sets.map((set, setIndex) => {
+                          if (set.type !== 'aquecimento') normal += 1
+                          return (
+                            <li
+                              key={setIndex}
+                              className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-3 py-2 text-sm"
                             >
-                              {setTagLabel(set.type, normal)}
-                            </span>
-                            <span className="flex-1 font-medium tabular-nums">
-                              {formatSet(exercise, set)}
-                            </span>
-                            {set.pr && <Chip tone="gold">🏆 Recorde</Chip>}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="mt-2 text-[13px] text-white/45">Não feito neste dia.</p>
-                  )}
-                </Card>
-              </li>
-            )
-          })}
-        </ol>
+                              <span
+                                className={cx(
+                                  'w-4 text-center text-xs font-bold',
+                                  set.type === 'aquecimento' && 'text-[var(--app-gold)]',
+                                  set.type === 'falha' && 'text-[var(--app-red)]',
+                                  set.type === 'normal' && 'text-white/50',
+                                )}
+                              >
+                                {setTagLabel(set.type, normal)}
+                              </span>
+                              <span className="flex-1 font-medium tabular-nums">
+                                {formatSet(exercise, set)}
+                              </span>
+                              {set.pr && <Chip tone="gold">🏆 Recorde</Chip>}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-[13px] text-white/45">Não feito neste dia.</p>
+                    )}
+                  </Card>
+                </li>
+              )
+            })}
+          </ol>
+        )}
       </div>
     </div>
   )
@@ -595,6 +614,7 @@ export function SessionScreen() {
   } = useStudentApp()
   const [video, setVideo] = useState<Exercise | null>(null)
   const [confirm, setConfirm] = useState<'finalizar' | 'descartar' | null>(null)
+  const [note, setNote] = useState('')
 
   if (!session) {
     return (
@@ -651,13 +671,6 @@ export function SessionScreen() {
             </p>
             <p className="truncate font-semibold">{workout.title}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setConfirm('finalizar')}
-            className="h-9 rounded-full bg-[var(--app-gold)] px-4 text-sm font-semibold text-[#0d0a21]"
-          >
-            Finalizar
-          </button>
         </div>
         <dl className="mt-2 grid grid-cols-3 px-2 text-center">
           <div>
@@ -667,7 +680,7 @@ export function SessionScreen() {
             </dd>
           </div>
           <div>
-            <dt className="text-[11px] text-white/45">Volume</dt>
+            <dt className="text-[11px] text-white/45">Peso levantado</dt>
             <dd className="font-semibold tabular-nums">{formatKg(volume)} kg</dd>
           </div>
           <div>
@@ -679,7 +692,7 @@ export function SessionScreen() {
         </dl>
       </header>
 
-      <div className={cx('space-y-7 px-4 pt-5', session.rest ? 'pb-40' : 'pb-8')}>
+      <div className="space-y-7 px-4 pt-5 pb-6">
         {workout.exercises.map((exercise) => {
           const logs = session.sets[exercise.id]
           let normalIndex = 0
@@ -826,57 +839,78 @@ export function SessionScreen() {
         </button>
       </div>
 
-      {session.rest && (
-        <div
-          role="timer"
-          aria-label="Descanso"
-          className="sticky bottom-3 z-30 mx-3 rounded-2xl bg-[var(--app-card-2)] p-4 shadow-2xl ring-1 ring-white/10"
-        >
-          <div className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold tracking-wide text-white/50 uppercase">
-                Descanso
-              </p>
-              <p className="truncate text-xs text-white/60">{session.rest.exercise}</p>
+      {/* Follows the student down the list: rest timer (when running) + finish bar. The
+          solid strip below covers the screen's bottom padding. */}
+      <div className="sticky bottom-0 z-30 space-y-2 bg-gradient-to-t from-[var(--app-bg)] via-[var(--app-bg)]/95 to-transparent px-3 pt-6 pb-2 after:absolute after:inset-x-0 after:top-full after:h-8 after:bg-[var(--app-bg)]">
+        {session.rest && (
+          <div
+            role="timer"
+            aria-label="Descanso"
+            className="rounded-2xl bg-[var(--app-card-2)] p-4 shadow-2xl ring-1 ring-white/10"
+          >
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold tracking-wide text-white/50 uppercase">
+                  Descanso
+                </p>
+                <p className="truncate text-xs text-white/60">{session.rest.exercise}</p>
+              </div>
+              <span
+                className="text-[32px] leading-none font-bold text-[var(--app-gold)] tabular-nums"
+                aria-live="off"
+              >
+                {formatClock(restLeft)}
+              </span>
             </div>
-            <span
-              className="text-[32px] leading-none font-bold text-[var(--app-gold)] tabular-nums"
-              aria-live="off"
-            >
-              {formatClock(restLeft)}
-            </span>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-[var(--app-gold)] transition-[width] duration-1000 ease-linear"
+                style={{ width: `${(restLeft / session.rest.total) * 100}%` }}
+              />
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => adjustRest(-15)}
+                className="h-9 rounded-lg bg-white/[0.08] text-sm font-semibold"
+              >
+                −15s
+              </button>
+              <button
+                type="button"
+                onClick={() => adjustRest(15)}
+                className="h-9 rounded-lg bg-white/[0.08] text-sm font-semibold"
+              >
+                +15s
+              </button>
+              <button
+                type="button"
+                onClick={skipRest}
+                className="h-9 rounded-lg bg-[var(--app-gold)] text-sm font-semibold text-[#0d0a21]"
+              >
+                Pular
+              </button>
+            </div>
           </div>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-[var(--app-gold)] transition-[width] duration-1000 ease-linear"
-              style={{ width: `${(restLeft / session.rest.total) * 100}%` }}
-            />
+        )}
+        <div className="flex items-center gap-3 rounded-2xl bg-[var(--app-card-2)] py-2 pr-2 pl-4 shadow-2xl ring-1 ring-white/10">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold tabular-nums">
+              {doneSets}/{totalSets} séries
+            </p>
+            <p className="text-[11px] text-white/50 tabular-nums">
+              {formatClock(elapsed)} de treino
+            </p>
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => adjustRest(-15)}
-              className="h-9 rounded-lg bg-white/[0.08] text-sm font-semibold"
-            >
-              −15s
-            </button>
-            <button
-              type="button"
-              onClick={() => adjustRest(15)}
-              className="h-9 rounded-lg bg-white/[0.08] text-sm font-semibold"
-            >
-              +15s
-            </button>
-            <button
-              type="button"
-              onClick={skipRest}
-              className="h-9 rounded-lg bg-[var(--app-gold)] text-sm font-semibold text-[#0d0a21]"
-            >
-              Pular
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setConfirm('finalizar')}
+            className="h-11 rounded-full bg-[var(--app-gold)] px-5 text-sm font-semibold text-[#0d0a21] active:scale-[0.98]"
+          >
+            Finalizar treino
+          </button>
         </div>
-      )}
+      </div>
 
       <PhoneSheet
         open={confirm !== null}
@@ -899,14 +933,37 @@ export function SessionScreen() {
             <p className="text-sm text-white/70">
               {doneSets
                 ? `${doneSets} de ${totalSets} séries concluídas em ${formatClock(elapsed)}.`
-                : 'Você ainda não marcou nenhuma série. Marque as séries feitas com ✓ antes de salvar.'}
+                : `Nenhuma série marcada (${formatClock(elapsed)} de treino). Sem problema: deixe uma observação para o ${studentProfile.coachFirstName} e salve.`}
             </p>
             {doneSets > 0 && doneSets < totalSets && (
               <p className="mt-2 text-xs text-white/45">
                 As séries não marcadas ficam de fora do registro.
               </p>
             )}
-            <GoldButton className="mt-5" disabled={!doneSets} onClick={finishSession}>
+            <label htmlFor="finish-note" className="mt-4 block text-sm font-semibold">
+              Observação para o {studentProfile.coachFirstName}{' '}
+              <span className="font-normal text-white/45">
+                {doneSets ? '(opcional)' : '(obrigatória sem séries)'}
+              </span>
+            </label>
+            <textarea
+              id="finish-note"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              rows={3}
+              maxLength={280}
+              placeholder={
+                doneSets
+                  ? 'Como foi? Alguma dor, alguma carga ficou leve?'
+                  : 'Ex.: fiz o treino todo, mas não anotei as cargas.'
+              }
+              className="mt-2 w-full resize-none rounded-2xl bg-white/[0.06] px-3 py-2.5 text-sm text-white placeholder:text-white/35 focus:bg-white/10 focus:outline-none"
+            />
+            <GoldButton
+              className="mt-4"
+              disabled={!doneSets && note.trim().length < 3}
+              onClick={() => finishSession(note)}
+            >
               Salvar treino
             </GoldButton>
           </>
@@ -949,11 +1006,16 @@ export function SummaryScreen() {
       </div>
 
       <Card className="mt-4 p-4">
-        {sent ? (
-          <p className="flex items-center gap-2 text-sm text-[var(--app-green)]">
-            <Icon name="check" className="size-4" /> Comentário enviado para o{' '}
-            {studentProfile.coachFirstName}.
-          </p>
+        {done.comment || sent ? (
+          <>
+            <p className="flex items-center gap-2 text-sm text-[var(--app-green)]">
+              <Icon name="check" className="size-4" /> Observação enviada para o{' '}
+              {studentProfile.coachFirstName}.
+            </p>
+            <p className="mt-2 rounded-2xl bg-white/[0.05] px-3 py-2.5 text-sm leading-5 text-white/75">
+              {done.comment ?? comment}
+            </p>
+          </>
         ) : (
           <>
             <label htmlFor="treino-comentario" className="text-sm font-semibold">
@@ -1098,7 +1160,7 @@ export function CalendarScreen() {
               <span className="block font-semibold">{workoutOf(code).title}</span>
               <span className="block text-xs text-white/55">
                 {history
-                  ? `${history.nth}ª vez · ${Math.round(history.seconds / 60)} min · ${seriesLabel(history.sets)}`
+                  ? `${history.nth}ª vez · ${Math.round(history.seconds / 60)} min · ${workLabel(history)}`
                   : 'Treino registrado'}
               </span>
             </span>

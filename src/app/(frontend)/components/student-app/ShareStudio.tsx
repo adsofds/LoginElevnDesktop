@@ -11,7 +11,9 @@ import {
   formatSet,
   musclesOf,
   useDoneWorkouts,
-  seriesLabel,
+  exercisesDone,
+  liftedKg,
+  workLabel,
   useTimesDone,
   workoutOf,
   type DoneWorkout,
@@ -37,6 +39,7 @@ type Background = 'sem-fundo' | 'cor' | 'foto'
 const templates = [
   'Músculos',
   'Card',
+  'Resumo',
   'Números',
   'Treino',
   'Exercícios',
@@ -169,7 +172,7 @@ function MusclesTemplate({ done, logo, id }: TemplateProps) {
           tone="sticker"
         />
         <Text y={1560} size={46} weight={600} opacity={0.92}>
-          {`${durationLabel(done.seconds)}  ·  ${seriesLabel(done.sets)}`}
+          {`${durationLabel(done.seconds)}  ·  ${workLabel(done)}`}
         </Text>
         <Logo logo={logo} y={1690} />
       </g>
@@ -177,19 +180,98 @@ function MusclesTemplate({ done, logo, id }: TemplateProps) {
   )
 }
 
+/** Strava-like summary that works with or without records: exercises, sets, weight, time. */
+function SummaryTemplate({ done, logo, id }: TemplateProps) {
+  const workout = workoutOf(done.code)
+  const kg = liftedKg(done)
+  const cells: [string, string, string?][] = [
+    ['Exercícios', String(exercisesDone(done).length)],
+    ['Séries', done.sets ? String(done.sets) : '—'],
+    ['Peso levantado', kg ? kg.toLocaleString('pt-BR') : '—', kg ? ' kg' : undefined],
+    ['Tempo', durationLabel(done.seconds)],
+  ]
+  const left = 150
+  // Two centered columns.
+  const centers = [W / 2 - 230, W / 2 + 230]
+  return (
+    <>
+      <defs>
+        <Shadow id={id} />
+      </defs>
+      <g filter={`url(#${id})`}>
+        <Text y={500} size={40} weight={700} fill={GOLD} spacing={6}>
+          {`TREINO ${done.code} · ${done.nth}ª VEZ`}
+        </Text>
+        <Text y={590} size={70} weight={700}>
+          {short(workout.title, 24)}
+        </Text>
+        <line
+          x1={left}
+          x2={W - left}
+          y1={680}
+          y2={680}
+          stroke="#fff"
+          strokeOpacity={0.3}
+          strokeWidth={3}
+        />
+        {cells.map(([label, value, unit], index) => {
+          const x = centers[index % 2]
+          const y = 780 + Math.floor(index / 2) * 270
+          return (
+            <g key={label}>
+              <Text x={x} y={y} size={36} weight={500} opacity={0.8}>
+                {label}
+              </Text>
+              <text
+                x={x}
+                y={y + 112}
+                fontSize={100}
+                fontWeight={800}
+                fill="#fff"
+                textAnchor="middle"
+              >
+                {value}
+                {unit && (
+                  <tspan fontSize={48} fontWeight={600}>
+                    {unit}
+                  </tspan>
+                )}
+              </text>
+            </g>
+          )
+        })}
+        <line
+          x1={left}
+          x2={W - left}
+          y1={1330}
+          y2={1330}
+          stroke="#fff"
+          strokeOpacity={0.3}
+          strokeWidth={3}
+        />
+        {done.prs > 0 && (
+          <Text y={1410} size={40} weight={700} fill={GOLD}>
+            {done.prs === 1 ? '1 recorde pessoal' : `${done.prs} recordes pessoais`}
+          </Text>
+        )}
+        <Logo logo={logo} y={done.prs > 0 ? 1540 : 1450} />
+      </g>
+    </>
+  )
+}
+
 function NumbersTemplate({ done, logo, id }: TemplateProps) {
   const workout = workoutOf(done.code)
+  const exercises = String(exercisesDone(done).length)
   const rows: [string, string, number][] = [
     ['Treino', short(workout.title, 24), 72],
     ['Tempo', durationLabel(done.seconds), 104],
-    ['Séries', String(done.sets), 104],
+    done.sets ? ['Séries', String(done.sets), 104] : ['Exercícios', exercises, 104],
     done.prs
       ? ['Recordes', String(done.prs), 104]
-      : [
-          'Exercícios',
-          String(done.exercises.filter((exercise) => exercise.sets.length).length),
-          104,
-        ],
+      : done.sets
+        ? ['Exercícios', exercises, 104]
+        : ['Vez', `${done.nth}ª`, 104],
   ]
   return (
     <>
@@ -252,7 +334,8 @@ function LetterTemplate({ done, logo, id }: TemplateProps) {
 
 function ExercisesTemplate({ done, logo, id }: TemplateProps) {
   const workout = workoutOf(done.code)
-  const rows = done.exercises.filter((exercise) => exercise.sets.length).slice(0, 6)
+  // Without marked sets, list the plan's exercises (with no load).
+  const rows = exercisesDone(done).slice(0, 6)
   const top = 640
   const step = 118
   const bottom = top + rows.length * step
@@ -300,15 +383,15 @@ function ExercisesTemplate({ done, logo, id }: TemplateProps) {
                 size={36}
                 weight={700}
                 anchor="end"
-                fill={best.pr ? GOLD : '#fff'}
+                fill={best?.pr ? GOLD : '#fff'}
               >
-                {formatSet(exercise, best)}
+                {best ? formatSet(exercise, best) : 'feito'}
               </Text>
             </g>
           )
         })}
         <Text x={150} y={bottom + 70} size={38} weight={500} anchor="start" opacity={0.85}>
-          {`${durationLabel(done.seconds)} · ${seriesLabel(done.sets)}`}
+          {`${durationLabel(done.seconds)} · ${workLabel(done)}`}
         </Text>
         <Logo logo={logo} y={bottom + 330} />
       </g>
@@ -488,7 +571,7 @@ function StripTemplate({ done, logo, id }: TemplateProps) {
   const workout = workoutOf(done.code)
   const stats: [string, string][] = [
     ['Tempo', durationLabel(done.seconds)],
-    ['Séries', String(done.sets)],
+    done.sets ? ['Séries', String(done.sets)] : ['Exercícios', String(exercisesDone(done).length)],
     done.prs ? ['Recordes', String(done.prs)] : ['Vez', `${done.nth}ª`],
   ]
   return (
@@ -551,6 +634,7 @@ function StripTemplate({ done, logo, id }: TemplateProps) {
 const templateComponents = [
   MusclesTemplate,
   CardTemplate,
+  SummaryTemplate,
   NumbersTemplate,
   LetterTemplate,
   ExercisesTemplate,

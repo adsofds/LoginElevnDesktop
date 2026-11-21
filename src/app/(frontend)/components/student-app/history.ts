@@ -71,6 +71,7 @@ export function useDoneWorkouts(): DoneWorkout[] {
       seconds: lastFinished.seconds,
       prs: lastFinished.prs,
       sets: lastFinished.sets,
+      comment: lastFinished.note,
       exercises: lastFinished.log,
     })
   }
@@ -121,7 +122,7 @@ export function formatSet(exercise: Pick<DoneExercise, 'name' | 'muscle'>, set: 
 }
 
 /** Best set of an exercise, for compact lists. */
-export function bestSet(exercise: DoneExercise) {
+export function bestSet(exercise: DoneExercise): DoneSet | undefined {
   const working = exercise.sets.filter((set) => set.type !== 'aquecimento')
   const pool = working.length ? working : exercise.sets
   return pool.reduce((best, set) => (set.kg * set.reps > best.kg * best.reps ? set : best), pool[0])
@@ -147,9 +148,30 @@ export function durationLabel(seconds: number) {
   return m ? `${m}min ${String(s).padStart(2, '0')}s` : `${s}s`
 }
 
+/** Exercises with at least one set marked; all of them when nothing was marked. */
+export const exercisesDone = (done: Pick<DoneWorkout, 'exercises'>) => {
+  const logged = done.exercises.filter((exercise) => exercise.sets.length)
+  return logged.length ? logged : done.exercises
+}
+
 /** All exercise muscle labels of a done workout (for the body map). */
 export const musclesOf = (done: Pick<DoneWorkout, 'exercises'>) =>
-  done.exercises.filter((exercise) => exercise.sets.length).map((exercise) => exercise.muscle)
+  exercisesDone(done).map((exercise) => exercise.muscle)
+
+/** Total weight lifted (kg × reps of every marked set, cardio excluded). */
+export const liftedKg = (done: Pick<DoneWorkout, 'exercises'>) =>
+  Math.round(
+    done.exercises
+      .filter((exercise) => exercise.muscle !== 'Cardio')
+      .reduce(
+        (sum, exercise) => sum + exercise.sets.reduce((s2, set) => s2 + set.kg * set.reps, 0),
+        0,
+      ),
+  )
+
+/** "15 séries", or "5 exercícios" when the student didn't mark sets. */
+export const workLabel = (done: DoneWorkout) =>
+  done.sets ? seriesLabel(done.sets) : `${exercisesDone(done).length} exercícios`
 
 /** "1 série" / "15 séries". */
 export const seriesLabel = (count: number) => `${count} ${count === 1 ? 'série' : 'séries'}`
