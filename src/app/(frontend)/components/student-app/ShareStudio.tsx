@@ -11,11 +11,13 @@ import {
   formatSet,
   musclesOf,
   useDoneWorkouts,
+  seriesLabel,
   useTimesDone,
   workoutOf,
   type DoneWorkout,
 } from './history'
 import { trainedDaysThisMonth, weekStreak } from './HomeTab'
+import { paintSvg } from './paintSvg'
 import { useStudentApp } from './StudentApp'
 
 /*
@@ -30,7 +32,7 @@ const GOLD = '#c5bb83'
 const INK = '#0d0a21'
 const FONT = 'var(--font-figtree), Figtree, ui-sans-serif, system-ui, sans-serif'
 
-type Background = 'transparente' | 'foto' | 'escuro'
+type Background = 'sem-fundo' | 'cor' | 'foto'
 
 const templates = [
   'Músculos',
@@ -167,7 +169,7 @@ function MusclesTemplate({ done, logo, id }: TemplateProps) {
           tone="sticker"
         />
         <Text y={1560} size={46} weight={600} opacity={0.92}>
-          {`${durationLabel(done.seconds)}  ·  ${done.sets} séries`}
+          {`${durationLabel(done.seconds)}  ·  ${seriesLabel(done.sets)}`}
         </Text>
         <Logo logo={logo} y={1690} />
       </g>
@@ -306,7 +308,7 @@ function ExercisesTemplate({ done, logo, id }: TemplateProps) {
           )
         })}
         <Text x={150} y={bottom + 70} size={38} weight={500} anchor="start" opacity={0.85}>
-          {`${durationLabel(done.seconds)} · ${done.sets} séries`}
+          {`${durationLabel(done.seconds)} · ${seriesLabel(done.sets)}`}
         </Text>
         <Logo logo={logo} y={bottom + 330} />
       </g>
@@ -558,8 +560,6 @@ const templateComponents = [
 
 /* ---------------------------------------------------------------- Export */
 
-let fontCssCache: Promise<string> | null = null
-
 const toDataUrl = async (url: string) => {
   const blob = await (await fetch(url)).blob()
   return await new Promise<string>((resolve, reject) => {
@@ -570,39 +570,6 @@ const toDataUrl = async (url: string) => {
   })
 }
 
-/** Figtree as data URLs: an SVG drawn into a canvas can't load the page's web fonts. */
-function fontFaceCss() {
-  fontCssCache ??= (async () => {
-    const rules: string[] = []
-    for (const sheet of Array.from(document.styleSheets)) {
-      let list: CSSRuleList
-      try {
-        list = sheet.cssRules
-      } catch {
-        continue
-      }
-      for (const rule of Array.from(list)) {
-        if (!(rule instanceof CSSFontFaceRule)) continue
-        if (!/figtree/i.test(rule.style.getPropertyValue('font-family'))) continue
-        const match = rule.style.getPropertyValue('src').match(/url\(["']?([^"')]+)["']?\)/)
-        if (!match) continue
-        try {
-          const data = await toDataUrl(new URL(match[1], sheet.href ?? location.href).href)
-          const weight = rule.style.getPropertyValue('font-weight') || '100 900'
-          const range = rule.style.getPropertyValue('unicode-range')
-          rules.push(
-            `@font-face{font-family:ShareFont;src:url(${data});font-weight:${weight};${range ? `unicode-range:${range};` : ''}}`,
-          )
-        } catch {
-          /* fall back to the system font */
-        }
-      }
-    }
-    return rules.join('\n')
-  })()
-  return fontCssCache
-}
-
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image()
@@ -611,31 +578,34 @@ const loadImage = (src: string) =>
     image.src = src
   })
 
-async function renderPng(svg: SVGSVGElement, background: Background, photo: string | null) {
-  const ns = 'http://www.w3.org/2000/svg'
-  const clone = svg.cloneNode(true) as SVGSVGElement
-  clone.setAttribute('xmlns', ns)
-  clone.setAttribute('width', String(W))
-  clone.setAttribute('height', String(H))
-  clone.removeAttribute('class')
-  clone.setAttribute('style', 'font-family: ShareFont, ui-sans-serif, system-ui, sans-serif')
-  const css = await fontFaceCss()
-  if (css) {
-    const style = document.createElementNS(ns, 'style')
-    style.textContent = css
-    clone.insertBefore(style, clone.firstChild)
-  }
-  const sticker = await loadImage(
-    `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(clone))}`,
-  )
+/** Background colors for "Com cor" (top-left → bottom-right gradient). */
+const colorStops = {
+  escuro: ['#2a2536', '#0b0a12'],
+  dourado: ['#7d7140', '#1d190c'],
+  vinho: ['#5a2434', '#14090d'],
+} as const
+type ColorId = keyof typeof colorStops
+const colorNames: Record<ColorId, string> = { escuro: 'Escuro', dourado: 'Dourado', vinho: 'Vinho' }
+
+/**
+ * PNG 1080 × 1920. "Sem fundo" keeps the alpha channel (a sticker, like Strava's);
+ * "Com cor" and "Foto" paint a background first. The sticker itself is painted with the
+ * canvas 2D API (see paintSvg) so it comes out complete on mobile browsers too.
+ */
+async function renderPng(
+  svg: SVGSVGElement,
+  background: Background,
+  color: ColorId,
+  photo: string | null,
+) {
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
   const context = canvas.getContext('2d')!
-  if (background === 'escuro') {
+  if (background === 'cor') {
     const gradient = context.createLinearGradient(0, 0, W * 0.35, H)
-    gradient.addColorStop(0, '#2a2536')
-    gradient.addColorStop(1, '#0b0a12')
+    gradient.addColorStop(0, colorStops[color][0])
+    gradient.addColorStop(1, colorStops[color][1])
     context.fillStyle = gradient
     context.fillRect(0, 0, W, H)
   } else if (background === 'foto' && photo) {
@@ -647,7 +617,7 @@ async function renderPng(svg: SVGSVGElement, background: Background, photo: stri
     context.fillStyle = 'rgba(0,0,0,0.25)'
     context.fillRect(0, 0, W, H)
   }
-  context.drawImage(sticker, 0, 0, W, H)
+  await paintSvg(svg, context)
   return await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('png'))), 'image/png'),
   )
@@ -675,7 +645,8 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
     Object.values(times).reduce((sum, value) => sum + value, 0) -
     all.findIndex((item) => item.key === doneKey)
   const [index, setIndex] = useState(0)
-  const [background, setBackground] = useState<Background>('transparente')
+  const [background, setBackground] = useState<Background>('sem-fundo')
+  const [color, setColor] = useState<ColorId>('escuro')
   const [photo, setPhoto] = useState<string | null>(null)
   const [logo, setLogo] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
@@ -683,6 +654,10 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
   const svgs = useRef<(SVGSVGElement | null)[]>([])
   const scroller = useRef<HTMLDivElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  // The PNG is prepared ahead of the tap: mobile browsers only allow share/copy while the
+  // tap is still "fresh", so there is no time to render after it.
+  const [ready, setReady] = useState<{ key: string; blob: Blob } | null>(null)
+  const renderKey = `${doneKey}|${index}|${background}|${color}|${photo ?? ''}|${logo ? 1 : 0}`
 
   // The wordmark goes into the sticker as a data URL so it survives the PNG export.
   useEffect(() => {
@@ -705,6 +680,21 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
   }, [toast])
 
   useEffect(() => () => void (photo && URL.revokeObjectURL(photo)), [photo])
+
+  useEffect(() => {
+    let alive = true
+    const timer = window.setTimeout(() => {
+      const svg = svgs.current[index]
+      if (!svg) return
+      renderPng(svg, background, color, photo)
+        .then((blob) => alive && setReady({ key: renderKey, blob }))
+        .catch(() => {})
+    }, 300)
+    return () => {
+      alive = false
+      window.clearTimeout(timer)
+    }
+  }, [renderKey, index, background, color, photo])
 
   if (!done) return null
   const workout = workoutOf(done.code)
@@ -731,44 +721,67 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
     setBackground(next)
   }
 
-  const run = async (action: 'stories' | 'copiar' | 'salvar') => {
+  const freshBlob = () => {
     const svg = svgs.current[index]
-    if (!svg || busy) return
-    setBusy(true)
-    try {
-      const blob = await renderPng(svg, background, photo)
-      if (action === 'salvar') {
+    return svg ? renderPng(svg, background, color, photo) : Promise.reject(new Error('svg'))
+  }
+
+  const savedToast =
+    background === 'sem-fundo'
+      ? 'Imagem sem fundo salva. Na galeria ela pode aparecer com preto ou branco atrás: é só a visualização.'
+      : 'Imagem salva.'
+
+  /** Opens the phone's share sheet; false when the browser can't share files. */
+  const shareFile = (blob: Blob) => {
+    const file = new File([blob], fileName, { type: 'image/png' })
+    if (!navigator.canShare?.({ files: [file] })) return false
+    navigator
+      .share({ files: [file], title: `Treino ${done.code} · ${workout.title}` })
+      .catch((error: Error) => {
+        if (error.name === 'AbortError') return
         download(blob, fileName)
-        setToast('Imagem salva.')
-      } else if (action === 'copiar') {
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-          setToast('Figurinha copiada. Cole nos Stories do Instagram.')
-        } catch {
-          download(blob, fileName)
-          setToast('Não deu para copiar aqui, então salvamos a imagem.')
-        }
-      } else {
-        const file = new File([blob], fileName, { type: 'image/png' })
-        if (navigator.canShare?.({ files: [file] })) {
+        setToast(savedToast)
+      })
+    return true
+  }
+
+  const act = (action: 'stories' | 'salvar', blob: Blob) => {
+    const phone = window.matchMedia('(pointer: coarse)').matches
+    // On phones, "Salvar" also goes through the share sheet ("Salvar imagem" puts it in
+    // the gallery); a plain download would land in Files/Downloads instead.
+    if ((action === 'stories' || phone) && shareFile(blob)) return
+    download(blob, fileName)
+    setToast(
+      action === 'stories' ? 'Imagem salva. No Instagram, adicione aos Stories.' : savedToast,
+    )
+  }
+
+  const run = (action: 'stories' | 'copiar' | 'salvar') => {
+    if (busy) return
+    const cached = ready?.key === renderKey ? ready.blob : null
+    if (action === 'copiar') {
+      // The clipboard accepts a promise, so copying works even if the PNG isn't ready yet.
+      const copy = navigator.clipboard?.write
+        ? navigator.clipboard.write([new ClipboardItem({ 'image/png': cached ?? freshBlob() })])
+        : Promise.reject(new Error('clipboard'))
+      copy
+        .then(() => setToast('Figurinha copiada. Nos Stories, toque e segure para colar.'))
+        .catch(async () => {
           try {
-            await navigator.share({
-              files: [file],
-              title: `Treino ${done.code} · ${workout.title}`,
-            })
-          } catch (error) {
-            if ((error as Error).name !== 'AbortError') throw error
+            download(cached ?? (await freshBlob()), fileName)
+            setToast('Não deu para copiar neste navegador, então salvamos a imagem.')
+          } catch {
+            setToast('Não foi possível gerar a imagem agora.')
           }
-        } else {
-          download(blob, fileName)
-          setToast('Imagem salva. Abra o Instagram e adicione aos Stories.')
-        }
-      }
-    } catch {
-      setToast('Não foi possível gerar a imagem agora.')
-    } finally {
-      setBusy(false)
+        })
+      return
     }
+    if (cached) return act(action, cached)
+    setBusy(true)
+    freshBlob()
+      .then((blob) => act(action, blob))
+      .catch(() => setToast('Não foi possível gerar a imagem agora.'))
+      .finally(() => setBusy(false))
   }
 
   return (
@@ -812,12 +825,19 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
           >
             <div
               className={cx(
-                'relative aspect-[9/16] w-[232px] overflow-hidden rounded-[22px] ring-1 ring-white/10',
-                background === 'transparente' &&
+                // Sized by height so the actions stay on screen on short phones.
+                'relative aspect-[9/16] h-[clamp(260px,calc(100svh-400px),440px)] overflow-hidden rounded-[22px] ring-1 ring-white/10',
+                background === 'sem-fundo' &&
                   'bg-[conic-gradient(#2b2834_25%,#1c1a23_0_50%,#2b2834_0_75%,#1c1a23_0)] bg-[length:18px_18px]',
-                background === 'escuro' && 'bg-[linear-gradient(170deg,#2a2536,#0b0a12)]',
                 background === 'foto' && 'bg-black',
               )}
+              style={
+                background === 'cor'
+                  ? {
+                      background: `linear-gradient(170deg, ${colorStops[color][0]}, ${colorStops[color][1]})`,
+                    }
+                  : undefined
+              }
             >
               {background === 'foto' && photo && (
                 <>
@@ -878,9 +898,9 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
       >
         {(
           [
-            ['transparente', 'Transparente'],
+            ['sem-fundo', 'Sem fundo'],
+            ['cor', 'Com cor'],
             ['foto', photo ? 'Sua foto' : 'Foto'],
-            ['escuro', 'Escuro'],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -898,17 +918,38 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
           </button>
         ))}
       </div>
-      <p className="mx-6 mt-2 text-center text-[11px] leading-4 text-white/45">
-        {background === 'transparente' ? (
-          'Sem fundo: cole a figurinha por cima de uma foto nos Stories.'
-        ) : background === 'foto' ? (
-          <button type="button" onClick={() => fileInput.current?.click()} className="underline">
-            Trocar foto
-          </button>
-        ) : (
-          'Fundo escuro da Elevn.'
-        )}
-      </p>
+      {background === 'cor' ? (
+        <div className="mt-3 flex justify-center gap-3" role="radiogroup" aria-label="Cor do fundo">
+          {(Object.keys(colorStops) as ColorId[]).map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={color === id}
+              aria-label={colorNames[id]}
+              title={colorNames[id]}
+              onClick={() => setColor(id)}
+              className={cx(
+                'size-8 rounded-full ring-2 ring-offset-2 ring-offset-[var(--app-bg)] transition',
+                color === id ? 'ring-white' : 'ring-transparent',
+              )}
+              style={{
+                background: `linear-gradient(135deg, ${colorStops[id][0]}, ${colorStops[id][1]})`,
+              }}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="mx-6 mt-2 text-center text-[11px] leading-4 text-white/45">
+          {background === 'sem-fundo' ? (
+            'PNG sem fundo, como figurinha. Nos Stories, use Copiar e cole por cima da sua foto.'
+          ) : (
+            <button type="button" onClick={() => fileInput.current?.click()} className="underline">
+              Trocar foto
+            </button>
+          )}
+        </p>
+      )}
       <input
         ref={fileInput}
         type="file"
@@ -919,7 +960,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
         aria-hidden="true"
       />
 
-      <div className="mt-auto grid grid-cols-3 gap-2 px-6 pt-5 pb-2">
+      <div className="mt-auto grid grid-cols-3 gap-2 px-6 pt-4 pb-2">
         {(
           [
             ['stories', 'Stories', 'photo'],

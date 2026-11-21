@@ -17,6 +17,7 @@ import {
   durationLabel,
   formatSet,
   musclesOf,
+  seriesLabel,
   useDoneWorkouts,
   useTimesDone,
   workoutOf,
@@ -280,7 +281,7 @@ function HistoryList() {
                   </span>
                   <span className="block truncate font-semibold">{workout.title}</span>
                   <span className="mt-0.5 block text-xs text-white/50 tabular-nums">
-                    {Math.round(item.seconds / 60)} min · {item.sets} séries
+                    {Math.round(item.seconds / 60)} min · {seriesLabel(item.sets)}
                     {item.prs > 0 && ` · 🏆 ${item.prs}`}
                   </span>
                 </span>
@@ -1097,7 +1098,7 @@ export function CalendarScreen() {
               <span className="block font-semibold">{workoutOf(code).title}</span>
               <span className="block text-xs text-white/55">
                 {history
-                  ? `${history.nth}ª vez · ${Math.round(history.seconds / 60)} min · ${history.sets} séries`
+                  ? `${history.nth}ª vez · ${Math.round(history.seconds / 60)} min · ${seriesLabel(history.sets)}`
                   : 'Treino registrado'}
               </span>
             </span>

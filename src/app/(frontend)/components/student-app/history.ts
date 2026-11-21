@@ -150,3 +150,6 @@ export function durationLabel(seconds: number) {
 /** All exercise muscle labels of a done workout (for the body map). */
 export const musclesOf = (done: Pick<DoneWorkout, 'exercises'>) =>
   done.exercises.filter((exercise) => exercise.sets.length).map((exercise) => exercise.muscle)
+
+/** "1 série" / "15 séries". */
+export const seriesLabel = (count: number) => `${count} ${count === 1 ? 'série' : 'séries'}`
