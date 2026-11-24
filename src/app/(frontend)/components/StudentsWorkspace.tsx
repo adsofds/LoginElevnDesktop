@@ -20,8 +20,11 @@ import { NameDialog } from './ui/NameDialog'
 import { Sheet } from './ui/Sheet'
 import { Table, TD, TH, THead, TR } from './ui/Table'
 import { Tabs } from './ui/Tabs'
-import { FaceCheckin, getFaceHistory } from './students/FaceCheckin'
+import { FaceCheckin } from './students/FaceCheckin'
+import { LiveClinAnswersView } from './students/LiveClinAnswersView'
+import { faceThemes, formatKg, weightLabel, type LiveClinAnswers } from './students/liveclin'
 import { FichaSection } from './students/FichaSection'
+import { WhatsAppGlyph, whatsappUrl } from './dashboard/AttentionActions'
 import { downloadComparison, exportTemplates } from './students/photoExport'
 
 type CheckinState = 'Pendente' | 'Realizado' | 'Atrasado'
@@ -41,24 +44,7 @@ export type StudentAppPhoto = {
 type RenewalState = 'Em dia' | 'Perto de vencer' | 'Recuperado' | 'Não renovou'
 type StudentHealth = 'Em dia' | 'Atenção' | 'Em risco'
 
-type LiveClinCheckinData = {
-  submittedAt: string
-  protocolName: string
-  fastingWeight: string
-  offPlanMeals: string
-  hungerLevels: string
-  waterIntake: string
-  bowelFrequency: string
-  abdominalDiscomfort: string
-  strengthWorkouts: string
-  exercisePerformance: string
-  aerobicSessions: string
-  sleepHours: string
-  dedicationLevel: string
-  bodyPerception: string
-  menuChangesRequest: string
-  openFeedback: string
-}
+type LiveClinCheckinData = LiveClinAnswers
 
 type AppStudentObservation = {
   id: string
@@ -140,7 +126,6 @@ type StudentRecord = {
   nonRenewalReason?: string
   status: StudentHealth
   weightChange: string
-  coachFeedback?: string
   hasLogin?: boolean
   loginEmail?: string
   accessKey?: string
@@ -362,21 +347,25 @@ const initialStudents: StudentRecord[] = [
     liveClinCheckin: {
       submittedAt: 'Hoje, 08:42 via LiveClin',
       protocolName: 'Cutting Fase 2 · Ciclo Novembro',
-      fastingWeight: '81,4 kg (-1,1 kg na quinzena)',
-      offPlanMeals: '1 refeição fora do planejado (jantar de sábado)',
-      hungerLevels: 'Fome moderada às 17h nos dias de treino de pernas',
-      waterIntake: '3,4 L / dia',
-      bowelFrequency: 'Sim, todos os dias regularmente',
-      abdominalDiscomfort: 'Não senti gases nem inchaço',
-      strengthWorkouts: '5 sessões de musculação nos últimos 7 dias',
-      exercisePerformance: 'Sim, progredi carga na remada curvada e no leg press',
-      aerobicSessions: '4 sessões de cardio (esteira inclinada 30 min)',
-      sleepHours: '7h30 por noite em média',
-      dedicationLevel: '9 / 10 — Muito dedicado',
-      bodyPerception: 'Sim, cintura mais fina (-2 cm) e maior definição abdominal',
-      menuChangesRequest:
+      weightKg: 81.4,
+      weightTrend: '-1,1 kg na quinzena',
+      offPlanMeals: 1,
+      offPlanNote: 'Jantar de sábado com a família.',
+      hunger: 'medio',
+      waterLiters: 3,
+      bowel: 'regulado',
+      discomfort: 'raro',
+      menuChanges:
         'Gostaria de incluir uma fruta ou aumentar o carboidrato no lanche das 16h30 nos dias de inferiores.',
-      openFeedback:
+      strengthSessions: 5,
+      performance: 5,
+      aerobicSessions: 4,
+      sleepHours: 7,
+      dedication: 4,
+      dedicationNote: 'Dormir um pouco mais cedo nos dias de perna.',
+      evolution: 4,
+      evolutionNote: 'Cintura mais fina (-2 cm) e mais definição no abdômen.',
+      feedback:
         'Semana muito consistente nos treinos. Senti mais fome no fim da tarde apenas nos dias de perna pesada.',
     },
     appObservations: [
@@ -417,24 +406,25 @@ const initialStudents: StudentRecord[] = [
     renewalState: 'Recuperado',
     status: 'Atenção',
     weightChange: '+0,6 kg',
-    coachFeedback: 'Subir 150 kcal nos dias de membros inferiores e manter cardio leve.',
     liveClinCheckin: {
       submittedAt: 'Hoje, 09:40 via LiveClin',
       protocolName: 'Bulking Limpo · Fase 3',
-      fastingWeight: '62,8 kg (+0,6 kg no mês)',
-      offPlanMeals: 'Nenhuma refeição fora do plano',
-      hungerLevels: 'Apetite estável, alta saciedade no pós-treino',
-      waterIntake: '2,9 L / dia',
-      bowelFrequency: 'Sim, diariamente',
-      abdominalDiscomfort: 'Nenhum desconforto após tirar lactose do jantar',
-      strengthWorkouts: '5 sessões de musculação nos últimos 7 dias',
-      exercisePerformance: 'Sim, bati 110kg na elevação pélvica para 4x10',
-      aerobicSessions: '3 sessões de bike ergométrica (25 min)',
-      sleepHours: '8h por noite em média',
-      dedicationLevel: '9,5 / 10 — Excelente dedicação',
-      bodyPerception: 'Sim, glúteo e posterior mais densos mantendo linha de cintura',
-      menuChangesRequest: 'Manter cardápio atual, apenas variar opção de fruta no café da manhã.',
-      openFeedback:
+      weightKg: 62.8,
+      weightTrend: '+0,6 kg no mês',
+      offPlanMeals: 0,
+      hunger: 'baixo',
+      waterLiters: 3,
+      bowel: 'regulado',
+      discomfort: 'raro',
+      menuChanges: 'Manter cardápio atual, apenas variar a opção de fruta no café da manhã.',
+      strengthSessions: 5,
+      performance: 5,
+      aerobicSessions: 3,
+      sleepHours: 8,
+      dedication: 5,
+      evolution: 4,
+      evolutionNote: 'Glúteo e posterior mais densos mantendo a linha de cintura.',
+      feedback:
         'Treinos renderam demais essa semana! Não marquei todos os checks de refeição no app na quarta e quinta por correria, mas segui a marmita 100%.',
     },
     appObservations: [
@@ -477,21 +467,26 @@ const initialStudents: StudentRecord[] = [
     liveClinCheckin: {
       submittedAt: 'Ontem, 21:15 via LiveClin',
       protocolName: 'Recomposição Corporal · Executivo',
-      fastingWeight: '69,2 kg (-0,3 kg)',
-      offPlanMeals: '3 refeições fora do planejado em viagem a trabalho',
-      hungerLevels: 'Ansiedade e vontade de doce à noite nos dias de hotel',
-      waterIntake: '2,1 L / dia',
-      bowelFrequency: 'Não, ficou 2 dias sem ir durante a viagem',
-      abdominalDiscomfort: 'Leve inchaço abdominal e retenção pós-voo',
-      strengthWorkouts: '3 sessões de musculação (academia do hotel)',
-      exercisePerformance: 'Estável, adaptou exercícios com halteres',
-      aerobicSessions: '2 sessões de HIIT na esteira (20 min)',
-      sleepHours: '6h por noite em média',
-      dedicationLevel: '7 / 10 — Fez o possível em viagem',
-      bodyPerception: 'Notou leve redução de medidas apesar da retenção da viagem',
-      menuChangesRequest:
+      weightKg: 69.2,
+      weightTrend: '-0,3 kg',
+      offPlanMeals: 3,
+      offPlanNote: '3 refeições em restaurante durante a viagem a trabalho.',
+      hunger: 'alto',
+      waterLiters: 2,
+      bowel: 'alternado',
+      discomfort: 'as-vezes',
+      discomfortNote: 'Leve inchaço e retenção depois do voo, principalmente à noite.',
+      menuChanges:
         'Gostaria de opções práticas de lanche proteico para levar na bolsa em semanas de viagem.',
-      openFeedback:
+      strengthSessions: 3,
+      performance: 3,
+      aerobicSessions: 2,
+      sleepHours: 6,
+      dedication: 2,
+      dedicationNote: 'Organizar os lanches antes de viajar.',
+      evolution: 4,
+      evolutionNote: 'Leve redução de medidas apesar da retenção da viagem.',
+      feedback:
         'Viajei de quarta a sexta para congresso. Mesmo sem marcar a dieta, consegui fazer 3 treinos no hotel.',
     },
     appObservations: [
@@ -534,21 +529,24 @@ const initialStudents: StudentRecord[] = [
     liveClinCheckin: {
       submittedAt: 'Pendente no LiveClin (último há 11 dias)',
       protocolName: 'Hipertrofia Intermediário · Fase 2',
-      fastingWeight: '79,0 kg (+0,4 kg)',
-      offPlanMeals: '2 refeições fora do planejado',
-      hungerLevels: 'Apetite normal',
-      waterIntake: '2,6 L / dia',
-      bowelFrequency: 'Sim, diariamente',
-      abdominalDiscomfort: 'Sem desconfortos',
-      strengthWorkouts: '2 sessões de musculação nos últimos 7 dias',
-      exercisePerformance: 'Mantendo cargas habituais',
-      aerobicSessions: '1 sessão de caminhada rápida',
-      sleepHours: '6h30 por noite (semana de provas)',
-      dedicationLevel: '6,5 / 10 — Semana corrida na pós-graduação',
-      bodyPerception: 'Estável nesta quinzena',
-      menuChangesRequest: 'Refeições mais rápidas para o horário noturno.',
-      openFeedback:
-        'Aluno treinou segunda e terça pelo aplicativo, aguardando atualização do check-in semanal e confirmação de renovação.',
+      weightKg: 79.0,
+      weightTrend: '+0,4 kg',
+      offPlanMeals: 2,
+      offPlanNote: 'Lanches na faculdade à noite.',
+      hunger: 'medio',
+      waterLiters: 3,
+      bowel: 'regulado',
+      discomfort: 'raro',
+      menuChanges: 'Refeições mais rápidas para o horário noturno.',
+      strengthSessions: 2,
+      performance: 3,
+      aerobicSessions: 1,
+      sleepHours: 6,
+      dedication: 2,
+      dedicationNote: 'Semana corrida na pós-graduação; preciso encaixar os treinos.',
+      evolution: 3,
+      evolutionNote: 'Estável nesta quinzena.',
+      feedback: 'Semana de provas na pós. Treinei só segunda e terça.',
     },
     appObservations: [
       {
@@ -581,24 +579,25 @@ const initialStudents: StudentRecord[] = [
     renewalState: 'Em dia',
     status: 'Em dia',
     weightChange: 'Estável',
-    coachFeedback: 'Manter periodização atual e ajustar hidratação intra-treino.',
     liveClinCheckin: {
       submittedAt: 'Hoje, 06:30 via LiveClin',
       protocolName: 'Híbrido Força & Meia Maratona',
-      fastingWeight: '75,2 kg (estável na meta)',
-      offPlanMeals: 'Nenhuma refeição fora do plano',
-      hungerLevels: 'Fome bem controlada com as 5 refeições do plano',
-      waterIntake: '4,0 L / dia',
-      bowelFrequency: 'Sim, todos os dias',
-      abdominalDiscomfort: 'Zero desconforto, ótima tolerância ao gel intra-treino',
-      strengthWorkouts: '4 sessões de musculação (força) nos últimos 7 dias',
-      exercisePerformance: 'Sim, recorde pessoal no agachamento livre',
-      aerobicSessions: '3 sessões de corrida de rua (tiros + longo de 14km)',
-      sleepHours: '8h por noite em média',
-      dedicationLevel: '10 / 10 — Dedicação total',
-      bodyPerception: 'Sim, musculatura mais seca e melhor rendimento cardiovascular',
-      menuChangesRequest: 'Não precisa alterar o cardápio, está perfeito para a rotina.',
-      openFeedback:
+      weightKg: 75.2,
+      weightTrend: 'estável na meta',
+      offPlanMeals: 0,
+      hunger: 'medio',
+      waterLiters: 4,
+      bowel: 'regulado',
+      discomfort: 'raro',
+      menuChanges: 'Não precisa alterar o cardápio, está perfeito para a rotina.',
+      strengthSessions: 4,
+      performance: 5,
+      aerobicSessions: 3,
+      sleepHours: 8,
+      dedication: 5,
+      evolution: 5,
+      evolutionNote: 'Musculatura mais seca e melhor rendimento cardiovascular.',
+      feedback:
         'Semana excelente! Bati meu PR no agachamento e mantive pace 4:35 nos tiros de quinta sem fadiga residual.',
     },
     appObservations: [
@@ -632,24 +631,26 @@ const initialStudents: StudentRecord[] = [
     renewalState: 'Em dia',
     status: 'Em dia',
     weightChange: '-1,8 kg',
-    coachFeedback: 'Parabéns pela consistência! Mantemos o protocolo mais 14 dias.',
     liveClinCheckin: {
       submittedAt: 'Hoje, 10:05 via LiveClin',
       protocolName: 'Definição Feminina · Fase 2',
-      fastingWeight: '60,4 kg (-1,8 kg em 21 dias)',
-      offPlanMeals: '1 refeição livre planejada no domingo',
-      hungerLevels: 'Saciedade excelente, especialmente com o mingau proteico',
-      waterIntake: '3,1 L / dia',
-      bowelFrequency: 'Sim, diariamente',
-      abdominalDiscomfort: 'Não senti nenhum desconforto',
-      strengthWorkouts: '5 sessões de musculação nos últimos 7 dias',
-      exercisePerformance: 'Sim, subiu +10kg no leg press 45° com boa execução',
-      aerobicSessions: '4 sessões de escada ergométrica (25 min)',
-      sleepHours: '7h45 por noite em média',
-      dedicationLevel: '9,5 / 10 — Muito dedicada',
-      bodyPerception: 'Sim! Redução de 4 cm de cintura e roupas folgadas',
-      menuChangesRequest: 'Gostaria de incluir opção de panqueca de banana no pré-treino.',
-      openFeedback:
+      weightKg: 60.4,
+      weightTrend: '-1,8 kg em 21 dias',
+      offPlanMeals: 1,
+      offPlanNote: 'Refeição livre planejada no domingo.',
+      hunger: 'baixo',
+      waterLiters: 3,
+      bowel: 'regulado',
+      discomfort: 'raro',
+      menuChanges: 'Gostaria de incluir opção de panqueca de banana no pré-treino.',
+      strengthSessions: 5,
+      performance: 5,
+      aerobicSessions: 4,
+      sleepHours: 8,
+      dedication: 5,
+      evolution: 5,
+      evolutionNote: '-4 cm de cintura e roupas mais folgadas.',
+      feedback:
         'Estou muito feliz com o resultado no espelho e nas roupas! O treino novo encaixou perfeitamente no meu horário de almoço.',
     },
     appObservations: [
@@ -686,21 +687,25 @@ const initialStudents: StudentRecord[] = [
     liveClinCheckin: {
       submittedAt: 'Há 2 dias via LiveClin',
       protocolName: 'Hipertrofia · Ajuste Articular',
-      fastingWeight: '84,1 kg (+0,2 kg)',
-      offPlanMeals: '2 refeições fora do planejado',
-      hungerLevels: 'Apetite bom ao longo do dia',
-      waterIntake: '3,0 L / dia',
-      bowelFrequency: 'Sim, diariamente',
-      abdominalDiscomfort: 'Sem gases ou inchaço',
-      strengthWorkouts: '4 sessões de musculação nos últimos 7 dias',
-      exercisePerformance: 'Sim em pernas e costas; leve incômodo no ombro direito em empurrar',
-      aerobicSessions: '2 sessões de bike horizontal (20 min)',
-      sleepHours: '7h por noite em média',
-      dedicationLevel: '8 / 10 — Dedicado nos treinos',
-      bodyPerception: 'Sim, ganho de volume em dorsal e quadríceps',
-      menuChangesRequest: 'Substituir batata-doce do almoço por macarrão ou mandioca.',
-      openFeedback:
-        'Continuei treinando firme (fiz 4 treinos na semana). Só gostaria de trocar o desenvolvimento militar com barra por halter pegada neutra.',
+      weightKg: 84.1,
+      weightTrend: '+0,2 kg',
+      offPlanMeals: 2,
+      offPlanNote: 'Pizza no sábado e um lanche fora na quarta.',
+      hunger: 'medio',
+      waterLiters: 3,
+      bowel: 'regulado',
+      discomfort: 'raro',
+      menuChanges: 'Substituir batata-doce do almoço por macarrão ou mandioca.',
+      strengthSessions: 4,
+      performance: 4,
+      aerobicSessions: 2,
+      sleepHours: 7,
+      dedication: 4,
+      dedicationNote: 'Fazer o cardio que ficou faltando.',
+      evolution: 4,
+      evolutionNote: 'Ganho de volume em dorsal e quadríceps.',
+      feedback:
+        'Continuei treinando firme (fiz 4 treinos na semana). Só gostaria de trocar o desenvolvimento militar com barra por halter pegada neutra: senti leve incômodo no ombro direito.',
     },
     appObservations: [
       {
@@ -734,25 +739,27 @@ const initialStudents: StudentRecord[] = [
     nonRenewalReason: 'Pausa financeira temporária; pediu para retomar contato em janeiro.',
     status: 'Atenção',
     weightChange: '-3,4 kg no ciclo',
-    coachFeedback: 'Deixamos plano de manutenção estruturado até o retorno em janeiro.',
     liveClinCheckin: {
       submittedAt: 'Há 3 dias via LiveClin',
       protocolName: 'Fechamento de Ciclo Trimestral',
-      fastingWeight: '86,2 kg (-3,4 kg no trimestre)',
-      offPlanMeals: '2 refeições fora na semana',
-      hungerLevels: 'Controlado e adaptado à rotina',
-      waterIntake: '3,0 L / dia',
-      bowelFrequency: 'Sim, diariamente',
-      abdominalDiscomfort: 'Sem desconforto',
-      strengthWorkouts: '3 sessões de musculação nos últimos 7 dias',
-      exercisePerformance: 'Sim, evoluiu bem ao longo do trimestre',
-      aerobicSessions: '2 sessões de corrida leve',
-      sleepHours: '7h30 por noite',
-      dedicationLevel: '8 / 10',
-      bodyPerception: 'Sim, perdeu 3,4 kg e 5 cm de abdômen no ciclo',
-      menuChangesRequest: 'Solicitou guia de manutenção para os próximos 60 dias.',
-      openFeedback:
-        'Gostei muito do acompanhamento e perdi mais de 3kg, mas vou precisar pausar 2 meses por reforma de apartamento. Volto em janeiro!',
+      weightKg: 86.2,
+      weightTrend: '-3,4 kg no trimestre',
+      offPlanMeals: 2,
+      offPlanNote: 'Dois almoços de trabalho.',
+      hunger: 'medio',
+      waterLiters: 3,
+      bowel: 'regulado',
+      discomfort: 'raro',
+      menuChanges: 'Gostaria de um guia de manutenção para os próximos 60 dias.',
+      strengthSessions: 3,
+      performance: 4,
+      aerobicSessions: 2,
+      sleepHours: 7,
+      dedication: 4,
+      evolution: 5,
+      evolutionNote: 'Perdi 3,4 kg e 5 cm de abdômen no ciclo.',
+      feedback:
+        'Gostei muito do acompanhamento e perdi mais de 3 kg, mas vou precisar pausar 2 meses por reforma de apartamento. Volto em janeiro!',
     },
     appObservations: [
       {
@@ -801,13 +808,38 @@ type StudentView = {
 /** Saved views shown as tabs above the roster. The user can add their own. */
 const builtInStudentViews: StudentView[] = [
   { id: 'todos', name: 'Todos', statuses: [], goal: 'Todos', search: '', builtIn: true },
-  { id: 'atencao', name: 'Precisa de atenção', statuses: ['pendentes', 'atrasados', 'vencendo'], goal: 'Todos', search: '', builtIn: true },
-  { id: 'vencendo', name: 'Vencendo', statuses: ['vencendo'], goal: 'Todos', search: '', builtIn: true },
-  { id: 'sem-login', name: 'Sem login', statuses: ['sem-login'], goal: 'Todos', search: '', builtIn: true },
+  {
+    id: 'atencao',
+    name: 'Precisa de atenção',
+    statuses: ['pendentes', 'atrasados', 'vencendo'],
+    goal: 'Todos',
+    search: '',
+    builtIn: true,
+  },
+  {
+    id: 'vencendo',
+    name: 'Vencendo',
+    statuses: ['vencendo'],
+    goal: 'Todos',
+    search: '',
+    builtIn: true,
+  },
+  {
+    id: 'sem-login',
+    name: 'Sem login',
+    statuses: ['sem-login'],
+    goal: 'Todos',
+    search: '',
+    builtIn: true,
+  },
 ]
 const STUDENT_VIEWS_KEY = 'elevn-student-views'
 
-const checkinTone: Record<CheckinState, BadgeTone> = { Pendente: 'warning', Atrasado: 'danger', Realizado: 'success' }
+const checkinTone: Record<CheckinState, BadgeTone> = {
+  Pendente: 'warning',
+  Atrasado: 'danger',
+  Realizado: 'success',
+}
 const renewalTone: Record<RenewalState, BadgeTone> = {
   'Em dia': 'neutral',
   'Perto de vencer': 'warning',
@@ -816,31 +848,11 @@ const renewalTone: Record<RenewalState, BadgeTone> = {
 }
 
 function getLiveClinAnswers(student: StudentRecord): LiveClinCheckinData {
-  const fallback =
+  return (
+    student.liveClinCheckin ??
     initialStudents.find((item) => item.id === student.id)?.liveClinCheckin ??
     initialStudents[0].liveClinCheckin
-  const current = student.liveClinCheckin
-  if (!current || !current.fastingWeight) {
-    return fallback
-  }
-  return {
-    submittedAt: current.submittedAt || fallback.submittedAt,
-    protocolName: current.protocolName || fallback.protocolName,
-    fastingWeight: current.fastingWeight || fallback.fastingWeight,
-    offPlanMeals: current.offPlanMeals || fallback.offPlanMeals,
-    hungerLevels: current.hungerLevels || fallback.hungerLevels,
-    waterIntake: current.waterIntake || fallback.waterIntake,
-    bowelFrequency: current.bowelFrequency || fallback.bowelFrequency,
-    abdominalDiscomfort: current.abdominalDiscomfort || fallback.abdominalDiscomfort,
-    strengthWorkouts: current.strengthWorkouts || fallback.strengthWorkouts,
-    exercisePerformance: current.exercisePerformance || fallback.exercisePerformance,
-    aerobicSessions: current.aerobicSessions || fallback.aerobicSessions,
-    sleepHours: current.sleepHours || fallback.sleepHours,
-    dedicationLevel: current.dedicationLevel || fallback.dedicationLevel,
-    bodyPerception: current.bodyPerception || fallback.bodyPerception,
-    menuChangesRequest: current.menuChangesRequest || fallback.menuChangesRequest,
-    openFeedback: current.openFeedback || fallback.openFeedback,
-  }
+  )
 }
 
 const defaultWorkoutCommentsByStudentId: Record<string, WorkoutAppComment[]> = {
@@ -1815,35 +1827,10 @@ function getStudentDefaultAppPhotos(student: StudentRecord): StudentAppPhoto[] {
   ]
 }
 
-/** Simple, explicit rules that flag check-in answers worth a closer look. */
-function liveClinAlert(field: string, value: string): string | null {
-  const text = value.toLowerCase()
-  const number = Number((text.match(/\d+(?:[.,]\d+)?/)?.[0] ?? 'NaN').replace(',', '.'))
-  if (field === 'offPlanMeals' && number >= 3) return '3 ou mais refeições fora do plano'
-  if (field === 'waterIntake' && number < 2.5) return 'Menos de 2,5 L de água por dia'
-  if (field === 'sleepHours' && number < 6.5) return 'Menos de 6h30 de sono'
-  if (field === 'dedicationLevel' && number < 7) return 'Dedicação abaixo de 7/10'
-  if (field === 'abdominalDiscomfort' && !/^(não|sem|nenhum|zero)/.test(text) && /(incha|gases|desconforto|dor)/.test(text))
-    return 'Relatou desconforto abdominal'
-  if (field === 'exercisePerformance' && /(incômodo|dor|lesão)/.test(text)) return 'Relatou incômodo no treino'
-  return null
-}
-
-const liveClinAlertFields = ['offPlanMeals', 'waterIntake', 'sleepHours', 'dedicationLevel', 'abdominalDiscomfort', 'exercisePerformance'] as const
-
-function LiveClinFlag({ reason }: { reason: string | null }) {
-  if (!reason) return null
-  return (
-    <span className="liveclin-flag mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-warning">
-      <span aria-hidden="true" className="size-1.5 rounded-full bg-warning" />
-      {reason}
-    </span>
-  )
-}
-
 /** Stacked bar of the day's macros (energy share of protein, carbs and fat). */
 function MacroBar({ protein, carbs, fat }: { protein: string; carbs: string; fat: string }) {
-  const grams = (value: string) => Number((value.match(/\d+(?:[.,]\d+)?/)?.[0] ?? '0').replace(',', '.'))
+  const grams = (value: string) =>
+    Number((value.match(/\d+(?:[.,]\d+)?/)?.[0] ?? '0').replace(',', '.'))
   const parts = [
     { label: 'Proteína', grams: grams(protein), kcal: grams(protein) * 4, color: 'bg-brand' },
     { label: 'Carboidrato', grams: grams(carbs), kcal: grams(carbs) * 4, color: 'bg-brand-light' },
@@ -1855,18 +1842,32 @@ function MacroBar({ protein, carbs, fat }: { protein: string; carbs: string; fat
     <div className="macro-bar mt-4 rounded-card border border-line bg-surface p-4">
       <div className="flex items-baseline justify-between">
         <p className="text-sm font-semibold text-ink">Distribuição de macros</p>
-        <p className="text-xs text-ink-3 tabular-nums">{Math.round(total).toLocaleString('pt-BR')} kcal dos macros</p>
+        <p className="text-xs text-ink-3 tabular-nums">
+          {Math.round(total).toLocaleString('pt-BR')} kcal dos macros
+        </p>
       </div>
-      <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-line-subtle" role="img" aria-label={parts.map((part) => `${part.label} ${Math.round((part.kcal / total) * 100)}%`).join(', ')}>
+      <div
+        className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-line-subtle"
+        role="img"
+        aria-label={parts
+          .map((part) => `${part.label} ${Math.round((part.kcal / total) * 100)}%`)
+          .join(', ')}
+      >
         {parts.map((part) => (
-          <span key={part.label} className={part.color} style={{ width: `${(part.kcal / total) * 100}%` }} />
+          <span
+            key={part.label}
+            className={part.color}
+            style={{ width: `${(part.kcal / total) * 100}%` }}
+          />
         ))}
       </div>
       <ul className="mt-3 grid grid-cols-3 gap-2 text-xs">
         {parts.map((part) => (
           <li key={part.label} className="flex items-center gap-1.5 text-ink-2">
             <span aria-hidden="true" className={`size-2 rounded-full ${part.color}`} />
-            <span className="font-semibold text-ink tabular-nums">{Math.round((part.kcal / total) * 100)}%</span>
+            <span className="font-semibold text-ink tabular-nums">
+              {Math.round((part.kcal / total) * 100)}%
+            </span>
             {part.label} · {part.grams} g
           </li>
         ))}
@@ -1894,17 +1895,24 @@ function ComparisonDeltas({ before, after }: { before: StudentAppPhoto; after: S
   const weightB = parseMeasure(after.weightKg)
   const dateA = parsePhotoDate(before.dateLabel)
   const dateB = parsePhotoDate(after.dateLabel)
-  const weeks = dateA && dateB ? Math.round(Math.abs(dateB.getTime() - dateA.getTime()) / (7 * 864e5)) : null
+  const weeks =
+    dateA && dateB ? Math.round(Math.abs(dateB.getTime() - dateA.getTime()) / (7 * 864e5)) : null
   const items = [
-    weightA !== null && weightB !== null ? { label: 'Peso', value: fmt(weightB - weightA, 'kg') } : null,
-    weeks !== null ? { label: 'Intervalo', value: `${weeks} ${weeks === 1 ? 'semana' : 'semanas'}` } : null,
+    weightA !== null && weightB !== null
+      ? { label: 'Peso', value: fmt(weightB - weightA, 'kg') }
+      : null,
+    weeks !== null
+      ? { label: 'Intervalo', value: `${weeks} ${weeks === 1 ? 'semana' : 'semanas'}` }
+      : null,
   ].filter(Boolean) as { label: string; value: string }[]
   if (!items.length) return null
   return (
     <dl className="mb-3 flex flex-wrap gap-x-8 gap-y-2 rounded-card bg-night px-5 py-3 text-on-dark">
       <div className="flex items-baseline gap-2">
         <dt className="text-xs text-white/55">De A para B</dt>
-        <dd className="text-xs text-white/70">{before.angle === after.angle ? before.angle : `${before.angle} → ${after.angle}`}</dd>
+        <dd className="text-xs text-white/70">
+          {before.angle === after.angle ? before.angle : `${before.angle} → ${after.angle}`}
+        </dd>
       </div>
       {items.map((item) => (
         <div key={item.label} className="flex items-baseline gap-2">
@@ -1919,8 +1927,13 @@ function ComparisonDeltas({ before, after }: { before: StudentAppPhoto; after: S
 /** Weight trend from the photos the student sent (each photo records the day's weight). */
 function WeightTrend({ photos, current }: { photos: StudentAppPhoto[]; current: string }) {
   const points = photos
-    .map((photo) => ({ date: parsePhotoDate(photo.dateLabel), weight: parseMeasure(photo.weightKg) }))
-    .filter((point): point is { date: Date; weight: number } => !!point.date && point.weight !== null)
+    .map((photo) => ({
+      date: parsePhotoDate(photo.dateLabel),
+      weight: parseMeasure(photo.weightKg),
+    }))
+    .filter(
+      (point): point is { date: Date; weight: number } => !!point.date && point.weight !== null,
+    )
     .sort((a, b) => a.date.getTime() - b.date.getTime())
   const first = points[0]?.weight
   const last = points[points.length - 1]?.weight
@@ -1935,17 +1948,35 @@ function WeightTrend({ photos, current }: { photos: StudentAppPhoto[]; current: 
     .join(' ')
   const delta = first !== undefined && last !== undefined ? last - first : null
   return (
-    <section className="rounded-card border border-line bg-surface p-4" aria-label="Evolução do peso">
+    <section
+      className="rounded-card border border-line bg-surface p-4"
+      aria-label="Evolução do peso"
+    >
       <p className="text-xs font-medium text-ink-3">Peso em jejum (LiveClin)</p>
       <p className="mt-1 text-lg font-semibold text-ink">{current}</p>
       {points.length > 1 && (
         <>
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="mt-2 h-12 w-full" aria-hidden="true">
-            <path d={path} fill="none" stroke="var(--elevn-accent)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            className="mt-2 h-12 w-full"
+            aria-hidden="true"
+          >
+            <path
+              d={path}
+              fill="none"
+              stroke="var(--elevn-accent)"
+              strokeWidth="2.5"
+              vectorEffect="non-scaling-stroke"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           <p className="mt-1 text-xs text-ink-3">
             {delta !== null && (
-              <span className={delta < 0 ? 'font-semibold text-success' : 'font-semibold text-ink-2'}>
+              <span
+                className={delta < 0 ? 'font-semibold text-success' : 'font-semibold text-ink-2'}
+              >
                 {delta > 0 ? '+' : delta < 0 ? '−' : ''}
                 {Math.abs(delta).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg
               </span>
@@ -1975,7 +2006,9 @@ function PriorityPanel({
     <article className="flex min-w-0 flex-col rounded-card border border-line bg-surface">
       <header className="flex items-start justify-between gap-3 border-b border-line-subtle px-5 pt-4 pb-3">
         <div>
-          <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-3 uppercase">{source}</p>
+          <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-3 uppercase">
+            {source}
+          </p>
           <h2 className="mt-0.5 text-[15px] font-semibold text-ink">{title}</h2>
         </div>
         <span className="mt-1 text-sm font-semibold text-ink-2 tabular-nums">{total}</span>
@@ -2129,7 +2162,6 @@ export default function StudentsWorkspace({
     'https://images.unsplash.com/photo-1637430308606-86576d8fef3c?auto=format&fit=crop&w=900&q=80',
   )
   const [newStudentOpen, setNewStudentOpen] = useState(false)
-  const [feedbackDraft, setFeedbackDraft] = useState('')
   const [nonRenewalOpenForId, setNonRenewalOpenForId] = useState<string | null>(null)
   const [nonRenewalDraft, setNonRenewalDraft] = useState('')
   const [priorityNonRenewalId, setPriorityNonRenewalId] = useState<string | null>(null)
@@ -2146,10 +2178,7 @@ export default function StudentsWorkspace({
   const [newStudentNameQuery, setNewStudentNameQuery] = useState('')
   const [externalSearchOpen, setExternalSearchOpen] = useState(false)
   const [externalSearchResults, setExternalSearchResults] = useState<ExternalPlatformStudent[]>([])
-  const openStudentModal = (
-    studentId: string,
-    initialTab: FichaTab = 'checkin',
-  ) => {
+  const openStudentModal = (studentId: string, initialTab: FichaTab = 'checkin') => {
     setModalStudentId(studentId)
     setModalTab(initialTab)
     const target = students.find((item) => item.id === studentId)
@@ -2205,10 +2234,15 @@ export default function StudentsWorkspace({
     if (!modalStudentId || modalTab === 'checkin') return
     setOpenSections((current) => {
       const open = current[modalStudentId] ?? ['checkin']
-      return open.includes(modalTab) ? current : { ...current, [modalStudentId]: [...open, modalTab] }
+      return open.includes(modalTab)
+        ? current
+        : { ...current, [modalStudentId]: [...open, modalTab] }
     })
     const timer = window.setTimeout(
-      () => document.getElementById(`ficha-${modalTab}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      () =>
+        document
+          .getElementById(`ficha-${modalTab}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
       60,
     )
     return () => window.clearTimeout(timer)
@@ -2278,7 +2312,12 @@ export default function StudentsWorkspace({
     return !getStudentAccessInfo(student, generatedKeysByStudent).hasLogin
   }
 
-  const passesFilters = (student: StudentRecord, statuses: StatusKey[], goal: string, term: string) => {
+  const passesFilters = (
+    student: StudentRecord,
+    statuses: StatusKey[],
+    goal: string,
+    term: string,
+  ) => {
     if (statuses.length && !statuses.some((key) => matchesStatus(student, key))) return false
     if (goal !== 'Todos' && student.goal !== goal) return false
     if (!term.trim()) return true
@@ -2308,9 +2347,12 @@ export default function StudentsWorkspace({
 
   const allViews = [...builtInStudentViews, ...customViews]
   const activeView = allViews.find((view) => view.id === activeViewId) ?? builtInStudentViews[0]
-  const sameStatuses = (a: StatusKey[], b: StatusKey[]) => a.length === b.length && a.every((key) => b.includes(key))
+  const sameStatuses = (a: StatusKey[], b: StatusKey[]) =>
+    a.length === b.length && a.every((key) => b.includes(key))
   const viewModified =
-    !sameStatuses(activeView.statuses, statusFilters) || activeView.goal !== goalFilter || activeView.search !== search
+    !sameStatuses(activeView.statuses, statusFilters) ||
+    activeView.goal !== goalFilter ||
+    activeView.search !== search
 
   const applyView = (view: StudentView) => {
     setActiveViewId(view.id)
@@ -2371,7 +2413,9 @@ export default function StudentsWorkspace({
       setGoalFilter('Todos')
       setSearch('')
     }
-    document.getElementById('carteira-alunos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    document
+      .getElementById('carteira-alunos')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const statusOptions: { id: StatusKey; label: string; count: number }[] = [
@@ -2434,7 +2478,8 @@ export default function StudentsWorkspace({
       angle: newPhotoAngle,
       dateLabel,
       cycleLabel: newPhotoCycle.trim() || 'Enviada pelo Aplicativo',
-      weightKg: newPhotoWeight.trim() || modalLiveClin?.fastingWeight || '78,0 kg',
+      weightKg:
+        newPhotoWeight.trim() || (modalLiveClin && formatKg(modalLiveClin.weightKg)) || '78,0 kg',
       imageUrl: newPhotoUrl,
       studentNote:
         newPhotoNote.trim() || 'Foto cadastrada pelo aluno diretamente no aplicativo Elevn.',
@@ -2511,7 +2556,7 @@ export default function StudentsWorkspace({
     )
   }
 
-  const completeCheckin = (studentId: string, customFeedback?: string) => {
+  const completeCheckin = (studentId: string) => {
     setStudents((current) =>
       current.map((student) =>
         student.id === studentId
@@ -2521,15 +2566,10 @@ export default function StudentsWorkspace({
               lastCheckin: 'Respondido agora',
               checkinAdherence: Math.min(100, student.checkinAdherence + 4),
               status: student.status === 'Em risco' ? 'Atenção' : 'Em dia',
-              coachFeedback:
-                customFeedback?.trim() ||
-                student.coachFeedback ||
-                'Check-in LiveClin revisado com ajustes de carga e dieta aplicados.',
             }
           : student,
       ),
     )
-    setFeedbackDraft('')
   }
 
   const recoverStudentPlan = (studentId: string) => {
@@ -2642,20 +2682,21 @@ export default function StudentsWorkspace({
       liveClinCheckin: {
         submittedAt: 'Sincronizado na importação (LiveClin + WebDiet + MFIT)',
         protocolName: `${candidate.goal} · ${candidate.phase}`,
-        fastingWeight: '71,5 kg (importado do WebDiet)',
-        offPlanMeals: 'Nenhuma refeição fora do plano',
-        hungerLevels: 'Saciedade bem ajustada no cardápio WebDiet',
-        waterIntake: '3,2 L / dia',
-        bowelFrequency: 'Sim, diariamente',
-        abdominalDiscomfort: 'Sem desconforto abdominal',
-        strengthWorkouts: '5 sessões prescritas no MFIT',
-        exercisePerformance: 'Boa adaptação às cargas iniciais no MFIT',
-        aerobicSessions: '3 sessões semanais prescritas',
-        sleepHours: '7h30 por noite',
-        dedicationLevel: '9,5 / 10 — Perfil sincronizado',
-        bodyPerception: 'Avaliação inicial importada do WebDiet e MFIT',
-        menuChangesRequest: 'Cardápio importado do WebDiet sem pendências.',
-        openFeedback: 'Dados de treino (MFIT) e dieta (WebDiet) vinculados com sucesso.',
+        weightKg: 71.5,
+        weightTrend: 'importado do WebDiet',
+        offPlanMeals: 0,
+        hunger: 'medio',
+        waterLiters: 3,
+        bowel: 'regulado',
+        discomfort: 'raro',
+        menuChanges: 'Cardápio importado do WebDiet sem pendências.',
+        strengthSessions: 5,
+        performance: 4,
+        aerobicSessions: 3,
+        sleepHours: 7,
+        dedication: 5,
+        evolution: 3,
+        feedback: 'Dados de treino (MFIT) e dieta (WebDiet) vinculados com sucesso.',
       },
       appObservations: [
         {
@@ -2709,20 +2750,22 @@ export default function StudentsWorkspace({
       liveClinCheckin: {
         submittedAt: 'Hoje via LiveClin (Anamnese Inicial)',
         protocolName: 'Protocolo Inicial Personalizado',
-        fastingWeight: '72,0 kg (peso inicial em jejum)',
-        offPlanMeals: 'Iniciando planejamento alimentar',
-        hungerLevels: 'Moderado no período noturno',
-        waterIntake: '2,5 L / dia',
-        bowelFrequency: 'Sim, diariamente',
-        abdominalDiscomfort: 'Não relatou desconforto abdominal',
-        strengthWorkouts: '4 sessões planejadas por semana',
-        exercisePerformance: 'Iniciando ciclo de adaptação',
-        aerobicSessions: '3 sessões planejadas por semana',
-        sleepHours: '7h30 por noite',
-        dedicationLevel: '10 / 10 — Motivado para iniciar',
-        bodyPerception: 'Marco zero registrado com fotos iniciais',
-        menuChangesRequest: 'Prefere refeições práticas no almoço.',
-        openFeedback: 'Anamnese completa preenchida no LiveClin para estruturação do plano.',
+        weightKg: 72.0,
+        weightTrend: 'peso inicial em jejum',
+        offPlanMeals: 0,
+        hunger: 'medio',
+        waterLiters: 2,
+        bowel: 'regulado',
+        discomfort: 'raro',
+        menuChanges: 'Prefere refeições práticas no almoço.',
+        strengthSessions: 4,
+        performance: 3,
+        aerobicSessions: 3,
+        sleepHours: 7,
+        dedication: 5,
+        evolution: 3,
+        evolutionNote: 'Marco zero registrado com fotos iniciais.',
+        feedback: 'Anamnese completa preenchida no LiveClin para estruturação do plano.',
       },
       appObservations: [
         {
@@ -2792,125 +2835,125 @@ export default function StudentsWorkspace({
           </Button>
         </header>
         <div className="student-create-sheet flex-1 overflow-y-auto px-6 py-5">
-        <div className="student-create-wrapper">
-          <form className="student-create-form" onSubmit={handleCreateStudent}>
-            <label>
-              <span>Nome do aluno (buscar no WebDiet e MFIT)</span>
-              <div className="student-name-search-field">
+          <div className="student-create-wrapper">
+            <form className="student-create-form" onSubmit={handleCreateStudent}>
+              <label>
+                <span>Nome do aluno (buscar no WebDiet e MFIT)</span>
+                <div className="student-name-search-field">
+                  <input
+                    name="student-name"
+                    value={newStudentNameQuery}
+                    onChange={(event) => setNewStudentNameQuery(event.target.value)}
+                    placeholder="Digite o nome ou clique na lupa..."
+                    required
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="student-search-lupa-btn"
+                    onClick={handleSearchExternalPlatforms}
+                    title="Buscar aluno no WebDiet e MFIT"
+                    aria-label="Buscar aluno no WebDiet e MFIT"
+                  >
+                    <SearchLupIcon />
+                  </button>
+                </div>
+              </label>
+              <label>
+                <span>WhatsApp (com DDD)</span>
                 <input
-                  name="student-name"
-                  value={newStudentNameQuery}
-                  onChange={(event) => setNewStudentNameQuery(event.target.value)}
-                  placeholder="Digite o nome ou clique na lupa..."
-                  required
-                  autoFocus
+                  key={prefillWhatsapp}
+                  name="student-whatsapp"
+                  defaultValue={prefillWhatsapp}
+                  placeholder="Ex.: 5511998887766"
                 />
+              </label>
+              <label>
+                <span>Objetivo</span>
+                <select name="student-goal" defaultValue="Emagrecimento">
+                  <option>Emagrecimento</option>
+                  <option>Hipertrofia</option>
+                  <option>Performance</option>
+                </select>
+              </label>
+              <label>
+                <span>Fase nutricional</span>
+                <select name="student-phase" defaultValue="Déficit">
+                  <option>Déficit</option>
+                  <option>Superávit</option>
+                  <option>Manutenção</option>
+                </select>
+              </label>
+              <label>
+                <span>Plano</span>
+                <select name="student-plan" defaultValue="Trimestral">
+                  <option>Mensal</option>
+                  <option>Trimestral</option>
+                  <option>Semestral</option>
+                  <option>Anual</option>
+                </select>
+              </label>
+              <div className="student-create-actions">
+                <button type="submit">Salvar aluno</button>
                 <button
                   type="button"
-                  className="student-search-lupa-btn"
-                  onClick={handleSearchExternalPlatforms}
-                  title="Buscar aluno no WebDiet e MFIT"
-                  aria-label="Buscar aluno no WebDiet e MFIT"
+                  onClick={() => {
+                    setNewStudentOpen(false)
+                    setExternalSearchOpen(false)
+                  }}
                 >
-                  <SearchLupIcon />
+                  Cancelar
                 </button>
               </div>
-            </label>
-            <label>
-              <span>WhatsApp (com DDD)</span>
-              <input
-                key={prefillWhatsapp}
-                name="student-whatsapp"
-                defaultValue={prefillWhatsapp}
-                placeholder="Ex.: 5511998887766"
-              />
-            </label>
-            <label>
-              <span>Objetivo</span>
-              <select name="student-goal" defaultValue="Emagrecimento">
-                <option>Emagrecimento</option>
-                <option>Hipertrofia</option>
-                <option>Performance</option>
-              </select>
-            </label>
-            <label>
-              <span>Fase nutricional</span>
-              <select name="student-phase" defaultValue="Déficit">
-                <option>Déficit</option>
-                <option>Superávit</option>
-                <option>Manutenção</option>
-              </select>
-            </label>
-            <label>
-              <span>Plano</span>
-              <select name="student-plan" defaultValue="Trimestral">
-                <option>Mensal</option>
-                <option>Trimestral</option>
-                <option>Semestral</option>
-                <option>Anual</option>
-              </select>
-            </label>
-            <div className="student-create-actions">
-              <button type="submit">Salvar aluno</button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewStudentOpen(false)
-                  setExternalSearchOpen(false)
-                }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+            </form>
 
-          {externalSearchOpen && (
-            <div
-              className="external-platform-results"
-              role="region"
-              aria-label="Alunos encontrados no WebDiet e MFIT"
-            >
-              <header>
-                <div>
-                  <span>INTEGRAÇÃO DIRETA · WEBDIET & MFIT</span>
-                  <strong>
-                    {externalSearchResults.length}{' '}
-                    {externalSearchResults.length === 1
-                      ? 'aluno encontrado pronto para importar'
-                      : 'alunos encontrados prontos para importar'}
-                  </strong>
+            {externalSearchOpen && (
+              <div
+                className="external-platform-results"
+                role="region"
+                aria-label="Alunos encontrados no WebDiet e MFIT"
+              >
+                <header>
+                  <div>
+                    <span>INTEGRAÇÃO DIRETA · WEBDIET & MFIT</span>
+                    <strong>
+                      {externalSearchResults.length}{' '}
+                      {externalSearchResults.length === 1
+                        ? 'aluno encontrado pronto para importar'
+                        : 'alunos encontrados prontos para importar'}
+                    </strong>
+                  </div>
+                  <button type="button" onClick={() => setExternalSearchOpen(false)}>
+                    Fechar busca
+                  </button>
+                </header>
+                <div className="external-platform-list">
+                  {externalSearchResults.map((candidate) => (
+                    <article key={candidate.id} className="external-platform-item">
+                      <img src={candidate.avatar} alt={`Foto de ${candidate.name}`} />
+                      <div>
+                        <strong>{candidate.name}</strong>
+                        <span>
+                          {candidate.goal} ({candidate.phase}) · Plano {candidate.plan} ·{' '}
+                          {candidate.email}
+                        </span>
+                        <small>
+                          {candidate.mfitWorkoutSummary} · {candidate.webDietSummary}
+                        </small>
+                      </div>
+                      <button
+                        type="button"
+                        className="import-student-btn"
+                        onClick={() => handleImportExternalStudent(candidate)}
+                      >
+                        IMPORTAR
+                      </button>
+                    </article>
+                  ))}
                 </div>
-                <button type="button" onClick={() => setExternalSearchOpen(false)}>
-                  Fechar busca
-                </button>
-              </header>
-              <div className="external-platform-list">
-                {externalSearchResults.map((candidate) => (
-                  <article key={candidate.id} className="external-platform-item">
-                    <img src={candidate.avatar} alt={`Foto de ${candidate.name}`} />
-                    <div>
-                      <strong>{candidate.name}</strong>
-                      <span>
-                        {candidate.goal} ({candidate.phase}) · Plano {candidate.plan} ·{' '}
-                        {candidate.email}
-                      </span>
-                      <small>
-                        {candidate.mfitWorkoutSummary} · {candidate.webDietSummary}
-                      </small>
-                    </div>
-                    <button
-                      type="button"
-                      className="import-student-btn"
-                      onClick={() => handleImportExternalStudent(candidate)}
-                    >
-                      IMPORTAR
-                    </button>
-                  </article>
-                ))}
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
         </div>
       </Sheet>
 
@@ -2929,439 +2972,533 @@ export default function StudentsWorkspace({
         notificationsContent
       ) : (
         <>
+          <KpiStrip
+            label="Indicadores da carteira"
+            className="mb-6"
+            items={[
+              {
+                id: 'receita',
+                label: 'Receita do mês',
+                value: `R$ ${activePortfolioRevenue.toLocaleString('pt-BR')}`,
+                delta: { text: '▲ 8% no mês', tone: 'success' },
+                hint: `Ticket médio R$ 418 · ${students.length + 120} ativos`,
+              },
+              {
+                id: 'pendentes',
+                label: 'Check-ins pendentes',
+                value: pendingCheckinsCount + 10,
+                delta: { text: `${pendingCheckinsCount} para responder hoje`, tone: 'warning' },
+                active: sameStatuses(statusFilters, ['pendentes', 'atrasados']),
+                onClick: () => showStatuses(['pendentes', 'atrasados']),
+              },
+              {
+                id: 'realizados',
+                label: 'Check-ins realizados',
+                value: completedCheckinsCount + 110,
+                delta: { text: 'No prazo', tone: 'success' },
+                active: sameStatuses(statusFilters, ['realizados']),
+                onClick: () => showStatuses(['realizados']),
+              },
+              {
+                id: 'vencendo',
+                label: 'Perto de vencer',
+                value: String(expiringSoonCount + 6).padStart(2, '0'),
+                delta: { text: `${expiringSoonCount} críticos em 4 dias`, tone: 'danger' },
+                active: sameStatuses(statusFilters, ['vencendo']),
+                onClick: () => showStatuses(['vencendo']),
+              },
+              {
+                id: 'recuperados',
+                label: 'Planos recuperados',
+                value: `${recoveredCount + 13}/18`,
+                delta: { text: '83% de retenção', tone: 'success' },
+                active: sameStatuses(statusFilters, ['recuperados']),
+                onClick: () => showStatuses(['recuperados']),
+              },
+              {
+                id: 'nao-renovaram',
+                label: 'Não renovaram',
+                value: String(nonRenewedCount + 1).padStart(2, '0'),
+                delta: { text: 'Ver motivos', tone: 'neutral' },
+                active: sameStatuses(statusFilters, ['nao-renovaram']),
+                onClick: () => showStatuses(['nao-renovaram']),
+              },
+            ]}
+          />
 
-      <KpiStrip
-        label="Indicadores da carteira"
-        className="mb-6"
-        items={[
-          {
-            id: 'receita',
-            label: 'Receita do mês',
-            value: `R$ ${activePortfolioRevenue.toLocaleString('pt-BR')}`,
-            delta: { text: '▲ 8% no mês', tone: 'success' },
-            hint: `Ticket médio R$ 418 · ${students.length + 120} ativos`,
-          },
-          {
-            id: 'pendentes',
-            label: 'Check-ins pendentes',
-            value: pendingCheckinsCount + 10,
-            delta: { text: `${pendingCheckinsCount} para responder hoje`, tone: 'warning' },
-            active: sameStatuses(statusFilters, ['pendentes', 'atrasados']),
-            onClick: () => showStatuses(['pendentes', 'atrasados']),
-          },
-          {
-            id: 'realizados',
-            label: 'Check-ins realizados',
-            value: completedCheckinsCount + 110,
-            delta: { text: 'No prazo', tone: 'success' },
-            active: sameStatuses(statusFilters, ['realizados']),
-            onClick: () => showStatuses(['realizados']),
-          },
-          {
-            id: 'vencendo',
-            label: 'Perto de vencer',
-            value: String(expiringSoonCount + 6).padStart(2, '0'),
-            delta: { text: `${expiringSoonCount} críticos em 4 dias`, tone: 'danger' },
-            active: sameStatuses(statusFilters, ['vencendo']),
-            onClick: () => showStatuses(['vencendo']),
-          },
-          {
-            id: 'recuperados',
-            label: 'Planos recuperados',
-            value: `${recoveredCount + 13}/18`,
-            delta: { text: '83% de retenção', tone: 'success' },
-            active: sameStatuses(statusFilters, ['recuperados']),
-            onClick: () => showStatuses(['recuperados']),
-          },
-          {
-            id: 'nao-renovaram',
-            label: 'Não renovaram',
-            value: String(nonRenewedCount + 1).padStart(2, '0'),
-            delta: { text: 'Ver motivos', tone: 'neutral' },
-            active: sameStatuses(statusFilters, ['nao-renovaram']),
-            onClick: () => showStatuses(['nao-renovaram']),
-          },
-        ]}
-      />
+          <section className="mb-8 grid gap-4 lg:grid-cols-3" aria-label="Prioridades de hoje">
+            <PriorityPanel
+              title="Check-ins para avaliar"
+              source="LiveClin · MFIT · WebDiet"
+              total={pendingCheckinsCount}
+              onSeeAll={() => showStatuses(['pendentes', 'atrasados'])}
+            >
+              {students
+                .filter(
+                  (student) =>
+                    student.checkinState === 'Pendente' || student.checkinState === 'Atrasado',
+                )
+                .slice(0, 3)
+                .map((student) => (
+                  <PriorityRow
+                    key={student.id}
+                    student={student}
+                    meta={
+                      <>
+                        <Badge tone={checkinTone[student.checkinState]} dot>
+                          {student.checkinState}
+                        </Badge>
+                        <span className="truncate">{student.lastCheckin}</span>
+                      </>
+                    }
+                    context={student.checkinNote}
+                    action={
+                      <Button size="sm" onClick={() => openStudentModal(student.id)}>
+                        Avaliar
+                      </Button>
+                    }
+                  />
+                ))}
+            </PriorityPanel>
 
-      <section className="mb-8 grid gap-4 lg:grid-cols-3" aria-label="Prioridades de hoje">
-        <PriorityPanel
-          title="Check-ins para avaliar"
-          source="LiveClin · MFIT · WebDiet"
-          total={pendingCheckinsCount}
-          onSeeAll={() => showStatuses(['pendentes', 'atrasados'])}
-        >
-          {students
-            .filter((student) => student.checkinState === 'Pendente' || student.checkinState === 'Atrasado')
-            .slice(0, 3)
-            .map((student) => (
-              <PriorityRow
-                key={student.id}
-                student={student}
-                meta={
-                  <>
-                    <Badge tone={checkinTone[student.checkinState]} dot>
-                      {student.checkinState}
-                    </Badge>
-                    <span className="truncate">{student.lastCheckin}</span>
-                  </>
-                }
-                context={student.checkinNote}
-                action={
-                  <Button size="sm" onClick={() => openStudentModal(student.id)}>
-                    Avaliar
-                  </Button>
-                }
-              />
-            ))}
-        </PriorityPanel>
-
-        <PriorityPanel
-          title="Treinos e check-ins concluídos"
-          source="MFIT"
-          total={completedCheckinsCount}
-          onSeeAll={() => showStatuses(['realizados'])}
-        >
-          {students
-            .filter((student) => student.checkinState === 'Realizado')
-            .slice(0, 3)
-            .map((student) => {
-              const firstComment = getStudentWorkoutComments(student)[0]
-              return (
-                <PriorityRow
-                  key={student.id}
-                  student={student}
-                  meta={<span className="truncate">{student.lastWorkoutActivity} · {student.weeklyWorkoutsCompleted}</span>}
-                  context={firstComment ? `${firstComment.workoutCode}: ${firstComment.comment}` : student.lastWorkoutTitle}
-                  action={
-                    <Button size="sm" variant="ghost" onClick={() => openStudentModal(student.id, 'treino')}>
-                      Ver treino
-                    </Button>
-                  }
-                />
-              )
-            })}
-        </PriorityPanel>
-
-        <PriorityPanel
-          title="Vencimentos e renovações"
-          source="Retenção"
-          total={expiringSoonCount + recoveredCount + nonRenewedCount}
-          onSeeAll={() => showStatuses(['vencendo', 'recuperados', 'nao-renovaram'])}
-        >
-          {students
-            .filter(
-              (student) =>
-                student.renewalState === 'Perto de vencer' ||
-                student.renewalState === 'Recuperado' ||
-                student.renewalState === 'Não renovou',
-            )
-            .slice(0, 3)
-            .map((student) => (
-              <PriorityRow
-                key={student.id}
-                student={student}
-                meta={
-                  <>
-                    <Badge tone={renewalTone[student.renewalState]} dot>
-                      {student.renewalState}
-                    </Badge>
-                    <span className="truncate">Venc. {student.expirationDate}</span>
-                  </>
-                }
-                context={
-                  student.renewalState === 'Recuperado'
-                    ? 'Renovação confirmada, próximo ciclo liberado.'
-                    : student.renewalState === 'Não renovou'
-                      ? `Motivo: ${student.nonRenewalReason || 'registrado pela administração.'}`
-                      : `Vence em ${student.daysToExpire} ${student.daysToExpire === 1 ? 'dia' : 'dias'}: acionar o aluno.`
-                }
-                action={
-                  student.renewalState === 'Perto de vencer' ? (
-                    <Button size="sm" variant="accent" onClick={() => recoverStudentPlan(student.id)}>
-                      Renovar
-                    </Button>
-                  ) : student.renewalState === 'Não renovou' ? (
-                    <Button size="sm" onClick={() => recoverStudentPlan(student.id)}>
-                      Recuperar
-                    </Button>
-                  ) : undefined
-                }
-                extra={
-                  priorityNonRenewalId === student.id ? (
-                    <div className="mt-2 flex flex-col gap-2">
-                      <input
-                        type="text"
-                        value={priorityNonRenewalDraft}
-                        onChange={(event) => setPriorityNonRenewalDraft(event.target.value)}
-                        placeholder="Motivo (ex.: financeiro, pausa)…"
-                        aria-label={`Motivo da não renovação de ${student.name}`}
-                        autoFocus
-                        className="h-9 rounded-control border border-line bg-surface px-3 text-sm outline-none focus:border-brand"
-                      />
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="danger" onClick={() => markNonRenewed(student.id, priorityNonRenewalDraft)}>
-                          Confirmar
-                        </Button>
+            <PriorityPanel
+              title="Treinos e check-ins concluídos"
+              source="MFIT"
+              total={completedCheckinsCount}
+              onSeeAll={() => showStatuses(['realizados'])}
+            >
+              {students
+                .filter((student) => student.checkinState === 'Realizado')
+                .slice(0, 3)
+                .map((student) => {
+                  const firstComment = getStudentWorkoutComments(student)[0]
+                  return (
+                    <PriorityRow
+                      key={student.id}
+                      student={student}
+                      meta={
+                        <span className="truncate">
+                          {student.lastWorkoutActivity} · {student.weeklyWorkoutsCompleted}
+                        </span>
+                      }
+                      context={
+                        firstComment
+                          ? `${firstComment.workoutCode}: ${firstComment.comment}`
+                          : student.lastWorkoutTitle
+                      }
+                      action={
                         <Button
                           size="sm"
                           variant="ghost"
+                          onClick={() => openStudentModal(student.id, 'treino')}
+                        >
+                          Ver treino
+                        </Button>
+                      }
+                    />
+                  )
+                })}
+            </PriorityPanel>
+
+            <PriorityPanel
+              title="Vencimentos e renovações"
+              source="Retenção"
+              total={expiringSoonCount + recoveredCount + nonRenewedCount}
+              onSeeAll={() => showStatuses(['vencendo', 'recuperados', 'nao-renovaram'])}
+            >
+              {students
+                .filter(
+                  (student) =>
+                    student.renewalState === 'Perto de vencer' ||
+                    student.renewalState === 'Recuperado' ||
+                    student.renewalState === 'Não renovou',
+                )
+                .slice(0, 3)
+                .map((student) => (
+                  <PriorityRow
+                    key={student.id}
+                    student={student}
+                    meta={
+                      <>
+                        <Badge tone={renewalTone[student.renewalState]} dot>
+                          {student.renewalState}
+                        </Badge>
+                        <span className="truncate">Venc. {student.expirationDate}</span>
+                      </>
+                    }
+                    context={
+                      student.renewalState === 'Recuperado'
+                        ? 'Renovação confirmada, próximo ciclo liberado.'
+                        : student.renewalState === 'Não renovou'
+                          ? `Motivo: ${student.nonRenewalReason || 'registrado pela administração.'}`
+                          : `Vence em ${student.daysToExpire} ${student.daysToExpire === 1 ? 'dia' : 'dias'}: acionar o aluno.`
+                    }
+                    action={
+                      student.renewalState === 'Perto de vencer' ? (
+                        <Button
+                          size="sm"
+                          variant="accent"
+                          onClick={() => recoverStudentPlan(student.id)}
+                        >
+                          Renovar
+                        </Button>
+                      ) : student.renewalState === 'Não renovou' ? (
+                        <Button size="sm" onClick={() => recoverStudentPlan(student.id)}>
+                          Recuperar
+                        </Button>
+                      ) : undefined
+                    }
+                    extra={
+                      priorityNonRenewalId === student.id ? (
+                        <div className="mt-2 flex flex-col gap-2">
+                          <input
+                            type="text"
+                            value={priorityNonRenewalDraft}
+                            onChange={(event) => setPriorityNonRenewalDraft(event.target.value)}
+                            placeholder="Motivo (ex.: financeiro, pausa)…"
+                            aria-label={`Motivo da não renovação de ${student.name}`}
+                            autoFocus
+                            className="h-9 rounded-control border border-line bg-surface px-3 text-sm outline-none focus:border-brand"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => markNonRenewed(student.id, priorityNonRenewalDraft)}
+                            >
+                              Confirmar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setPriorityNonRenewalId(null)
+                                setPriorityNonRenewalDraft('')
+                              }}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : student.renewalState !== 'Não renovou' ? (
+                        <button
+                          type="button"
+                          className="mt-1 cursor-pointer text-xs font-medium text-ink-3 underline-offset-2 hover:text-danger hover:underline"
                           onClick={() => {
-                            setPriorityNonRenewalId(null)
-                            setPriorityNonRenewalDraft('')
+                            setPriorityNonRenewalId(student.id)
+                            setPriorityNonRenewalDraft(student.nonRenewalReason ?? '')
                           }}
                         >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  ) : student.renewalState !== 'Não renovou' ? (
-                    <button
-                      type="button"
-                      className="mt-1 cursor-pointer text-xs font-medium text-ink-3 underline-offset-2 hover:text-danger hover:underline"
-                      onClick={() => {
-                        setPriorityNonRenewalId(student.id)
-                        setPriorityNonRenewalDraft(student.nonRenewalReason ?? '')
-                      }}
-                    >
-                      Registrar não renovação
-                    </button>
-                  ) : null
-                }
-              />
-            ))}
-        </PriorityPanel>
-      </section>
+                          Registrar não renovação
+                        </button>
+                      ) : null
+                    }
+                  />
+                ))}
+            </PriorityPanel>
+          </section>
 
-      <section id="carteira-alunos" className="min-w-0 scroll-mt-20" aria-label="Carteira de alunos">
-        {generatedKeyBanner && (
-          <div
-            role="status"
-            className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-success/20 bg-success-soft px-4 py-3"
+          <section
+            id="carteira-alunos"
+            className="min-w-0 scroll-mt-20"
+            aria-label="Carteira de alunos"
           >
-            <p className="text-sm text-ink">
-              <strong className="font-semibold">Chave gerada para {generatedKeyBanner.studentName}:</strong>{' '}
-              <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[13px] tracking-wider">
-                {generatedKeyBanner.key}
-              </code>
-              <span className="block text-xs text-ink-2">
-                Envie ao aluno para ele criar ou redefinir o login no app.
-              </span>
-            </p>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => openStudentModal(generatedKeyBanner.studentId)}>
-                Abrir ficha
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setGeneratedKeyBanner(null)}>
-                Fechar
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <Tabs
-            label="Visões salvas da carteira"
-            className="min-w-0 flex-1 border-b-0"
-            value={activeView.id}
-            onChange={(id) => {
-              const view = allViews.find((item) => item.id === id)
-              if (view) applyView(view)
-            }}
-            items={allViews.map((view) => ({
-              id: view.id,
-              label: view.name,
-              count: view.id === 'todos' ? undefined : students.filter((student) => passesFilters(student, view.statuses, view.goal, view.search)).length,
-            }))}
-          />
-          <div className="flex items-center gap-2 pb-1.5">
-            {viewModified && (
-              <>
-                <Button size="sm" variant="ghost" onClick={() => applyView(activeView)}>
-                  Limpar
-                </Button>
-                <Button size="sm" onClick={() => setViewDialogOpen(true)}>
-                  Salvar visão
-                </Button>
-              </>
-            )}
-            {!activeView.builtIn && !viewModified && (
-              <Button size="sm" variant="ghost" onClick={deleteActiveView}>
-                Excluir visão
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-4 mb-3 flex flex-wrap items-center gap-2">
-          <label className="relative min-w-[220px] flex-1 md:max-w-xs">
-            <span className="sr-only">Buscar aluno</span>
-            <Icon name="search" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3" />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar aluno, treino, plano ou fase"
-              className="h-9 w-full rounded-control border border-line bg-surface pr-3 pl-9 text-sm text-ink outline-none placeholder:text-ink-3 focus:border-brand"
-            />
-          </label>
-          <div role="radiogroup" aria-label="Objetivo" className="inline-flex h-9 rounded-control border border-line bg-surface p-0.5">
-            {['Todos', 'Emagrecimento', 'Hipertrofia', 'Performance'].map((goal) => (
-              <button
-                key={goal}
-                type="button"
-                role="radio"
-                aria-checked={goalFilter === goal}
-                onClick={() => setGoalFilter(goal)}
-                className={cx(
-                  'cursor-pointer rounded-[8px] px-3 text-xs font-semibold transition-colors',
-                  goalFilter === goal ? 'bg-night text-white' : 'text-ink-2 hover:text-ink',
-                )}
+            {generatedKeyBanner && (
+              <div
+                role="status"
+                className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-success/20 bg-success-soft px-4 py-3"
               >
-                {goal}
-              </button>
-            ))}
-          </div>
-          <FilterMenu label="Status" options={statusOptions} value={statusFilters} onChange={setStatusFilters} />
-          <span className="ml-auto text-xs text-ink-3 tabular-nums">
-            {filteredStudents.length} de {students.length} alunos
-          </span>
-        </div>
-
-        <Table>
-          <THead>
-            <tr>
-              <TH>Aluno</TH>
-              <TH>Objetivo · Fase</TH>
-              <TH>Treino (MFIT)</TH>
-              <TH>Check-in (LiveClin)</TH>
-              <TH>Vencimento</TH>
-              <TH className="w-24 text-right">
-                <span className="sr-only">Ações</span>
-              </TH>
-            </tr>
-          </THead>
-          <tbody>
-            {filteredStudents.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-ink-3">
-                  Nenhum aluno com esses filtros.{' '}
-                  <button type="button" className="cursor-pointer font-semibold text-brand hover:underline" onClick={() => applyView(builtInStudentViews[0])}>
-                    Ver todos
-                  </button>
-                </td>
-              </tr>
+                <p className="text-sm text-ink">
+                  <strong className="font-semibold">
+                    Chave gerada para {generatedKeyBanner.studentName}:
+                  </strong>{' '}
+                  <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[13px] tracking-wider">
+                    {generatedKeyBanner.key}
+                  </code>
+                  <span className="block text-xs text-ink-2">
+                    Envie ao aluno para ele criar ou redefinir o login no app.
+                  </span>
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => openStudentModal(generatedKeyBanner.studentId)}>
+                    Abrir ficha
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setGeneratedKeyBanner(null)}>
+                    Fechar
+                  </Button>
+                </div>
+              </div>
             )}
-            {filteredStudents.map((student) => {
-              const accessInfo = getStudentAccessInfo(student, generatedKeysByStudent)
-              const photosCount = getStudentDefaultAppPhotos(student).length
-              return (
-                <TR
-                  key={student.id}
-                  tabIndex={0}
-                  aria-label={`Abrir ficha de ${student.name}`}
-                  onClick={() => openStudentModal(student.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && event.target === event.currentTarget) openStudentModal(student.id)
-                  }}
-                  className={cx('h-14 cursor-pointer', modalStudent?.id === student.id && 'bg-brand-soft/40')}
-                >
-                  <TD>
-                    <div className="flex items-center gap-3">
-                      <img src={student.avatar} alt="" className="size-8 shrink-0 rounded-full object-cover" />
-                      <div className="min-w-0">
-                        <p className="flex items-center gap-1.5 truncate font-medium text-ink">
-                          {student.name}
-                          <span
-                            title={accessInfo.hasLogin ? `Login ativo: ${accessInfo.loginEmail}` : accessInfo.accessKey ? `Sem login · chave ${accessInfo.accessKey}` : 'Sem login no app'}
-                            className={accessInfo.hasLogin ? 'text-success' : 'text-ink-3'}
-                          >
-                            <Icon name="key" className="size-3.5" />
-                            <span className="sr-only">{accessInfo.hasLogin ? 'Login ativo' : 'Sem login'}</span>
-                          </span>
-                        </p>
-                        <p className="truncate text-xs text-ink-3">
-                          Plano {student.plan} · R$ {student.monthlyRevenue}/mês
-                        </p>
-                      </div>
-                    </div>
-                  </TD>
-                  <TD>
-                    <p className="text-ink">{student.goal}</p>
-                    <p className="text-xs text-ink-3">{student.phase}</p>
-                  </TD>
-                  <TD>
-                    <p className="text-ink">{student.lastWorkoutActivity.replace('Treinou ', '')}</p>
-                    <p className="text-xs text-ink-3">{student.weeklyWorkoutsCompleted.replace(' na semana', '/sem.')}</p>
-                  </TD>
-                  <TD>
-                    <Badge tone={checkinTone[student.checkinState]} dot>
-                      {student.checkinState}
-                    </Badge>
-                    <p className="mt-0.5 text-xs text-ink-3">{student.lastCheckin}</p>
-                  </TD>
-                  <TD>
-                    <p className="text-ink">{student.expirationDate}</p>
-                    <p
-                      className={cx(
-                        'text-xs',
-                        student.renewalState === 'Perto de vencer' && 'font-medium text-warning',
-                        student.renewalState === 'Não renovou' && 'font-medium text-danger',
-                        student.renewalState === 'Recuperado' && 'font-medium text-success',
-                        student.renewalState === 'Em dia' && 'text-ink-3',
-                      )}
-                      title={student.nonRenewalReason || undefined}
-                    >
-                      {student.renewalState === 'Perto de vencer'
-                        ? `em ${student.daysToExpire} ${student.daysToExpire === 1 ? 'dia' : 'dias'}`
-                        : student.renewalState}
-                    </p>
-                  </TD>
-                  <TD className="text-right">
-                    <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
-                      <a
-                        href={buildWhatsAppUrl(student.whatsapp, student.name)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={`WhatsApp de ${student.name}`}
-                        aria-label={`Conversar com ${student.name} no WhatsApp`}
-                        className="grid size-8 place-items-center rounded-control text-success transition-colors hover:bg-success-soft [&_svg]:size-4"
-                      >
-                        <WhatsAppIcon />
-                      </a>
-                      <Menu
-                        label={`Ações de ${student.name}`}
-                        items={[
-                          { id: 'ficha', label: 'Abrir ficha', icon: <Icon name="students" className="size-4" />, onSelect: () => openStudentModal(student.id) },
-                          { id: 'fotos', label: `Fotos e comparador (${photosCount})`, icon: <Icon name="photo" className="size-4" />, onSelect: () => openStudentModal(student.id, 'fotos') },
-                          { id: 'chave', label: 'Gerar chave de acesso', icon: <Icon name="key" className="size-4" />, onSelect: () => generateAccessKeyForStudent(student) },
-                          ...(student.checkinState !== 'Realizado'
-                            ? [{ id: 'concluir', label: 'Marcar check-in como avaliado', icon: <Icon name="check" className="size-4" />, onSelect: () => completeCheckin(student.id) }]
-                            : []),
-                        ]}
-                        trigger={({ open, toggle, id }) => (
-                          <button
-                            type="button"
-                            onClick={toggle}
-                            aria-haspopup="menu"
-                            aria-expanded={open}
-                            aria-controls={open ? id : undefined}
-                            aria-label={`Mais ações para ${student.name}`}
-                            className="grid size-8 cursor-pointer place-items-center rounded-control text-ink-3 transition-colors hover:bg-line-subtle hover:text-ink"
-                          >
-                            <Icon name="dots" className="size-4" />
-                          </button>
-                        )}
-                      />
-                    </div>
-                  </TD>
-                </TR>
-              )
-            })}
-          </tbody>
-        </Table>
-      </section>
 
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <Tabs
+                label="Visões salvas da carteira"
+                className="min-w-0 flex-1 border-b-0"
+                value={activeView.id}
+                onChange={(id) => {
+                  const view = allViews.find((item) => item.id === id)
+                  if (view) applyView(view)
+                }}
+                items={allViews.map((view) => ({
+                  id: view.id,
+                  label: view.name,
+                  count:
+                    view.id === 'todos'
+                      ? undefined
+                      : students.filter((student) =>
+                          passesFilters(student, view.statuses, view.goal, view.search),
+                        ).length,
+                }))}
+              />
+              <div className="flex items-center gap-2 pb-1.5">
+                {viewModified && (
+                  <>
+                    <Button size="sm" variant="ghost" onClick={() => applyView(activeView)}>
+                      Limpar
+                    </Button>
+                    <Button size="sm" onClick={() => setViewDialogOpen(true)}>
+                      Salvar visão
+                    </Button>
+                  </>
+                )}
+                {!activeView.builtIn && !viewModified && (
+                  <Button size="sm" variant="ghost" onClick={deleteActiveView}>
+                    Excluir visão
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 mb-3 flex flex-wrap items-center gap-2">
+              <label className="relative min-w-[220px] flex-1 md:max-w-xs">
+                <span className="sr-only">Buscar aluno</span>
+                <Icon
+                  name="search"
+                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3"
+                />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar aluno, treino, plano ou fase"
+                  className="h-9 w-full rounded-control border border-line bg-surface pr-3 pl-9 text-sm text-ink outline-none placeholder:text-ink-3 focus:border-brand"
+                />
+              </label>
+              <div
+                role="radiogroup"
+                aria-label="Objetivo"
+                className="inline-flex h-9 max-w-full overflow-x-auto rounded-control border border-line bg-surface p-0.5 [scrollbar-width:none]"
+              >
+                {['Todos', 'Emagrecimento', 'Hipertrofia', 'Performance'].map((goal) => (
+                  <button
+                    key={goal}
+                    type="button"
+                    role="radio"
+                    aria-checked={goalFilter === goal}
+                    onClick={() => setGoalFilter(goal)}
+                    className={cx(
+                      'shrink-0 cursor-pointer rounded-[8px] px-3 text-xs font-semibold transition-colors',
+                      goalFilter === goal ? 'bg-night text-white' : 'text-ink-2 hover:text-ink',
+                    )}
+                  >
+                    {goal}
+                  </button>
+                ))}
+              </div>
+              <FilterMenu
+                label="Status"
+                options={statusOptions}
+                value={statusFilters}
+                onChange={setStatusFilters}
+              />
+              <span className="ml-auto text-xs text-ink-3 tabular-nums">
+                {filteredStudents.length} de {students.length} alunos
+              </span>
+            </div>
+
+            <Table>
+              <THead>
+                <tr>
+                  <TH>Aluno</TH>
+                  <TH>Objetivo · Fase</TH>
+                  <TH>Treino (MFIT)</TH>
+                  <TH>Check-in (LiveClin)</TH>
+                  <TH>Vencimento</TH>
+                  <TH className="w-24 text-right">
+                    <span className="sr-only">Ações</span>
+                  </TH>
+                </tr>
+              </THead>
+              <tbody>
+                {filteredStudents.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center text-sm text-ink-3">
+                      Nenhum aluno com esses filtros.{' '}
+                      <button
+                        type="button"
+                        className="cursor-pointer font-semibold text-brand hover:underline"
+                        onClick={() => applyView(builtInStudentViews[0])}
+                      >
+                        Ver todos
+                      </button>
+                    </td>
+                  </tr>
+                )}
+                {filteredStudents.map((student) => {
+                  const accessInfo = getStudentAccessInfo(student, generatedKeysByStudent)
+                  const photosCount = getStudentDefaultAppPhotos(student).length
+                  return (
+                    <TR
+                      key={student.id}
+                      tabIndex={0}
+                      aria-label={`Abrir ficha de ${student.name}`}
+                      onClick={() => openStudentModal(student.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && event.target === event.currentTarget)
+                          openStudentModal(student.id)
+                      }}
+                      className={cx(
+                        'h-14 cursor-pointer',
+                        modalStudent?.id === student.id && 'bg-brand-soft/40',
+                      )}
+                    >
+                      <TD>
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={student.avatar}
+                            alt=""
+                            className="size-8 shrink-0 rounded-full object-cover"
+                          />
+                          <div className="min-w-0">
+                            <p className="flex items-center gap-1.5 truncate font-medium text-ink">
+                              {student.name}
+                              <span
+                                title={
+                                  accessInfo.hasLogin
+                                    ? `Login ativo: ${accessInfo.loginEmail}`
+                                    : accessInfo.accessKey
+                                      ? `Sem login · chave ${accessInfo.accessKey}`
+                                      : 'Sem login no app'
+                                }
+                                className={accessInfo.hasLogin ? 'text-success' : 'text-ink-3'}
+                              >
+                                <Icon name="key" className="size-3.5" />
+                                <span className="sr-only">
+                                  {accessInfo.hasLogin ? 'Login ativo' : 'Sem login'}
+                                </span>
+                              </span>
+                            </p>
+                            <p className="truncate text-xs text-ink-3">
+                              Plano {student.plan} · R$ {student.monthlyRevenue}/mês
+                            </p>
+                          </div>
+                        </div>
+                      </TD>
+                      <TD>
+                        <p className="text-ink">{student.goal}</p>
+                        <p className="text-xs text-ink-3">{student.phase}</p>
+                      </TD>
+                      <TD>
+                        <p className="text-ink">
+                          {student.lastWorkoutActivity.replace('Treinou ', '')}
+                        </p>
+                        <p className="text-xs text-ink-3">
+                          {student.weeklyWorkoutsCompleted.replace(' na semana', '/sem.')}
+                        </p>
+                      </TD>
+                      <TD>
+                        <Badge tone={checkinTone[student.checkinState]} dot>
+                          {student.checkinState}
+                        </Badge>
+                        <p className="mt-0.5 text-xs text-ink-3">{student.lastCheckin}</p>
+                      </TD>
+                      <TD>
+                        <p className="text-ink">{student.expirationDate}</p>
+                        <p
+                          className={cx(
+                            'text-xs',
+                            student.renewalState === 'Perto de vencer' &&
+                              'font-medium text-warning',
+                            student.renewalState === 'Não renovou' && 'font-medium text-danger',
+                            student.renewalState === 'Recuperado' && 'font-medium text-success',
+                            student.renewalState === 'Em dia' && 'text-ink-3',
+                          )}
+                          title={student.nonRenewalReason || undefined}
+                        >
+                          {student.renewalState === 'Perto de vencer'
+                            ? `em ${student.daysToExpire} ${student.daysToExpire === 1 ? 'dia' : 'dias'}`
+                            : student.renewalState}
+                        </p>
+                      </TD>
+                      <TD className="text-right">
+                        <div
+                          className="flex items-center justify-end gap-1"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <a
+                            href={buildWhatsAppUrl(student.whatsapp, student.name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`WhatsApp de ${student.name}`}
+                            aria-label={`Conversar com ${student.name} no WhatsApp`}
+                            className="grid size-8 place-items-center rounded-control text-success transition-colors hover:bg-success-soft [&_svg]:size-4"
+                          >
+                            <WhatsAppIcon />
+                          </a>
+                          <Menu
+                            label={`Ações de ${student.name}`}
+                            items={[
+                              {
+                                id: 'ficha',
+                                label: 'Abrir ficha',
+                                icon: <Icon name="students" className="size-4" />,
+                                onSelect: () => openStudentModal(student.id),
+                              },
+                              {
+                                id: 'fotos',
+                                label: `Fotos e comparador (${photosCount})`,
+                                icon: <Icon name="photo" className="size-4" />,
+                                onSelect: () => openStudentModal(student.id, 'fotos'),
+                              },
+                              {
+                                id: 'chave',
+                                label: 'Gerar chave de acesso',
+                                icon: <Icon name="key" className="size-4" />,
+                                onSelect: () => generateAccessKeyForStudent(student),
+                              },
+                              ...(student.checkinState !== 'Realizado'
+                                ? [
+                                    {
+                                      id: 'concluir',
+                                      label: 'Marcar check-in como avaliado',
+                                      icon: <Icon name="check" className="size-4" />,
+                                      onSelect: () => completeCheckin(student.id),
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                            trigger={({ open, toggle, id }) => (
+                              <button
+                                type="button"
+                                onClick={toggle}
+                                aria-haspopup="menu"
+                                aria-expanded={open}
+                                aria-controls={open ? id : undefined}
+                                aria-label={`Mais ações para ${student.name}`}
+                                className="grid size-8 cursor-pointer place-items-center rounded-control text-ink-3 transition-colors hover:bg-line-subtle hover:text-ink"
+                              >
+                                <Icon name="dots" className="size-4" />
+                              </button>
+                            )}
+                          />
+                        </div>
+                      </TD>
+                    </TR>
+                  )
+                })}
+              </tbody>
+            </Table>
+          </section>
         </>
       )}
 
@@ -3441,38 +3578,42 @@ export default function StudentsWorkspace({
             </header>
 
             <div className="ficha-stack">
-            <section className="student-modal-highlights">
-              <div>
-                <span>ÚLTIMA ATIVIDADE DE TREINO (MFIT)</span>
-                <strong>{modalStudent.lastWorkoutActivity}</strong>
-                <small>
-                  {modalStudent.lastWorkoutTitle} ({modalStudent.weeklyWorkoutsCompleted})
-                </small>
-              </div>
-              <div>
-                <span>CHECK-IN SEMANAL (LIVECLIN)</span>
-                <strong>{modalStudent.checkinState}</strong>
-                <small>{modalLiveClin.submittedAt}</small>
-              </div>
-              <div>
-                <span>STATUS DE RENOVAÇÃO</span>
-                <strong>{modalStudent.renewalState}</strong>
-                <small>Vencimento: {modalStudent.expirationDate}</small>
-              </div>
-            </section>
+              <section className="student-modal-highlights">
+                <div>
+                  <span>ÚLTIMA ATIVIDADE DE TREINO (MFIT)</span>
+                  <strong>{modalStudent.lastWorkoutActivity}</strong>
+                  <small>
+                    {modalStudent.lastWorkoutTitle} ({modalStudent.weeklyWorkoutsCompleted})
+                  </small>
+                </div>
+                <div>
+                  <span>CHECK-IN SEMANAL (LIVECLIN)</span>
+                  <strong>{modalStudent.checkinState}</strong>
+                  <small>{modalLiveClin.submittedAt}</small>
+                </div>
+                <div>
+                  <span>STATUS DE RENOVAÇÃO</span>
+                  <strong>{modalStudent.renewalState}</strong>
+                  <small>Vencimento: {modalStudent.expirationDate}</small>
+                </div>
+              </section>
 
               {(() => {
                 const open = sectionsOpenFor(modalStudent.id)
                 const toggle = (id: FichaTab) => {
                   if (open.includes(id)) {
-                    setSectionsFor(modalStudent.id, open.filter((item) => item !== id))
+                    setSectionsFor(
+                      modalStudent.id,
+                      open.filter((item) => item !== id),
+                    )
                   } else {
                     setSectionsFor(modalStudent.id, [...open, id])
                     setModalTab(id)
                   }
                 }
-                const faces = getFaceHistory(modalStudent.id)
-                const lowThemes = Object.values(faces).filter((weeks) => weeks[weeks.length - 1] <= 2).length
+                const lowThemes = faceThemes.filter(
+                  (theme) => theme.score(modalLiveClin) <= 2,
+                ).length
                 return (
                   <>
                     <FichaSection
@@ -3493,298 +3634,186 @@ export default function StudentsWorkspace({
                       }
                       summary={`${modalStudent.checkinState} · ${modalLiveClin.submittedAt}`}
                     >
-              <div className="student-modal-columns">
-                <div className="min-w-0">
-                  <FaceCheckin
-                    studentId={modalStudent.id}
-                    studentName={modalStudent.name}
-                    submittedAt={modalLiveClin.submittedAt}
-                    weight={modalLiveClin.fastingWeight}
-                    note={modalLiveClin.openFeedback}
-                  />
-                  <details className="group mt-4 rounded-lg border border-line">
-                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[13px] font-medium text-ink-2 [&::-webkit-details-marker]:hidden">
-                      Respostas detalhadas do formulário anterior (LiveClin)
-                      <Icon name="chevronRight" className="size-4 text-ink-3 transition-transform group-open:rotate-90" />
-                    </summary>
-                    <div className="border-t border-line p-3">
-                <section className="modal-liveclin-section">
-                  <header>
-                    <div>
-                      <span>CHECK-IN SEMANAL LIVECLIN · 14 PERGUNTAS</span>
-                      <h3>Respostas do Check-in no LiveClin</h3>
-                    </div>
-                    <em>{modalLiveClin.protocolName}</em>
-                  </header>
-                  {(() => {
-                    const flagged = liveClinAlertFields.filter((field) => liveClinAlert(field, modalLiveClin[field]))
-                    return (
-                      <p className={`liveclin-summary ${flagged.length ? 'has-alerts' : ''}`} role="status">
-                        {flagged.length
-                          ? `${flagged.length} ${flagged.length === 1 ? 'resposta pede' : 'respostas pedem'} atenção nesta semana.`
-                          : 'Nenhuma resposta fora do padrão nesta semana.'}
-                      </p>
-                    )
-                  })()}
+                      <div className="student-modal-columns">
+                        <div className="min-w-0">
+                          <FaceCheckin
+                            studentId={modalStudent.id}
+                            studentName={modalStudent.name}
+                            answers={modalLiveClin}
+                          />
+                          <details className="group mt-4 rounded-lg border border-line">
+                            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[13px] font-medium text-ink-2 [&::-webkit-details-marker]:hidden">
+                              Respostas do aluno no LiveClin (14 perguntas)
+                              <Icon
+                                name="chevronRight"
+                                className="size-4 text-ink-3 transition-transform group-open:rotate-90"
+                              />
+                            </summary>
+                            <div className="border-t border-line p-3">
+                              <p className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-3">
+                                <span>
+                                  {modalLiveClin.protocolName} · {modalLiveClin.submittedAt}
+                                </span>
+                                <span>Como o aluno preencheu, pergunta por pergunta</span>
+                              </p>
+                              <LiveClinAnswersView answers={modalLiveClin} />
+                            </div>
+                          </details>
+                        </div>
+                        <section className="modal-app-and-coach-section">
+                          <div className="modal-quick-plans-card">
+                            <header>
+                              <span>PROTOCOLO ATUAL DO ALUNO</span>
+                              <h3>Treino (MFIT) & Dieta (WebDiet)</h3>
+                            </header>
+                            <div className="modal-quick-plans-grid">
+                              <div>
+                                <span>TREINO PRESCRITO (MFIT)</span>
+                                <strong>{modalWorkoutPlan.splitName}</strong>
+                                <small>{modalWorkoutPlan.frequency}</small>
+                                <button type="button" onClick={() => setModalTab('treino')}>
+                                  Ver treino no MFIT
+                                </button>
+                              </div>
+                              <div>
+                                <span>DIETA PRESCRITA (WEBDIET)</span>
+                                <strong>{modalDietPlan.strategyName}</strong>
+                                <small>{modalDietPlan.dailyCalories}</small>
+                                <button type="button" onClick={() => setModalTab('dieta')}>
+                                  Ver dieta no WebDiet
+                                </button>
+                              </div>
+                            </div>
+                          </div>
 
-                  <div className="liveclin-answers-grid">
-                    <div>
-                      <span>Peso corporal</span>
-                      <small>Qual foi o seu último peso em jejum?</small>
-                      <strong>Resposta: {modalLiveClin.fastingWeight}</strong>
-                      <LiveClinFlag reason={liveClinAlert('fastingWeight', modalLiveClin.fastingWeight)} />
-                    </div>
-                    <div>
-                      <span>Refeições fora do plano alimentar</span>
-                      <small>Quantas refeições fora do planejado você fez na última semana?</small>
-                      <strong>Resposta: {modalLiveClin.offPlanMeals}</strong>
-                      <LiveClinFlag reason={liveClinAlert('offPlanMeals', modalLiveClin.offPlanMeals)} />
-                    </div>
-                    <div>
-                      <span>Níveis de fome</span>
-                      <small>
-                        Como você considera que está o seu nível de fome e apetite atualmente?
-                      </small>
-                      <strong>Resposta: {modalLiveClin.hungerLevels}</strong>
-                      <LiveClinFlag reason={liveClinAlert('hungerLevels', modalLiveClin.hungerLevels)} />
-                    </div>
-                    <div>
-                      <span>Ingestão de líquidos</span>
-                      <small>Quantos litros de água você está bebendo por dia em média?</small>
-                      <strong>Resposta: {modalLiveClin.waterIntake}</strong>
-                      <LiveClinFlag reason={liveClinAlert('waterIntake', modalLiveClin.waterIntake)} />
-                    </div>
-                    <div>
-                      <span>Frequência intestinal</span>
-                      <small>Você tem ido ao banheiro diariamente?</small>
-                      <strong>Resposta: {modalLiveClin.bowelFrequency}</strong>
-                      <LiveClinFlag reason={liveClinAlert('bowelFrequency', modalLiveClin.bowelFrequency)} />
-                    </div>
-                    <div>
-                      <span>Desconforto Abdominal</span>
-                      <small>
-                        Você sentiu desconforto abdominal, como gases ou inchaço nos últimos dias?
-                      </small>
-                      <strong>Resposta: {modalLiveClin.abdominalDiscomfort}</strong>
-                      <LiveClinFlag reason={liveClinAlert('abdominalDiscomfort', modalLiveClin.abdominalDiscomfort)} />
-                    </div>
-                    <div>
-                      <span>Treinos de Força</span>
-                      <small>
-                        Quantas sessões de treinos com pesos você realizou nos últimos 7 dias?
-                        Exemplo: Musculação, Pilates, Crossfit, Calistenia.
-                      </small>
-                      <strong>Resposta: {modalLiveClin.strengthWorkouts}</strong>
-                      <LiveClinFlag reason={liveClinAlert('strengthWorkouts', modalLiveClin.strengthWorkouts)} />
-                    </div>
-                    <div>
-                      <span>Desempenho em exercícios</span>
-                      <small>
-                        Você sente que seu desempenho em exercícios físicos está melhorando?
-                      </small>
-                      <strong>Resposta: {modalLiveClin.exercisePerformance}</strong>
-                      <LiveClinFlag reason={liveClinAlert('exercisePerformance', modalLiveClin.exercisePerformance)} />
-                    </div>
-                    <div>
-                      <span>Frequência de Aeróbico</span>
-                      <small>
-                        Você fez quantas sessões de atividade aeróbica (cardio) na semana anterior?
-                        Exemplo: Corrida, ciclismo, natação, caminhada.
-                      </small>
-                      <strong>Resposta: {modalLiveClin.aerobicSessions}</strong>
-                      <LiveClinFlag reason={liveClinAlert('aerobicSessions', modalLiveClin.aerobicSessions)} />
-                    </div>
-                    <div>
-                      <span>Horas de Sono</span>
-                      <small>Quantas horas de sono você está dormindo por noite, em média?</small>
-                      <strong>Resposta: {modalLiveClin.sleepHours}</strong>
-                      <LiveClinFlag reason={liveClinAlert('sleepHours', modalLiveClin.sleepHours)} />
-                    </div>
-                    <div>
-                      <span>Dedicação</span>
-                      <small>O quanto você se dedicou na última semana?</small>
-                      <strong>Resposta: {modalLiveClin.dedicationLevel}</strong>
-                      <LiveClinFlag reason={liveClinAlert('dedicationLevel', modalLiveClin.dedicationLevel)} />
-                    </div>
-                    <div>
-                      <span>Percepção corporal</span>
-                      <small>
-                        Você consegue notar evolução corporal em direção ao seu objetivo?
-                      </small>
-                      <strong>Resposta: {modalLiveClin.bodyPerception}</strong>
-                      <LiveClinFlag reason={liveClinAlert('bodyPerception', modalLiveClin.bodyPerception)} />
-                    </div>
-                    <div className="full-width-question">
-                      <span>Alterações no cardápio</span>
-                      <small>
-                        Você gostaria de fazer alguma alteração no seu planejamento alimentar? Por
-                        exemplo, incluir um novo alimento, adicionar ou modificar uma refeição.
-                      </small>
-                      <strong>Resposta: {modalLiveClin.menuChangesRequest}</strong>
-                      <LiveClinFlag reason={liveClinAlert('menuChangesRequest', modalLiveClin.menuChangesRequest)} />
-                    </div>
-                    <div className="full-width-question">
-                      <span>Feedback Aberto</span>
-                      <small>O que mais você gostaria de compartilhar sobre sua experiência?</small>
-                      <strong>Resposta: {modalLiveClin.openFeedback}</strong>
-                      <LiveClinFlag reason={liveClinAlert('openFeedback', modalLiveClin.openFeedback)} />
-                    </div>
-                  </div>
-                </section>
+                          <div className="app-observations-card">
+                            <header>
+                              <div>
+                                <span>COMENTÁRIOS DO ALUNO POR TREINO NO APP (MFIT)</span>
+                                <h3>Comentários recebidos: Treino A, Treino B e Treino C</h3>
+                              </div>
+                              <small>Para responder, fale com o aluno no WhatsApp</small>
+                            </header>
+                            <div className="app-observations-list">
+                              {modalWorkoutComments.map((wc) => (
+                                <article key={wc.workoutCode} className="workout-comment-item">
+                                  <header>
+                                    <span className="obs-tag tag-treino">
+                                      {wc.workoutCode} · {wc.workoutTitle}
+                                    </span>
+                                    <time>{wc.sentAt}</time>
+                                  </header>
+                                  <p>{wc.comment}</p>
+                                </article>
+                              ))}
+                              {modalStudent.appObservations.map((obs) => (
+                                <article key={obs.id}>
+                                  <header>
+                                    <span className={`obs-tag tag-${obs.category.toLowerCase()}`}>
+                                      {obs.category}
+                                    </span>
+                                    <time>{obs.when}</time>
+                                  </header>
+                                  <p>{obs.note}</p>
+                                </article>
+                              ))}
+                            </div>
+                          </div>
 
-                    </div>
-                  </details>
-                </div>
-                <section className="modal-app-and-coach-section">
-                  <div className="modal-quick-plans-card">
-                    <header>
-                      <span>PROTOCOLO ATUAL DO ALUNO</span>
-                      <h3>Treino (MFIT) & Dieta (WebDiet)</h3>
-                    </header>
-                    <div className="modal-quick-plans-grid">
-                      <div>
-                        <span>TREINO PRESCRITO (MFIT)</span>
-                        <strong>{modalWorkoutPlan.splitName}</strong>
-                        <small>{modalWorkoutPlan.frequency}</small>
-                        <button type="button" onClick={() => setModalTab('treino')}>
-                          Ver treino no MFIT
-                        </button>
+                          {modalStudent.renewalState === 'Não renovou' &&
+                            modalStudent.nonRenewalReason && (
+                              <div className="inspector-nonrenewal-box">
+                                <span>MOTIVO DA NÃO RENOVAÇÃO (REGISTRADO PELO ADMIN)</span>
+                                <p>{modalStudent.nonRenewalReason}</p>
+                              </div>
+                            )}
+
+                          <div className="inspector-checkin-form">
+                            <p className="text-[13px] leading-5 text-ink-3">
+                              O retorno do check-in é feito pelo WhatsApp. Depois de responder,
+                              marque o check-in como avaliado.
+                            </p>
+                            <div className="inspector-form-buttons">
+                              <a
+                                href={whatsappUrl(
+                                  modalStudent.whatsapp,
+                                  `Oi ${modalStudent.name.split(' ')[0]}! Vi seu check-in desta semana no LiveClin.`,
+                                )}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-2"
+                              >
+                                <WhatsAppGlyph className="size-4 text-[#1f9d55]" />
+                                Responder no WhatsApp
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => completeCheckin(modalStudent.id)}
+                                disabled={modalStudent.checkinState === 'Realizado'}
+                              >
+                                {modalStudent.checkinState === 'Realizado'
+                                  ? 'Check-in avaliado'
+                                  : 'Marcar check-in como avaliado'}
+                              </button>
+                              {modalStudent.renewalState !== 'Recuperado' && (
+                                <button
+                                  type="button"
+                                  className="recover-btn"
+                                  onClick={() => recoverStudentPlan(modalStudent.id)}
+                                >
+                                  Confirmar renovação
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="non-renew-btn"
+                                onClick={() => {
+                                  setNonRenewalOpenForId(
+                                    nonRenewalOpenForId === modalStudent.id
+                                      ? null
+                                      : modalStudent.id,
+                                  )
+                                  setNonRenewalDraft(modalStudent.nonRenewalReason ?? '')
+                                }}
+                              >
+                                {modalStudent.renewalState === 'Não renovou'
+                                  ? 'Editar motivo de não renovação'
+                                  : 'Não renovou (escrever motivo)'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {nonRenewalOpenForId === modalStudent.id && (
+                            <div className="modal-non-renewal-box">
+                              <label>
+                                <span>Motivo da não renovação (preenchido pelo Admin)</span>
+                                <textarea
+                                  rows={2}
+                                  value={nonRenewalDraft}
+                                  onChange={(event) => setNonRenewalDraft(event.target.value)}
+                                  placeholder="Ex.: Pausa financeira, mudança para consultoria presencial, viagem..."
+                                  autoFocus
+                                />
+                              </label>
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => markNonRenewed(modalStudent.id, nonRenewalDraft)}
+                                >
+                                  Salvar motivo da não renovação
+                                </button>
+                                <button
+                                  type="button"
+                                  className="cancel"
+                                  onClick={() => setNonRenewalOpenForId(null)}
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </section>
                       </div>
-                      <div>
-                        <span>DIETA PRESCRITA (WEBDIET)</span>
-                        <strong>{modalDietPlan.strategyName}</strong>
-                        <small>{modalDietPlan.dailyCalories}</small>
-                        <button type="button" onClick={() => setModalTab('dieta')}>
-                          Ver dieta no WebDiet
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="app-observations-card">
-                    <header>
-                      <div>
-                        <span>COMENTÁRIOS DO ALUNO POR TREINO NO APP (MFIT)</span>
-                        <h3>Comentários recebidos: Treino A, Treino B e Treino C</h3>
-                      </div>
-                      <small>Para responder, fale com o aluno no WhatsApp</small>
-                    </header>
-                    <div className="app-observations-list">
-                      {modalWorkoutComments.map((wc) => (
-                        <article key={wc.workoutCode} className="workout-comment-item">
-                          <header>
-                            <span className="obs-tag tag-treino">
-                              {wc.workoutCode} · {wc.workoutTitle}
-                            </span>
-                            <time>{wc.sentAt}</time>
-                          </header>
-                          <p>{wc.comment}</p>
-
-                        </article>
-                      ))}
-                      {modalStudent.appObservations.map((obs) => (
-                        <article key={obs.id}>
-                          <header>
-                            <span className={`obs-tag tag-${obs.category.toLowerCase()}`}>
-                              {obs.category}
-                            </span>
-                            <time>{obs.when}</time>
-                          </header>
-                          <p>{obs.note}</p>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-
-                  {modalStudent.coachFeedback && (
-                    <div className="inspector-feedback-box">
-                      <span>CONDUTA ATUAL REGISTRADA PELA EQUIPE</span>
-                      <p>{modalStudent.coachFeedback}</p>
-                    </div>
-                  )}
-
-                  {modalStudent.renewalState === 'Não renovou' && modalStudent.nonRenewalReason && (
-                    <div className="inspector-nonrenewal-box">
-                      <span>MOTIVO DA NÃO RENOVAÇÃO (REGISTRADO PELO ADMIN)</span>
-                      <p>{modalStudent.nonRenewalReason}</p>
-                    </div>
-                  )}
-
-                  <form
-                    className="inspector-checkin-form"
-                    onSubmit={(event) => {
-                      event.preventDefault()
-                      completeCheckin(modalStudent.id, feedbackDraft)
-                    }}
-                  >
-                    <label>
-                      <span>Conduta do Treinador / Nutricionista (Retorno do Check-in)</span>
-                      <textarea
-                        rows={3}
-                        value={feedbackDraft}
-                        onChange={(event) => setFeedbackDraft(event.target.value)}
-                        placeholder={`Escreva os ajustes de treino e dieta para ${modalStudent.name}...`}
-                      />
-                    </label>
-                    <div className="inspector-form-buttons">
-                      <button type="submit">Salvar retorno e dar baixa no Check-in</button>
-                      {modalStudent.renewalState !== 'Recuperado' && (
-                        <button
-                          type="button"
-                          className="recover-btn"
-                          onClick={() => recoverStudentPlan(modalStudent.id)}
-                        >
-                          Confirmar renovação
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="non-renew-btn"
-                        onClick={() => {
-                          setNonRenewalOpenForId(
-                            nonRenewalOpenForId === modalStudent.id ? null : modalStudent.id,
-                          )
-                          setNonRenewalDraft(modalStudent.nonRenewalReason ?? '')
-                        }}
-                      >
-                        {modalStudent.renewalState === 'Não renovou'
-                          ? 'Editar motivo de não renovação'
-                          : 'Não renovou (escrever motivo)'}
-                      </button>
-                    </div>
-                  </form>
-
-                  {nonRenewalOpenForId === modalStudent.id && (
-                    <div className="modal-non-renewal-box">
-                      <label>
-                        <span>Motivo da não renovação (preenchido pelo Admin)</span>
-                        <textarea
-                          rows={2}
-                          value={nonRenewalDraft}
-                          onChange={(event) => setNonRenewalDraft(event.target.value)}
-                          placeholder="Ex.: Pausa financeira, mudança para consultoria presencial, viagem..."
-                          autoFocus
-                        />
-                      </label>
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => markNonRenewed(modalStudent.id, nonRenewalDraft)}
-                        >
-                          Salvar motivo da não renovação
-                        </button>
-                        <button
-                          type="button"
-                          className="cancel"
-                          onClick={() => setNonRenewalOpenForId(null)}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </section>
-              </div>
                     </FichaSection>
 
                     <FichaSection
@@ -3794,63 +3823,64 @@ export default function StudentsWorkspace({
                       onToggle={() => toggle('treino')}
                       summary={`${modalWorkoutPlan.splitName} · ${modalWorkoutPlan.frequency}`}
                     >
-              <section className="modal-plan-view" aria-label="Treino atual do aluno">
-                <header className="modal-plan-banner">
-                  <div>
-                    <span>PRESCRIÇÃO DE TREINO ATIVA NO MFIT</span>
-                    <h3>{modalWorkoutPlan.splitName}</h3>
-                    <p>{modalWorkoutPlan.technicalGuideline}</p>
-                  </div>
-                  <div className="modal-plan-kpis">
-                    <div>
-                      <span>FREQUÊNCIA SEMANAL</span>
-                      <strong>{modalWorkoutPlan.frequency}</strong>
-                    </div>
-                    <div>
-                      <span>PRESCRIÇÃO DE CARDIO / AERÓBICO</span>
-                      <strong>{modalWorkoutPlan.cardioPrescription}</strong>
-                    </div>
-                  </div>
-                </header>
-
-                <div className="workout-sessions-grid">
-                  {modalWorkoutPlan.sessions.map((session) => (
-                    <article key={session.code} className="workout-session-card">
-                      <header>
-                        <div>
-                          <span>{session.code}</span>
-                          <h4>{session.title}</h4>
-                        </div>
-                        <em>{session.schedule}</em>
-                      </header>
-
-                      <div className="workout-student-comment-box">
-                        <header>
-                          <span>COMENTÁRIO DO ALUNO NO APP ({session.code.toUpperCase()})</span>
-                          <time>{session.commentSentAt}</time>
-                        </header>
-                        <p>“{session.studentAppComment}”</p>
-
-                      </div>
-
-                      <div className="workout-exercise-list">
-                        {session.exercises.map((exercise) => (
-                          <div key={exercise.name} className="workout-exercise-row">
+                      <section className="modal-plan-view" aria-label="Treino atual do aluno">
+                        <header className="modal-plan-banner">
+                          <div>
+                            <span>PRESCRIÇÃO DE TREINO ATIVA NO MFIT</span>
+                            <h3>{modalWorkoutPlan.splitName}</h3>
+                            <p>{modalWorkoutPlan.technicalGuideline}</p>
+                          </div>
+                          <div className="modal-plan-kpis">
                             <div>
-                              <strong>{exercise.name}</strong>
-                              <small>{exercise.loadNote}</small>
+                              <span>FREQUÊNCIA SEMANAL</span>
+                              <strong>{modalWorkoutPlan.frequency}</strong>
                             </div>
-                            <div className="workout-exercise-meta">
-                              <span>{exercise.sets}</span>
-                              <em>Descanso: {exercise.rest}</em>
+                            <div>
+                              <span>PRESCRIÇÃO DE CARDIO / AERÓBICO</span>
+                              <strong>{modalWorkoutPlan.cardioPrescription}</strong>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
+                        </header>
+
+                        <div className="workout-sessions-grid">
+                          {modalWorkoutPlan.sessions.map((session) => (
+                            <article key={session.code} className="workout-session-card">
+                              <header>
+                                <div>
+                                  <span>{session.code}</span>
+                                  <h4>{session.title}</h4>
+                                </div>
+                                <em>{session.schedule}</em>
+                              </header>
+
+                              <div className="workout-student-comment-box">
+                                <header>
+                                  <span>
+                                    COMENTÁRIO DO ALUNO NO APP ({session.code.toUpperCase()})
+                                  </span>
+                                  <time>{session.commentSentAt}</time>
+                                </header>
+                                <p>“{session.studentAppComment}”</p>
+                              </div>
+
+                              <div className="workout-exercise-list">
+                                {session.exercises.map((exercise) => (
+                                  <div key={exercise.name} className="workout-exercise-row">
+                                    <div>
+                                      <strong>{exercise.name}</strong>
+                                      <small>{exercise.loadNote}</small>
+                                    </div>
+                                    <div className="workout-exercise-meta">
+                                      <span>{exercise.sets}</span>
+                                      <em>Descanso: {exercise.rest}</em>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      </section>
                     </FichaSection>
 
                     <FichaSection
@@ -3860,63 +3890,63 @@ export default function StudentsWorkspace({
                       onToggle={() => toggle('dieta')}
                       summary={`${modalDietPlan.strategyName} · ${modalDietPlan.dailyCalories}`}
                     >
-              <section className="modal-plan-view" aria-label="Dieta atual do aluno">
-                <header className="modal-plan-banner">
-                  <div>
-                    <span>PLANO ALIMENTAR ATIVO NO WEBDIET</span>
-                    <h3>{modalDietPlan.strategyName}</h3>
-                    <p>Suplementação: {modalDietPlan.supplements}</p>
-                  </div>
-                  <div className="diet-macros-strip">
-                    <div>
-                      <span>META CALÓRICA</span>
-                      <strong>{modalDietPlan.dailyCalories}</strong>
-                    </div>
-                    <div>
-                      <span>PROTEÍNAS</span>
-                      <strong>{modalDietPlan.proteinTarget}</strong>
-                    </div>
-                    <div>
-                      <span>CARBOIDRATOS</span>
-                      <strong>{modalDietPlan.carbsTarget}</strong>
-                    </div>
-                    <div>
-                      <span>GORDURAS & ÁGUA</span>
-                      <strong>
-                        {modalDietPlan.fatTarget} · {modalDietPlan.waterTarget}
-                      </strong>
-                    </div>
-                  </div>
-                </header>
+                      <section className="modal-plan-view" aria-label="Dieta atual do aluno">
+                        <header className="modal-plan-banner">
+                          <div>
+                            <span>PLANO ALIMENTAR ATIVO NO WEBDIET</span>
+                            <h3>{modalDietPlan.strategyName}</h3>
+                            <p>Suplementação: {modalDietPlan.supplements}</p>
+                          </div>
+                          <div className="diet-macros-strip">
+                            <div>
+                              <span>META CALÓRICA</span>
+                              <strong>{modalDietPlan.dailyCalories}</strong>
+                            </div>
+                            <div>
+                              <span>PROTEÍNAS</span>
+                              <strong>{modalDietPlan.proteinTarget}</strong>
+                            </div>
+                            <div>
+                              <span>CARBOIDRATOS</span>
+                              <strong>{modalDietPlan.carbsTarget}</strong>
+                            </div>
+                            <div>
+                              <span>GORDURAS & ÁGUA</span>
+                              <strong>
+                                {modalDietPlan.fatTarget} · {modalDietPlan.waterTarget}
+                              </strong>
+                            </div>
+                          </div>
+                        </header>
 
-                <MacroBar
-                  protein={modalDietPlan.proteinTarget}
-                  carbs={modalDietPlan.carbsTarget}
-                  fat={modalDietPlan.fatTarget}
-                />
+                        <MacroBar
+                          protein={modalDietPlan.proteinTarget}
+                          carbs={modalDietPlan.carbsTarget}
+                          fat={modalDietPlan.fatTarget}
+                        />
 
-                <div className="diet-meals-grid">
-                  {modalDietPlan.meals.map((meal) => (
-                    <article key={meal.title} className="diet-meal-card">
-                      <header>
-                        <div>
-                          <span>{meal.time}</span>
-                          <h4>{meal.title}</h4>
+                        <div className="diet-meals-grid">
+                          {modalDietPlan.meals.map((meal) => (
+                            <article key={meal.title} className="diet-meal-card">
+                              <header>
+                                <div>
+                                  <span>{meal.time}</span>
+                                  <h4>{meal.title}</h4>
+                                </div>
+                                <em>{meal.macros}</em>
+                              </header>
+                              <ul>
+                                {meal.items.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
+                              <footer>
+                                <strong>Opções de substituição:</strong> {meal.substitutions}
+                              </footer>
+                            </article>
+                          ))}
                         </div>
-                        <em>{meal.macros}</em>
-                      </header>
-                      <ul>
-                        {meal.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                      <footer>
-                        <strong>Opções de substituição:</strong> {meal.substitutions}
-                      </footer>
-                    </article>
-                  ))}
-                </div>
-              </section>
+                      </section>
                     </FichaSection>
 
                     <FichaSection
@@ -3924,507 +3954,587 @@ export default function StudentsWorkspace({
                       title="Fotos e evolução"
                       open={open.includes('fotos')}
                       onToggle={() => toggle('fotos')}
-                      badge={<span className="text-xs text-ink-3 tabular-nums">{modalAppPhotos.length}</span>}
-                      summary={`Peso atual ${modalLiveClin.fastingWeight}`}
+                      badge={
+                        <span className="text-xs text-ink-3 tabular-nums">
+                          {modalAppPhotos.length}
+                        </span>
+                      }
+                      summary={`Peso atual ${weightLabel(modalLiveClin)}`}
                     >
                       <div className="mb-5">
-                        <WeightTrend photos={modalAppPhotos} current={modalLiveClin.fastingWeight} />
+                        <WeightTrend photos={modalAppPhotos} current={weightLabel(modalLiveClin)} />
                       </div>
-              <section
-                className="student-photos-comparator-view"
-                aria-label={`Fotos enviadas pelo aplicativo e comparador de ${modalStudent.name}`}
-              >
-                <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-[15px] font-semibold text-ink">Comparador Antes × Depois</h3>
-                    <p className="text-xs text-ink-3">
-                      Fotos enviadas por {modalStudent.name} no app · escolha A e B nas miniaturas abaixo
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div role="radiogroup" aria-label="Modo de comparação" className="inline-flex h-9 rounded-control border border-line bg-surface p-0.5">
-                      {([
-                        ['side-by-side', 'Lado a lado'],
-                        ['slider', 'Slider'],
-                      ] as const).map(([mode, label]) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          role="radio"
-                          aria-checked={compareMode === mode}
-                          onClick={() => setCompareMode(mode)}
-                          className={`cursor-pointer rounded-[8px] px-3 text-xs font-semibold transition-colors ${compareMode === mode ? 'bg-night text-white' : 'text-ink-2 hover:text-ink'}`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      aria-pressed={blurThumbs}
-                      onClick={() => setBlurThumbs((current) => !current)}
-                      title="Desfoca as miniaturas até passar o mouse (útil em reuniões)"
-                    >
-                      <Icon name={blurThumbs ? 'eye' : 'eyeOff'} className="size-4" />
-                      {blurThumbs ? 'Mostrar miniaturas' : 'Desfocar miniaturas'}
-                    </Button>
-                    <Button size="sm" onClick={() => setAddPhotoFormOpen((open) => !open)}>
-                      <Icon name="plus" className="size-4" /> Nova foto
-                    </Button>
-                    {photoBefore && photoAfter && (
-                      <Menu
-                        label="Baixar comparação"
-                        items={exportTemplates.map((template) => ({
-                          id: template.id,
-                          label: template.label,
-                          description: template.description,
-                          onSelect: async () => {
-                            setExportError('')
-                            setExportingTemplate(template.id)
-                            const short = (label: string) => label.split('·')[0].trim()
-                            try {
-                              await downloadComparison(
-                                template,
-                                {
-                                  before: { url: photoBefore.imageUrl, date: short(photoBefore.dateLabel), weight: photoBefore.weightKg, label: 'Antes' },
-                                  after: { url: photoAfter.imageUrl, date: short(photoAfter.dateLabel), weight: photoAfter.weightKg, label: 'Depois' },
-                                  studentName: modalStudent.name.split(' ')[0],
-                                  accent: getComputedStyle(document.documentElement).getPropertyValue('--elevn-accent').trim() || '#6b5f2a',
-                                },
-                                `elevn-${modalStudent.id.replace('student-', '')}-antes-depois-${template.id}.png`,
-                              )
-                            } catch {
-                              setExportError('Não foi possível gerar a imagem com estas fotos. Tente outro par ou envie as fotos de novo.')
-                            } finally {
-                              setExportingTemplate(null)
-                            }
-                          },
-                        }))}
-                        trigger={({ open, toggle, id }) => (
-                          <Button
-                            size="sm"
-                            variant="accent"
-                            onClick={toggle}
-                            aria-haspopup="menu"
-                            aria-expanded={open}
-                            aria-controls={open ? id : undefined}
-                            disabled={!!exportingTemplate}
+                      <section
+                        className="student-photos-comparator-view"
+                        aria-label={`Fotos enviadas pelo aplicativo e comparador de ${modalStudent.name}`}
+                      >
+                        <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-[15px] font-semibold text-ink">
+                              Comparador Antes × Depois
+                            </h3>
+                            <p className="text-xs text-ink-3">
+                              Fotos enviadas por {modalStudent.name} no app · escolha A e B nas
+                              miniaturas abaixo
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div
+                              role="radiogroup"
+                              aria-label="Modo de comparação"
+                              className="inline-flex h-9 rounded-control border border-line bg-surface p-0.5"
+                            >
+                              {(
+                                [
+                                  ['side-by-side', 'Lado a lado'],
+                                  ['slider', 'Slider'],
+                                ] as const
+                              ).map(([mode, label]) => (
+                                <button
+                                  key={mode}
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={compareMode === mode}
+                                  onClick={() => setCompareMode(mode)}
+                                  className={`cursor-pointer rounded-[8px] px-3 text-xs font-semibold transition-colors ${compareMode === mode ? 'bg-night text-white' : 'text-ink-2 hover:text-ink'}`}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              aria-pressed={blurThumbs}
+                              onClick={() => setBlurThumbs((current) => !current)}
+                              title="Desfoca as miniaturas até passar o mouse (útil em reuniões)"
+                            >
+                              <Icon name={blurThumbs ? 'eye' : 'eyeOff'} className="size-4" />
+                              {blurThumbs ? 'Mostrar miniaturas' : 'Desfocar miniaturas'}
+                            </Button>
+                            <Button size="sm" onClick={() => setAddPhotoFormOpen((open) => !open)}>
+                              <Icon name="plus" className="size-4" /> Nova foto
+                            </Button>
+                            {photoBefore && photoAfter && (
+                              <Menu
+                                label="Baixar comparação"
+                                items={exportTemplates.map((template) => ({
+                                  id: template.id,
+                                  label: template.label,
+                                  description: template.description,
+                                  onSelect: async () => {
+                                    setExportError('')
+                                    setExportingTemplate(template.id)
+                                    const short = (label: string) => label.split('·')[0].trim()
+                                    try {
+                                      await downloadComparison(
+                                        template,
+                                        {
+                                          before: {
+                                            url: photoBefore.imageUrl,
+                                            date: short(photoBefore.dateLabel),
+                                            weight: photoBefore.weightKg,
+                                            label: 'Antes',
+                                          },
+                                          after: {
+                                            url: photoAfter.imageUrl,
+                                            date: short(photoAfter.dateLabel),
+                                            weight: photoAfter.weightKg,
+                                            label: 'Depois',
+                                          },
+                                          studentName: modalStudent.name.split(' ')[0],
+                                          accent:
+                                            getComputedStyle(document.documentElement)
+                                              .getPropertyValue('--elevn-accent')
+                                              .trim() || '#6b5f2a',
+                                        },
+                                        `elevn-${modalStudent.id.replace('student-', '')}-antes-depois-${template.id}.png`,
+                                      )
+                                    } catch {
+                                      setExportError(
+                                        'Não foi possível gerar a imagem com estas fotos. Tente outro par ou envie as fotos de novo.',
+                                      )
+                                    } finally {
+                                      setExportingTemplate(null)
+                                    }
+                                  },
+                                }))}
+                                trigger={({ open, toggle, id }) => (
+                                  <Button
+                                    size="sm"
+                                    variant="accent"
+                                    onClick={toggle}
+                                    aria-haspopup="menu"
+                                    aria-expanded={open}
+                                    aria-controls={open ? id : undefined}
+                                    disabled={!!exportingTemplate}
+                                  >
+                                    <Icon name="download" className="size-4" />
+                                    {exportingTemplate ? 'Gerando…' : 'Baixar'}
+                                  </Button>
+                                )}
+                              />
+                            )}
+                          </div>
+                        </header>
+                        {exportError && (
+                          <p
+                            role="alert"
+                            className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger"
                           >
-                            <Icon name="download" className="size-4" />
-                            {exportingTemplate ? 'Gerando…' : 'Baixar'}
-                          </Button>
+                            {exportError}
+                          </p>
                         )}
-                      />
-                    )}
-                  </div>
-                </header>
-                {exportError && (
-                  <p role="alert" className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
-                    {exportError}
-                  </p>
-                )}
 
-                {addPhotoFormOpen && (
-                  <form className="add-app-photo-form" onSubmit={handleAddStudentAppPhoto}>
-                    <div className="add-app-photo-head">
-                      <strong>Adicionar foto de evolução</strong>
-                      <button type="button" onClick={() => setAddPhotoFormOpen(false)}>
-                        Fechar
-                      </button>
-                    </div>
-
-                    <div className="add-app-photo-grid">
-                      <label>
-                        <span>Pose / Ângulo</span>
-                        <select
-                          value={newPhotoAngle}
-                          onChange={(e) => setNewPhotoAngle(e.target.value as StudentPhotoAngle)}
-                        >
-                          <option value="Frente">Frente</option>
-                          <option value="Costas">Costas</option>
-                          <option value="Perfil Direito">Perfil Direito</option>
-                          <option value="Pós-Treino">Pós-Treino</option>
-                        </select>
-                      </label>
-                      <label>
-                        <span>Data da foto</span>
-                        <input
-                          type="date"
-                          value={newPhotoDate}
-                          max={new Date().toISOString().slice(0, 10)}
-                          onChange={(e) => setNewPhotoDate(e.target.value)}
-                          aria-describedby="photo-date-hint"
-                        />
-                        <small id="photo-date-hint" style={{ fontSize: 11, color: 'var(--color-ink-3)' }}>
-                          Em branco: hoje
-                        </small>
-                      </label>
-                      <label>
-                        <span>Etapa / Ciclo</span>
-                        <input
-                          type="text"
-                          value={newPhotoCycle}
-                          onChange={(e) => setNewPhotoCycle(e.target.value)}
-                          placeholder="Ex.: Check-in Semana 14"
-                        />
-                      </label>
-                      <label>
-                        <span>Peso no dia da foto</span>
-                        <input
-                          type="text"
-                          value={newPhotoWeight}
-                          onChange={(e) => setNewPhotoWeight(e.target.value)}
-                          placeholder="Ex.: 77,2 kg"
-                        />
-                      </label>
-                      <label className="upload-file-label">
-                        <span>Subir foto do dispositivo</span>
-                        <input type="file" accept="image/*" onChange={handleNewPhotoFileUpload} />
-                      </label>
-                    </div>
-
-                    <label className="add-app-photo-note">
-                      <span>Observação enviada pelo aluno junto com a foto</span>
-                      <input
-                        type="text"
-                        value={newPhotoNote}
-                        onChange={(e) => setNewPhotoNote(e.target.value)}
-                        placeholder="Ex.: Foto tirada em jejum pela manhã após concluir a semana 14..."
-                      />
-                    </label>
-
-                    <div className="add-app-photo-foot">
-                      <button type="submit">Salvar foto na galeria do aluno e comparar</button>
-                    </div>
-                  </form>
-                )}
-
-                {photoBefore && photoAfter && <ComparisonDeltas before={photoBefore} after={photoAfter} />}
-                {/* PALCO DO COMPARADOR DE FOTOS (LADO A LADO OU SLIDER) */}
-                {photoBefore && photoAfter && (
-                  <div className="comparator-stage-card">
-                    {compareMode === 'side-by-side' ? (
-                      <div className="comparator-side-by-side-grid">
-                        <article className="comparator-photo-pane before">
-                          <div className="pane-top-badges">
-                            <span className="pane-tag before-tag">FOTO A · ANTES</span>
-                            <span className="pane-angle">{photoBefore.angle}</span>
-                            <span className="pane-weight">{photoBefore.weightKg}</span>
-                          </div>
-                          <div className="pane-image-frame">
-                            <img
-                              src={photoBefore.imageUrl}
-                              alt={`Foto Antes (${photoBefore.angle}) de ${modalStudent.name}`}
-                            />
-                          </div>
-                          <div className="pane-footer-meta">
-                            <strong>{photoBefore.cycleLabel}</strong>
-                            <time>Enviada no App em {photoBefore.dateLabel}</time>
-                            <p>“{photoBefore.studentNote}”</p>
-                          </div>
-                        </article>
-
-                        <article className="comparator-photo-pane after">
-                          <div className="pane-top-badges">
-                            <span className="pane-tag after-tag">FOTO B · DEPOIS (ATUAL)</span>
-                            <span className="pane-angle">{photoAfter.angle}</span>
-                            <span className="pane-weight">{photoAfter.weightKg}</span>
-                          </div>
-                          <div className="pane-image-frame">
-                            <img
-                              src={photoAfter.imageUrl}
-                              alt={`Foto Depois (${photoAfter.angle}) de ${modalStudent.name}`}
-                            />
-                          </div>
-                          <div className="pane-footer-meta">
-                            <strong>{photoAfter.cycleLabel}</strong>
-                            <time>Enviada no App em {photoAfter.dateLabel}</time>
-                            <p>“{photoAfter.studentNote}”</p>
-                          </div>
-                        </article>
-                      </div>
-                    ) : (
-                      <div className="comparator-slider-stage">
-                        <div className="slider-instructions-bar">
-                          <span>
-                            Clique e arraste o botão <strong>↔</strong> diretamente sobre a foto
-                            para revelar o <strong>Antes</strong> e o <strong>Depois</strong>:
-                          </span>
-                          <div className="slider-quick-positions">
-                            {[
-                              { label: 'Só Depois (0%)', val: 2 },
-                              { label: '25%', val: 25 },
-                              { label: 'Meio a Meio (50%)', val: 50 },
-                              { label: '75%', val: 75 },
-                              { label: 'Só Antes (100%)', val: 98 },
-                            ].map((preset) => (
-                              <button
-                                key={preset.label}
-                                type="button"
-                                className={
-                                  Math.abs(sliderPosition - preset.val) <= 3 ? 'active' : ''
-                                }
-                                onClick={() => setSliderPosition(preset.val)}
-                              >
-                                {preset.label}
+                        {addPhotoFormOpen && (
+                          <form className="add-app-photo-form" onSubmit={handleAddStudentAppPhoto}>
+                            <div className="add-app-photo-head">
+                              <strong>Adicionar foto de evolução</strong>
+                              <button type="button" onClick={() => setAddPhotoFormOpen(false)}>
+                                Fechar
                               </button>
-                            ))}
+                            </div>
+
+                            <div className="add-app-photo-grid">
+                              <label>
+                                <span>Pose / Ângulo</span>
+                                <select
+                                  value={newPhotoAngle}
+                                  onChange={(e) =>
+                                    setNewPhotoAngle(e.target.value as StudentPhotoAngle)
+                                  }
+                                >
+                                  <option value="Frente">Frente</option>
+                                  <option value="Costas">Costas</option>
+                                  <option value="Perfil Direito">Perfil Direito</option>
+                                  <option value="Pós-Treino">Pós-Treino</option>
+                                </select>
+                              </label>
+                              <label>
+                                <span>Data da foto</span>
+                                <input
+                                  type="date"
+                                  value={newPhotoDate}
+                                  max={new Date().toISOString().slice(0, 10)}
+                                  onChange={(e) => setNewPhotoDate(e.target.value)}
+                                  aria-describedby="photo-date-hint"
+                                />
+                                <small
+                                  id="photo-date-hint"
+                                  style={{ fontSize: 11, color: 'var(--color-ink-3)' }}
+                                >
+                                  Em branco: hoje
+                                </small>
+                              </label>
+                              <label>
+                                <span>Etapa / Ciclo</span>
+                                <input
+                                  type="text"
+                                  value={newPhotoCycle}
+                                  onChange={(e) => setNewPhotoCycle(e.target.value)}
+                                  placeholder="Ex.: Check-in Semana 14"
+                                />
+                              </label>
+                              <label>
+                                <span>Peso no dia da foto</span>
+                                <input
+                                  type="text"
+                                  value={newPhotoWeight}
+                                  onChange={(e) => setNewPhotoWeight(e.target.value)}
+                                  placeholder="Ex.: 77,2 kg"
+                                />
+                              </label>
+                              <label className="upload-file-label">
+                                <span>Subir foto do dispositivo</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleNewPhotoFileUpload}
+                                />
+                              </label>
+                            </div>
+
+                            <label className="add-app-photo-note">
+                              <span>Observação enviada pelo aluno junto com a foto</span>
+                              <input
+                                type="text"
+                                value={newPhotoNote}
+                                onChange={(e) => setNewPhotoNote(e.target.value)}
+                                placeholder="Ex.: Foto tirada em jejum pela manhã após concluir a semana 14..."
+                              />
+                            </label>
+
+                            <div className="add-app-photo-foot">
+                              <button type="submit">
+                                Salvar foto na galeria do aluno e comparar
+                              </button>
+                            </div>
+                          </form>
+                        )}
+
+                        {photoBefore && photoAfter && (
+                          <ComparisonDeltas before={photoBefore} after={photoAfter} />
+                        )}
+                        {/* PALCO DO COMPARADOR DE FOTOS (LADO A LADO OU SLIDER) */}
+                        {photoBefore && photoAfter && (
+                          <div className="comparator-stage-card">
+                            {compareMode === 'side-by-side' ? (
+                              <div className="comparator-side-by-side-grid">
+                                <article className="comparator-photo-pane before">
+                                  <div className="pane-top-badges">
+                                    <span className="pane-tag before-tag">FOTO A · ANTES</span>
+                                    <span className="pane-angle">{photoBefore.angle}</span>
+                                    <span className="pane-weight">{photoBefore.weightKg}</span>
+                                  </div>
+                                  <div className="pane-image-frame">
+                                    <img
+                                      src={photoBefore.imageUrl}
+                                      alt={`Foto Antes (${photoBefore.angle}) de ${modalStudent.name}`}
+                                    />
+                                  </div>
+                                  <div className="pane-footer-meta">
+                                    <strong>{photoBefore.cycleLabel}</strong>
+                                    <time>Enviada no App em {photoBefore.dateLabel}</time>
+                                    <p>“{photoBefore.studentNote}”</p>
+                                  </div>
+                                </article>
+
+                                <article className="comparator-photo-pane after">
+                                  <div className="pane-top-badges">
+                                    <span className="pane-tag after-tag">
+                                      FOTO B · DEPOIS (ATUAL)
+                                    </span>
+                                    <span className="pane-angle">{photoAfter.angle}</span>
+                                    <span className="pane-weight">{photoAfter.weightKg}</span>
+                                  </div>
+                                  <div className="pane-image-frame">
+                                    <img
+                                      src={photoAfter.imageUrl}
+                                      alt={`Foto Depois (${photoAfter.angle}) de ${modalStudent.name}`}
+                                    />
+                                  </div>
+                                  <div className="pane-footer-meta">
+                                    <strong>{photoAfter.cycleLabel}</strong>
+                                    <time>Enviada no App em {photoAfter.dateLabel}</time>
+                                    <p>“{photoAfter.studentNote}”</p>
+                                  </div>
+                                </article>
+                              </div>
+                            ) : (
+                              <div className="comparator-slider-stage">
+                                <div className="slider-instructions-bar">
+                                  <span>
+                                    Clique e arraste o botão <strong>↔</strong> diretamente sobre a
+                                    foto para revelar o <strong>Antes</strong> e o{' '}
+                                    <strong>Depois</strong>:
+                                  </span>
+                                  <div className="slider-quick-positions">
+                                    {[
+                                      { label: 'Só Depois (0%)', val: 2 },
+                                      { label: '25%', val: 25 },
+                                      { label: 'Meio a Meio (50%)', val: 50 },
+                                      { label: '75%', val: 75 },
+                                      { label: 'Só Antes (100%)', val: 98 },
+                                    ].map((preset) => (
+                                      <button
+                                        key={preset.label}
+                                        type="button"
+                                        className={
+                                          Math.abs(sliderPosition - preset.val) <= 3 ? 'active' : ''
+                                        }
+                                        onClick={() => setSliderPosition(preset.val)}
+                                      >
+                                        {preset.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div
+                                  ref={sliderViewportRef}
+                                  className={`slider-viewport ${isDraggingSlider ? 'is-dragging' : ''}`}
+                                  onPointerDown={handleSliderPointerDown}
+                                  onPointerMove={handleSliderPointerMove}
+                                  onPointerUp={handleSliderPointerUp}
+                                  onPointerCancel={handleSliderPointerUp}
+                                  role="slider"
+                                  aria-label="Comparador deslizante Antes e Depois"
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                  aria-valuenow={sliderPosition}
+                                  tabIndex={0}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'ArrowLeft') {
+                                      e.preventDefault()
+                                      setSliderPosition((p) => Math.max(2, p - 5))
+                                    } else if (e.key === 'ArrowRight') {
+                                      e.preventDefault()
+                                      setSliderPosition((p) => Math.min(98, p + 5))
+                                    }
+                                  }}
+                                >
+                                  {/* CAMADA DE FUNDO: FOTO B (DEPOIS / ATUAL) EM TAMANHO 100% FIXO */}
+                                  <img
+                                    src={photoAfter.imageUrl}
+                                    alt="Foto Depois"
+                                    className="slider-img-after"
+                                    draggable={false}
+                                  />
+
+                                  {/* CAMADA DE RECORTE CORTINA: FOTO A (ANTES) EM TAMANHO 100% IDÊNTICO COM CLIP-PATH */}
+                                  <div
+                                    className="slider-before-clip"
+                                    style={{
+                                      clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
+                                      WebkitClipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
+                                    }}
+                                  >
+                                    <img
+                                      src={photoBefore.imageUrl}
+                                      alt="Foto Antes"
+                                      className="slider-img-before"
+                                      draggable={false}
+                                    />
+                                  </div>
+
+                                  {/* CAMADA OPCIONAL DE TRANSPARÊNCIA FANTASMA (SE O ADMIN QUISER SOBREPOR COM OPACIDADE) */}
+                                  {overlayBlendOpacity > 0 && (
+                                    <img
+                                      src={photoBefore.imageUrl}
+                                      alt=""
+                                      aria-hidden="true"
+                                      className="slider-img-ghost"
+                                      style={{ opacity: overlayBlendOpacity / 100 }}
+                                      draggable={false}
+                                    />
+                                  )}
+
+                                  <div
+                                    className="slider-divider-line"
+                                    style={{ left: `${sliderPosition}%` }}
+                                  >
+                                    <span className="slider-handle-circle">
+                                      ↔<small>{sliderPosition}%</small>
+                                    </span>
+                                  </div>
+
+                                  <span className="slider-corner-badge left">
+                                    FOTO A (ANTES) · {photoBefore.dateLabel} ·{' '}
+                                    {photoBefore.weightKg}
+                                  </span>
+                                  <span className="slider-corner-badge right">
+                                    FOTO B (DEPOIS) · {photoAfter.dateLabel} · {photoAfter.weightKg}
+                                  </span>
+                                </div>
+
+                                <div className="slider-dual-controls-grid">
+                                  <div className="slider-range-control">
+                                    <span>Posição da Cortina (Antes × Depois):</span>
+                                    <input
+                                      type="range"
+                                      min={2}
+                                      max={98}
+                                      value={sliderPosition}
+                                      onChange={(e) => setSliderPosition(Number(e.target.value))}
+                                      aria-label="Controle deslizante de comparação entre Foto A e Foto B"
+                                    />
+                                    <strong>{sliderPosition}%</strong>
+                                  </div>
+
+                                  <div className="slider-range-control">
+                                    <span>Transparência Fantasma (Sobrepor Foto A sobre B):</span>
+                                    <input
+                                      type="range"
+                                      min={0}
+                                      max={100}
+                                      value={overlayBlendOpacity}
+                                      onChange={(e) =>
+                                        setOverlayBlendOpacity(Number(e.target.value))
+                                      }
+                                      aria-label="Opacidade de sobreposição fantasma"
+                                    />
+                                    <strong>{overlayBlendOpacity}%</strong>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
+                        )}
 
-                        <div
-                          ref={sliderViewportRef}
-                          className={`slider-viewport ${isDraggingSlider ? 'is-dragging' : ''}`}
-                          onPointerDown={handleSliderPointerDown}
-                          onPointerMove={handleSliderPointerMove}
-                          onPointerUp={handleSliderPointerUp}
-                          onPointerCancel={handleSliderPointerUp}
-                          role="slider"
-                          aria-label="Comparador deslizante Antes e Depois"
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-valuenow={sliderPosition}
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === 'ArrowLeft') {
-                              e.preventDefault()
-                              setSliderPosition((p) => Math.max(2, p - 5))
-                            } else if (e.key === 'ArrowRight') {
-                              e.preventDefault()
-                              setSliderPosition((p) => Math.min(98, p + 5))
-                            }
-                          }}
-                        >
-                          {/* CAMADA DE FUNDO: FOTO B (DEPOIS / ATUAL) EM TAMANHO 100% FIXO */}
-                          <img
-                            src={photoAfter.imageUrl}
-                            alt="Foto Depois"
-                            className="slider-img-after"
-                            draggable={false}
-                          />
-
-                          {/* CAMADA DE RECORTE CORTINA: FOTO A (ANTES) EM TAMANHO 100% IDÊNTICO COM CLIP-PATH */}
-                          <div
-                            className="slider-before-clip"
-                            style={{
-                              clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
-                              WebkitClipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
-                            }}
-                          >
-                            <img
-                              src={photoBefore.imageUrl}
-                              alt="Foto Antes"
-                              className="slider-img-before"
-                              draggable={false}
-                            />
-                          </div>
-
-                          {/* CAMADA OPCIONAL DE TRANSPARÊNCIA FANTASMA (SE O ADMIN QUISER SOBREPOR COM OPACIDADE) */}
-                          {overlayBlendOpacity > 0 && (
-                            <img
-                              src={photoBefore.imageUrl}
-                              alt=""
-                              aria-hidden="true"
-                              className="slider-img-ghost"
-                              style={{ opacity: overlayBlendOpacity / 100 }}
-                              draggable={false}
-                            />
-                          )}
-
-                          <div
-                            className="slider-divider-line"
-                            style={{ left: `${sliderPosition}%` }}
-                          >
-                            <span className="slider-handle-circle">
-                              ↔<small>{sliderPosition}%</small>
-                            </span>
-                          </div>
-
-                          <span className="slider-corner-badge left">
-                            FOTO A (ANTES) · {photoBefore.dateLabel} · {photoBefore.weightKg}
-                          </span>
-                          <span className="slider-corner-badge right">
-                            FOTO B (DEPOIS) · {photoAfter.dateLabel} · {photoAfter.weightKg}
-                          </span>
-                        </div>
-
-                        <div className="slider-dual-controls-grid">
-                          <div className="slider-range-control">
-                            <span>Posição da Cortina (Antes × Depois):</span>
-                            <input
-                              type="range"
-                              min={2}
-                              max={98}
-                              value={sliderPosition}
-                              onChange={(e) => setSliderPosition(Number(e.target.value))}
-                              aria-label="Controle deslizante de comparação entre Foto A e Foto B"
-                            />
-                            <strong>{sliderPosition}%</strong>
-                          </div>
-
-                          <div className="slider-range-control">
-                            <span>Transparência Fantasma (Sobrepor Foto A sobre B):</span>
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              value={overlayBlendOpacity}
-                              onChange={(e) => setOverlayBlendOpacity(Number(e.target.value))}
-                              aria-label="Opacidade de sobreposição fantasma"
-                            />
-                            <strong>{overlayBlendOpacity}%</strong>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="mt-4 rounded-card border border-line bg-surface p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="mr-1 text-xs font-semibold text-ink-3">Mesma pose:</span>
-                      {(['Frente', 'Costas', 'Perfil Direito', 'Pós-Treino'] as const).map((angle) => (
-                        <button
-                          key={angle}
-                          type="button"
-                          onClick={() => pairSameAngleForComparison(angle)}
-                          className={`h-7 cursor-pointer rounded-full border px-2.5 text-xs font-medium transition-colors ${photoBefore?.angle === angle && photoAfter?.angle === angle ? 'border-brand bg-brand-soft text-ink' : 'border-line text-ink-2 hover:border-ink-3'}`}
-                        >
-                          {angle}
-                        </button>
-                      ))}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        if (!photoBefore || !photoAfter) return
-                        const prevBefore = photoBefore.id
-                        setCompareBeforeId(photoAfter.id)
-                        setCompareAfterId(prevBefore)
-                      }}
-                    >
-                      <Icon name="swap" className="size-4" /> Inverter A e B
-                    </Button>
-                  </div>
-                  <ol className={`mt-3 flex gap-3 overflow-x-auto pb-1 ${blurThumbs ? 'blur-thumbs' : ''}`} aria-label="Fotos do aluno, da mais antiga para a mais recente">
-                    {modalAppPhotos.map((photo) => {
-                      const isA = photoBefore?.id === photo.id
-                      const isB = photoAfter?.id === photo.id
-                      return (
-                        <li key={photo.id} className="w-28 shrink-0">
-                          <div className={`relative overflow-hidden rounded-[10px] border-2 ${isA ? 'border-ink-2' : isB ? 'border-brand' : 'border-transparent'}`}>
-                            <img src={photo.imageUrl} alt={`${photo.angle}, ${photo.dateLabel}`} className="aspect-[3/4] w-full bg-night object-cover" />
-                            {(isA || isB) && (
-                              <span className={`absolute top-1.5 left-1.5 rounded-full px-1.5 text-[11px] font-bold text-white ${isA ? 'bg-ink-2' : 'bg-brand'}`}>
-                                {isA ? 'A' : 'B'}
+                        <div className="mt-4 rounded-card border border-line bg-surface p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="mr-1 text-xs font-semibold text-ink-3">
+                                Mesma pose:
                               </span>
-                            )}
-                          </div>
-                          <p className="mt-1 truncate text-xs font-medium text-ink">{photo.angle}</p>
-                          <p className="truncate text-[11px] text-ink-3">{photo.dateLabel.split(' · ')[0]} · {photo.weightKg}</p>
-                          <div className="mt-1 grid grid-cols-2 gap-1">
-                            <button
-                              type="button"
-                              aria-pressed={isA}
-                              onClick={() => setCompareBeforeId(photo.id)}
-                              className={`h-6 cursor-pointer rounded-md border text-[11px] font-semibold ${isA ? 'border-ink-2 bg-ink-2 text-white' : 'border-line text-ink-2 hover:border-ink-3'}`}
+                              {(['Frente', 'Costas', 'Perfil Direito', 'Pós-Treino'] as const).map(
+                                (angle) => (
+                                  <button
+                                    key={angle}
+                                    type="button"
+                                    onClick={() => pairSameAngleForComparison(angle)}
+                                    className={`h-7 cursor-pointer rounded-full border px-2.5 text-xs font-medium transition-colors ${photoBefore?.angle === angle && photoAfter?.angle === angle ? 'border-brand bg-brand-soft text-ink' : 'border-line text-ink-2 hover:border-ink-3'}`}
+                                  >
+                                    {angle}
+                                  </button>
+                                ),
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                if (!photoBefore || !photoAfter) return
+                                const prevBefore = photoBefore.id
+                                setCompareBeforeId(photoAfter.id)
+                                setCompareAfterId(prevBefore)
+                              }}
                             >
-                              Antes
-                            </button>
-                            <button
-                              type="button"
-                              aria-pressed={isB}
-                              onClick={() => setCompareAfterId(photo.id)}
-                              className={`h-6 cursor-pointer rounded-md border text-[11px] font-semibold ${isB ? 'border-brand bg-brand text-white' : 'border-line text-ink-2 hover:border-ink-3'}`}
-                            >
-                              Depois
-                            </button>
+                              <Icon name="swap" className="size-4" /> Inverter A e B
+                            </Button>
                           </div>
-                        </li>
-                      )
-                    })}
-                  </ol>
-                </div>
-                {/* GALERIA COMPLETA DE TODAS AS FOTOS ENVIADAS PELO ALUNO NO APLICATIVO */}
-                <div className="student-all-photos-section">
-                  <header className="all-photos-header">
-                    <div>
-                      <span>HISTÓRICO COMPLETO DE FOTOS NO APLICATIVO</span>
-                      <h4>
-                        Todas as fotos enviadas por {modalStudent.name} (
-                        {filteredModalPhotos.length})
-                      </h4>
-                    </div>
-
-                    <div className="all-photos-filter-pills">
-                      {(['Todos', 'Frente', 'Costas', 'Perfil Direito', 'Pós-Treino'] as const).map(
-                        (angle) => (
-                          <button
-                            key={angle}
-                            type="button"
-                            className={photoAngleFilter === angle ? 'active' : ''}
-                            onClick={() => setPhotoAngleFilter(angle)}
+                          <ol
+                            className={`mt-3 flex gap-3 overflow-x-auto pb-1 ${blurThumbs ? 'blur-thumbs' : ''}`}
+                            aria-label="Fotos do aluno, da mais antiga para a mais recente"
                           >
-                            {angle}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </header>
+                            {modalAppPhotos.map((photo) => {
+                              const isA = photoBefore?.id === photo.id
+                              const isB = photoAfter?.id === photo.id
+                              return (
+                                <li key={photo.id} className="w-28 shrink-0">
+                                  <div
+                                    className={`relative overflow-hidden rounded-[10px] border-2 ${isA ? 'border-ink-2' : isB ? 'border-brand' : 'border-transparent'}`}
+                                  >
+                                    <img
+                                      src={photo.imageUrl}
+                                      alt={`${photo.angle}, ${photo.dateLabel}`}
+                                      className="aspect-[3/4] w-full bg-night object-cover"
+                                    />
+                                    {(isA || isB) && (
+                                      <span
+                                        className={`absolute top-1.5 left-1.5 rounded-full px-1.5 text-[11px] font-bold text-white ${isA ? 'bg-ink-2' : 'bg-brand'}`}
+                                      >
+                                        {isA ? 'A' : 'B'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 truncate text-xs font-medium text-ink">
+                                    {photo.angle}
+                                  </p>
+                                  <p className="truncate text-[11px] text-ink-3">
+                                    {photo.dateLabel.split(' · ')[0]} · {photo.weightKg}
+                                  </p>
+                                  <div className="mt-1 grid grid-cols-2 gap-1">
+                                    <button
+                                      type="button"
+                                      aria-pressed={isA}
+                                      onClick={() => setCompareBeforeId(photo.id)}
+                                      className={`h-6 cursor-pointer rounded-md border text-[11px] font-semibold ${isA ? 'border-ink-2 bg-ink-2 text-white' : 'border-line text-ink-2 hover:border-ink-3'}`}
+                                    >
+                                      Antes
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-pressed={isB}
+                                      onClick={() => setCompareAfterId(photo.id)}
+                                      className={`h-6 cursor-pointer rounded-md border text-[11px] font-semibold ${isB ? 'border-brand bg-brand text-white' : 'border-line text-ink-2 hover:border-ink-3'}`}
+                                    >
+                                      Depois
+                                    </button>
+                                  </div>
+                                </li>
+                              )
+                            })}
+                          </ol>
+                        </div>
+                        {/* GALERIA COMPLETA DE TODAS AS FOTOS ENVIADAS PELO ALUNO NO APLICATIVO */}
+                        <div className="student-all-photos-section">
+                          <header className="all-photos-header">
+                            <div>
+                              <span>HISTÓRICO COMPLETO DE FOTOS NO APLICATIVO</span>
+                              <h4>
+                                Todas as fotos enviadas por {modalStudent.name} (
+                                {filteredModalPhotos.length})
+                              </h4>
+                            </div>
 
-                  <div className={`student-photos-gallery-grid ${blurThumbs ? 'blur-thumbs' : ''}`}>
-                    {filteredModalPhotos.map((photo) => {
-                      const isBefore = photoBefore?.id === photo.id
-                      const isAfter = photoAfter?.id === photo.id
-                      return (
-                        <article
-                          key={photo.id}
-                          className={`student-photo-card ${isBefore ? 'selected-before' : ''} ${
-                            isAfter ? 'selected-after' : ''
-                          }`}
-                        >
-                          <div className="photo-card-thumb">
-                            <img src={photo.imageUrl} alt={`${photo.angle} - ${photo.dateLabel}`} />
-                            <span className="angle-badge">{photo.angle}</span>
-                            <span className="weight-badge">{photo.weightKg}</span>
+                            <div className="all-photos-filter-pills">
+                              {(
+                                [
+                                  'Todos',
+                                  'Frente',
+                                  'Costas',
+                                  'Perfil Direito',
+                                  'Pós-Treino',
+                                ] as const
+                              ).map((angle) => (
+                                <button
+                                  key={angle}
+                                  type="button"
+                                  className={photoAngleFilter === angle ? 'active' : ''}
+                                  onClick={() => setPhotoAngleFilter(angle)}
+                                >
+                                  {angle}
+                                </button>
+                              ))}
+                            </div>
+                          </header>
+
+                          <div
+                            className={`student-photos-gallery-grid ${blurThumbs ? 'blur-thumbs' : ''}`}
+                          >
+                            {filteredModalPhotos.map((photo) => {
+                              const isBefore = photoBefore?.id === photo.id
+                              const isAfter = photoAfter?.id === photo.id
+                              return (
+                                <article
+                                  key={photo.id}
+                                  className={`student-photo-card ${isBefore ? 'selected-before' : ''} ${
+                                    isAfter ? 'selected-after' : ''
+                                  }`}
+                                >
+                                  <div className="photo-card-thumb">
+                                    <img
+                                      src={photo.imageUrl}
+                                      alt={`${photo.angle} - ${photo.dateLabel}`}
+                                    />
+                                    <span className="angle-badge">{photo.angle}</span>
+                                    <span className="weight-badge">{photo.weightKg}</span>
+                                  </div>
+
+                                  <div className="photo-card-body">
+                                    <strong>{photo.cycleLabel}</strong>
+                                    <time>Enviada em {photo.dateLabel}</time>
+                                    <p>“{photo.studentNote}”</p>
+                                    {photo.adminObservation && (
+                                      <small className="admin-obs">
+                                        Nota do Admin: {photo.adminObservation}
+                                      </small>
+                                    )}
+                                  </div>
+
+                                  <footer className="photo-card-compare-actions">
+                                    <button
+                                      type="button"
+                                      className={isBefore ? 'active-before' : ''}
+                                      onClick={() => setCompareBeforeId(photo.id)}
+                                    >
+                                      {isBefore ? '✓ Na Foto A (Antes)' : 'Usar como Foto A'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={isAfter ? 'active-after' : ''}
+                                      onClick={() => setCompareAfterId(photo.id)}
+                                    >
+                                      {isAfter ? '✓ Na Foto B (Depois)' : 'Usar como Foto B'}
+                                    </button>
+                                  </footer>
+                                </article>
+                              )
+                            })}
                           </div>
-
-                          <div className="photo-card-body">
-                            <strong>{photo.cycleLabel}</strong>
-                            <time>Enviada em {photo.dateLabel}</time>
-                            <p>“{photo.studentNote}”</p>
-                            {photo.adminObservation && (
-                              <small className="admin-obs">
-                                Nota do Admin: {photo.adminObservation}
-                              </small>
-                            )}
-                          </div>
-
-                          <footer className="photo-card-compare-actions">
-                            <button
-                              type="button"
-                              className={isBefore ? 'active-before' : ''}
-                              onClick={() => setCompareBeforeId(photo.id)}
-                            >
-                              {isBefore ? '✓ Na Foto A (Antes)' : 'Usar como Foto A'}
-                            </button>
-                            <button
-                              type="button"
-                              className={isAfter ? 'active-after' : ''}
-                              onClick={() => setCompareAfterId(photo.id)}
-                            >
-                              {isAfter ? '✓ Na Foto B (Depois)' : 'Usar como Foto B'}
-                            </button>
-                          </footer>
-                        </article>
-                      )
-                    })}
-                  </div>
-                </div>
-              </section>
+                        </div>
+                      </section>
                     </FichaSection>
 
                     <FichaSection
@@ -4434,62 +4544,65 @@ export default function StudentsWorkspace({
                       onToggle={() => toggle('acesso')}
                       summary={`${modalAccessInfo.hasLogin ? 'Login ativo' : 'Sem login'} · vence ${modalStudent.expirationDate}`}
                     >
-            <section
-              className={`student-access-panel ${modalAccessInfo.hasLogin ? 'has-login' : 'no-login'}`}
-              aria-label="Credenciais e status de login do aluno"
-            >
-              <div className="student-access-status">
-                <span>STATUS DE ACESSO & LOGIN DO ALUNO</span>
-                <div>
-                  <em className={modalAccessInfo.hasLogin ? 'login-active' : 'login-missing'}>
-                    {modalAccessInfo.hasLogin ? 'Possui login ativo' : 'Não possui login'}
-                  </em>
-                  <strong>
-                    {modalAccessInfo.hasLogin
-                      ? `E-mail cadastrado: ${modalAccessInfo.loginEmail}`
-                      : 'Aluno ainda não possui login com e-mail cadastrado'}
-                  </strong>
-                </div>
-                <small>
-                  {modalAccessInfo.accessKey
-                    ? `Chave de acesso atual: ${modalAccessInfo.accessKey} (${modalAccessInfo.accessKeyGeneratedAt || 'Ativa'})`
-                    : 'Nenhuma chave de acesso gerada para este aluno ainda.'}
-                </small>
-              </div>
+                      <section
+                        className={`student-access-panel ${modalAccessInfo.hasLogin ? 'has-login' : 'no-login'}`}
+                        aria-label="Credenciais e status de login do aluno"
+                      >
+                        <div className="student-access-status">
+                          <span>STATUS DE ACESSO & LOGIN DO ALUNO</span>
+                          <div>
+                            <em
+                              className={
+                                modalAccessInfo.hasLogin ? 'login-active' : 'login-missing'
+                              }
+                            >
+                              {modalAccessInfo.hasLogin ? 'Possui login ativo' : 'Não possui login'}
+                            </em>
+                            <strong>
+                              {modalAccessInfo.hasLogin
+                                ? `E-mail cadastrado: ${modalAccessInfo.loginEmail}`
+                                : 'Aluno ainda não possui login com e-mail cadastrado'}
+                            </strong>
+                          </div>
+                          <small>
+                            {modalAccessInfo.accessKey
+                              ? `Chave de acesso atual: ${modalAccessInfo.accessKey} (${modalAccessInfo.accessKeyGeneratedAt || 'Ativa'})`
+                              : 'Nenhuma chave de acesso gerada para este aluno ainda.'}
+                          </small>
+                        </div>
 
-              <div className="student-access-actions">
-                <div className="student-access-key-box">
-                  <span>CHAVE DE ACESSO</span>
-                  <code>{modalAccessInfo.accessKey ?? 'Não gerada'}</code>
-                </div>
-                <button
-                  type="button"
-                  className="generate-key-primary"
-                  onClick={() => generateAccessKeyForStudent(modalStudent)}
-                >
-                  Gerar chave de acesso
-                </button>
-                {!modalAccessInfo.hasLogin && (
-                  <form
-                    className="student-link-email-form"
-                    onSubmit={(event) => {
-                      event.preventDefault()
-                      saveStudentLoginEmail(modalStudent.id, loginEmailDraft)
-                    }}
-                  >
-                    <input
-                      type="email"
-                      value={loginEmailDraft}
-                      onChange={(event) => setLoginEmailDraft(event.target.value)}
-                      placeholder="Cadastrar e-mail de login..."
-                      aria-label="E-mail de login do aluno"
-                    />
-                    <button type="submit">Ativar login</button>
-                  </form>
-                )}
-              </div>
-            </section>
-
+                        <div className="student-access-actions">
+                          <div className="student-access-key-box">
+                            <span>CHAVE DE ACESSO</span>
+                            <code>{modalAccessInfo.accessKey ?? 'Não gerada'}</code>
+                          </div>
+                          <button
+                            type="button"
+                            className="generate-key-primary"
+                            onClick={() => generateAccessKeyForStudent(modalStudent)}
+                          >
+                            Gerar chave de acesso
+                          </button>
+                          {!modalAccessInfo.hasLogin && (
+                            <form
+                              className="student-link-email-form"
+                              onSubmit={(event) => {
+                                event.preventDefault()
+                                saveStudentLoginEmail(modalStudent.id, loginEmailDraft)
+                              }}
+                            >
+                              <input
+                                type="email"
+                                value={loginEmailDraft}
+                                onChange={(event) => setLoginEmailDraft(event.target.value)}
+                                placeholder="Cadastrar e-mail de login..."
+                                aria-label="E-mail de login do aluno"
+                              />
+                              <button type="submit">Ativar login</button>
+                            </form>
+                          )}
+                        </div>
+                      </section>
                     </FichaSection>
                   </>
                 )

@@ -31,6 +31,7 @@ import {
   formatClock,
   GhostButton,
   GoldButton,
+  ElevnMark,
   LetterBadge,
   PhoneSheet,
   ScreenHeader,
@@ -1066,9 +1067,12 @@ export function CalendarScreen() {
   const firstWeekday = new Date(year, month, 1).getDay()
   const isDone = (day: number) =>
     (day === today.getDate() && lastFinished) || (day <= today.getDate() && trained[day - 1])
-  const monthCount = Array.from({ length: today.getDate() }, (_, i) => i + 1).filter((day) =>
-    isDone(day),
+  // Weekly goal (Sunday first): days of this week, inside this month, already trained.
+  const weekStartDay = today.getDate() - today.getDay()
+  const weekDone = Array.from({ length: today.getDay() + 1 }, (_, i) => weekStartDay + i).filter(
+    (day) => day >= 1 && isDone(day),
   ).length
+  const weeklyTarget = studentProfile.weeklyTarget
   const streak = weekStreak(trained, today)
   const selectedDate = new Date(year, month, selected)
   const history = doneList.find(
@@ -1086,8 +1090,13 @@ export function CalendarScreen() {
           <p className="text-xs text-white/55">Semanas seguidas</p>
         </Card>
         <Card className="py-4 text-center">
-          <p className="text-2xl font-bold tabular-nums">{monthCount}</p>
-          <p className="text-xs text-white/55">Treinos no mês</p>
+          <p className="text-2xl font-bold tabular-nums">
+            {weekDone}
+            <span className="text-base font-semibold text-white/40">/{weeklyTarget}</span>
+          </p>
+          <p className="text-xs text-white/55">
+            {weekDone >= weeklyTarget ? 'Meta da semana batida' : 'Meta da semana'}
+          </p>
         </Card>
       </div>
 
@@ -1124,12 +1133,25 @@ export function CalendarScreen() {
               className={cx(
                 'mx-auto grid size-11 place-items-center rounded-xl text-[15px] font-semibold tabular-nums transition-colors',
                 future && 'text-white/25',
-                !future && done && 'bg-[var(--app-gold-deep)] text-[var(--app-gold)]',
+                !future &&
+                  done &&
+                  'bg-[var(--app-gold)]/[0.12] text-[var(--app-gold)] ring-1 ring-[var(--app-gold)]/30 ring-inset',
                 !future && !done && 'text-white/85',
                 isSelected && 'ring-2 ring-[var(--app-gold)]',
               )}
             >
-              {day === today.getDate() ? 'Hoje' : day}
+              {done && !future ? (
+                <span className="flex flex-col items-center gap-[3px]">
+                  <ElevnMark className="w-[22px]" />
+                  <span className="text-[10px] leading-none font-semibold text-[var(--app-gold)]/80">
+                    {day === today.getDate() ? 'Hoje' : day}
+                  </span>
+                </span>
+              ) : day === today.getDate() ? (
+                'Hoje'
+              ) : (
+                day
+              )}
             </button>
           )
         })}

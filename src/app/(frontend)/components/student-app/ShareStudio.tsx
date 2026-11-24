@@ -19,6 +19,7 @@ import {
   type DoneWorkout,
 } from './history'
 import { trainedDaysThisMonth, weekStreak } from './HomeTab'
+import { ElevnMark } from './ui'
 import { paintSvg } from './paintSvg'
 import { useStudentApp } from './StudentApp'
 
@@ -46,8 +47,36 @@ const templates = [
   'Faixa',
 ] as const
 
+/**
+ * Elevn catchphrases for the stickers (Figtree, Elevn gold). The originals plus a few
+ * variations; the student picks one in the studio.
+ */
+export const sharePhrases = [
+  'Tirou 11!',
+  'Tirou 11 de novo!',
+  'Treino nota 11.',
+  'Hoje foi 11.',
+  'Not Just Better, Beyond',
+  'Beyond, sempre.',
+  'Não apenas melhor, além.',
+  'Mais que melhor: além.',
+  'Além do melhor.',
+  'Mandou bem!',
+  'Mandou muito bem!',
+  'Mandou bem demais!',
+  'Deu aula!',
+  'Deu aula hoje!',
+  'Aula dada.',
+] as const
+
+/** Font size that fits `text` in `width` (Figtree bold is ~0.56 em per character). */
+const fit = (text: string, max: number, width = 900) =>
+  Math.min(max, Math.floor(width / (text.length * 0.56)))
+
 type TemplateProps = {
   done: DoneWorkout
+  /** Catchphrase shown as the headline. */
+  phrase: string
   logo: string | null
   id: string
   /** Every finished workout, newest first. */
@@ -148,7 +177,7 @@ const short = (value: string, max: number) =>
 
 /* ---------------------------------------------------------------- Templates */
 
-function MusclesTemplate({ done, logo, id }: TemplateProps) {
+function MusclesTemplate({ done, logo, id, phrase }: TemplateProps) {
   const workout = workoutOf(done.code)
   return (
     <>
@@ -156,11 +185,11 @@ function MusclesTemplate({ done, logo, id }: TemplateProps) {
         <Shadow id={id} />
       </defs>
       <g filter={`url(#${id})`}>
-        <Text y={470} size={40} weight={700} fill={GOLD} spacing={6}>
-          {`TREINO ${done.code} · ${done.nth}ª VEZ`}
+        <Text y={480} size={fit(phrase, 96)} weight={800} fill={GOLD}>
+          {phrase}
         </Text>
-        <Text y={560} size={70} weight={700}>
-          {short(workout.title, 24)}
+        <Text y={565} size={54} weight={600} opacity={0.92}>
+          {short(workout.title, 28)}
         </Text>
         <BodyMap
           muscles={musclesOf(done)}
@@ -179,7 +208,7 @@ function MusclesTemplate({ done, logo, id }: TemplateProps) {
   )
 }
 
-function NumbersTemplate({ done, logo, id }: TemplateProps) {
+function NumbersTemplate({ done, logo, id, phrase }: TemplateProps) {
   const workout = workoutOf(done.code)
   const exercises = String(exercisesDone(done).length)
   const rows: [string, string, number][] = [
@@ -190,7 +219,7 @@ function NumbersTemplate({ done, logo, id }: TemplateProps) {
       ? ['Recordes', String(done.prs), 104]
       : done.sets
         ? ['Exercícios', exercises, 104]
-        : ['Vez', `${done.nth}ª`, 104],
+        : ['Dia', dayLabel(done.date), 88],
   ]
   return (
     <>
@@ -198,8 +227,11 @@ function NumbersTemplate({ done, logo, id }: TemplateProps) {
         <Shadow id={id} />
       </defs>
       <g filter={`url(#${id})`}>
+        <Text y={400} size={fit(phrase, 96)} weight={800} fill={GOLD}>
+          {phrase}
+        </Text>
         {rows.map(([label, value, size], index) => {
-          const top = 520 + index * 250
+          const top = 560 + index * 240
           return (
             <g key={label}>
               <Text y={top} size={40} weight={500} opacity={0.8}>
@@ -211,47 +243,60 @@ function NumbersTemplate({ done, logo, id }: TemplateProps) {
             </g>
           )
         })}
-        <Logo logo={logo} y={1560} />
+        <Logo logo={logo} y={1590} />
       </g>
     </>
   )
 }
 
-function LetterTemplate({ done, logo, id }: TemplateProps) {
+function LetterTemplate({ done, logo, id, phrase }: TemplateProps) {
   const workout = workoutOf(done.code)
   return (
     <>
       <defs>
         <Shadow id={id} />
-        <linearGradient id={`${id}-gold`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#e2d9a6" />
-          <stop offset="1" stopColor="#6b6133" />
-        </linearGradient>
       </defs>
       <g filter={`url(#${id})`}>
-        <rect x={370} y={470} width={340} height={340} rx={84} fill={`url(#${id}-gold)`} />
-        <Text y={728} size={220} weight={800} fill={INK}>
+        <rect
+          x={380}
+          y={470}
+          width={320}
+          height={320}
+          rx={88}
+          fill="#14121b"
+          fillOpacity={0.92}
+          stroke={GOLD}
+          strokeOpacity={0.6}
+          strokeWidth={5}
+        />
+        <Text y={706} size={200} weight={800} fill={GOLD}>
           {done.code}
         </Text>
-        <Text y={1010} size={150} weight={800}>
-          {`${done.nth}ª vez`}
+        <line
+          x1={480}
+          x2={600}
+          y1={746}
+          y2={746}
+          stroke={GOLD}
+          strokeOpacity={0.5}
+          strokeWidth={4}
+        />
+        <Text y={1010} size={fit(phrase, 128)} weight={800} fill={GOLD}>
+          {phrase}
         </Text>
-        <Text y={1080} size={42} weight={500} opacity={0.85}>
-          fazendo este treino
-        </Text>
-        <Text y={1210} size={62} weight={700} fill={GOLD}>
+        <Text y={1120} size={62} weight={700}>
           {short(workout.title, 26)}
         </Text>
-        <Text y={1290} size={42} weight={500} opacity={0.85}>
+        <Text y={1195} size={42} weight={500} opacity={0.85}>
           {`${dayLabel(done.date)} · ${durationLabel(done.seconds)}`}
         </Text>
-        <Logo logo={logo} y={1440} />
+        <Logo logo={logo} y={1350} />
       </g>
     </>
   )
 }
 
-function ExercisesTemplate({ done, logo, id }: TemplateProps) {
+function ExercisesTemplate({ done, logo, id, phrase }: TemplateProps) {
   const workout = workoutOf(done.code)
   // Without marked sets, list the plan's exercises (with no load).
   const rows = exercisesDone(done).slice(0, 6)
@@ -274,11 +319,11 @@ function ExercisesTemplate({ done, logo, id }: TemplateProps) {
         fillOpacity={0.55}
       />
       <g filter={`url(#${id})`}>
-        <Text x={150} y={470} size={38} weight={700} fill={GOLD} anchor="start" spacing={5}>
-          {`TREINO ${done.code} · ${done.nth}ª VEZ`}
+        <Text x={150} y={480} size={fit(phrase, 68, 780)} weight={800} fill={GOLD} anchor="start">
+          {phrase}
         </Text>
-        <Text x={150} y={550} size={62} weight={700} anchor="start">
-          {short(workout.title, 24)}
+        <Text x={150} y={555} size={46} weight={600} anchor="start" opacity={0.92}>
+          {short(workout.title, 30)}
         </Text>
         {rows.map((exercise, index) => {
           const y = top + index * step
@@ -327,13 +372,12 @@ function ExercisesTemplate({ done, logo, id }: TemplateProps) {
   )
 }
 
-function WeekTemplate({ done, logo, id }: TemplateProps) {
+function WeekTemplate({ done, logo, id, phrase }: TemplateProps) {
   const workout = workoutOf(done.code)
   const today = new Date()
   const trained = trainedDaysThisMonth(today)
   if (done.key === 'hoje') trained[today.getDate() - 1] = true
   const streak = weekStreak(trained, today)
-  const monthCount = trained.slice(0, today.getDate()).filter(Boolean).length
   const start = new Date(done.date)
   start.setDate(done.date.getDate() - done.date.getDay())
   const days = Array.from({ length: 7 }, (_, index) => {
@@ -346,17 +390,21 @@ function WeekTemplate({ done, logo, id }: TemplateProps) {
       current: date.toDateString() === done.date.toDateString(),
     }
   })
-  const month = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(today)
+  const weekCount = days.filter((day) => day.done).length
+  const target = 5
   return (
     <>
       <defs>
         <Shadow id={id} />
       </defs>
       <g filter={`url(#${id})`}>
-        <Text y={760} size={300} weight={800} fill={GOLD}>
+        <Text y={470} size={fit(phrase, 96)} weight={800} fill={GOLD}>
+          {phrase}
+        </Text>
+        <Text y={760} size={260} weight={800}>
           {streak}
         </Text>
-        <Text y={850} size={54} weight={700}>
+        <Text y={850} size={54} weight={700} opacity={0.92}>
           {streak === 1 ? 'semana seguida' : 'semanas seguidas'}
         </Text>
         {days.map((day, index) => {
@@ -375,16 +423,7 @@ function WeekTemplate({ done, logo, id }: TemplateProps) {
                 strokeOpacity={0.45}
                 strokeWidth={4}
               />
-              {day.done && (
-                <path
-                  d={`M${cx - 20} ${1068} l13 13 l26 -28`}
-                  fill="none"
-                  stroke={INK}
-                  strokeWidth={9}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              )}
+              {day.done && <ElevnMark color={INK} x={cx - 30} y={1054} width={60} height={29} />}
               {day.current && (
                 <circle cx={cx} cy={1068} r={60} fill="none" stroke="#fff" strokeWidth={5} />
               )}
@@ -392,10 +431,12 @@ function WeekTemplate({ done, logo, id }: TemplateProps) {
           )
         })}
         <Text y={1230} size={46} weight={600}>
-          {`${monthCount} treinos em ${month}`}
+          {weekCount >= target
+            ? `Meta da semana batida: ${weekCount} treinos`
+            : `${weekCount} de ${target} treinos na semana`}
         </Text>
         <Text y={1300} size={40} weight={500} opacity={0.85}>
-          {`${dayLabel(done.date)}: treino ${done.code} · ${short(workout.title, 22)}`}
+          {`${dayLabel(done.date)} · ${short(workout.title, 30)}`}
         </Text>
         <Logo logo={logo} y={1450} />
       </g>
@@ -404,7 +445,7 @@ function WeekTemplate({ done, logo, id }: TemplateProps) {
 }
 
 /** Hevy-like card: the body map, the last 7 days and how often the student trained. */
-function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
+function CardTemplate({ done, logo, id, all, overall, phrase }: TemplateProps) {
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(done.date)
@@ -435,8 +476,8 @@ function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
         strokeOpacity={0.1}
         strokeWidth={3}
       />
-      <Text y={400} size={76} weight={800}>
-        Mandou bem!
+      <Text y={400} size={fit(phrase, 84, 780)} weight={800} fill={GOLD}>
+        {phrase}
       </Text>
       <Text y={470} size={40} weight={500} opacity={0.8}>
         {`Esse foi seu ${overall}º treino`}
@@ -468,14 +509,7 @@ function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
         return day.done ? (
           <g key={`d${index}`}>
             <circle cx={cx} cy={1421} r={40} fill={GOLD} />
-            <path
-              d={`M${cx - 17} 1421 l11 11 l23 -24`}
-              fill="none"
-              stroke={INK}
-              strokeWidth={8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <ElevnMark color={INK} x={cx - 25} y={1409} width={50} height={24} />
           </g>
         ) : (
           <circle key={`d${index}`} cx={cx} cy={1421} r={13} fill="#fff" fillOpacity={0.25} />
@@ -488,19 +522,23 @@ function CardTemplate({ done, logo, id, all, overall }: TemplateProps) {
       </text>
       <Logo logo={logo} y={1668} width={200} left={pad} />
       <Text x={W - pad} y={1680} size={36} weight={600} anchor="end" opacity={0.8}>
-        {`Treino ${done.code} · ${done.nth}ª vez`}
+        {dayLabel(done.date)}
       </Text>
     </>
   )
 }
 
 /** Strava-like strip at the bottom, meant to sit over the student's photo. */
-function StripTemplate({ done, logo, id }: TemplateProps) {
+function StripTemplate({ done, logo, id, phrase }: TemplateProps) {
   const workout = workoutOf(done.code)
   const stats: [string, string][] = [
     ['Tempo', durationLabel(done.seconds)],
     done.sets ? ['Séries', String(done.sets)] : ['Exercícios', String(exercisesDone(done).length)],
-    done.prs ? ['Recordes', String(done.prs)] : ['Vez', `${done.nth}ª`],
+    done.prs
+      ? ['Recordes', String(done.prs)]
+      : done.sets
+        ? ['Exercícios', String(exercisesDone(done).length)]
+        : ['Volume', workLabel(done)],
   ]
   return (
     <>
@@ -510,23 +548,33 @@ function StripTemplate({ done, logo, id }: TemplateProps) {
           <stop offset="0" stopColor="#000" stopOpacity={0} />
           <stop offset="1" stopColor="#000" stopOpacity={0.72} />
         </linearGradient>
-        <linearGradient id={`${id}-gold`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#e2d9a6" />
-          <stop offset="1" stopColor="#6b6133" />
-        </linearGradient>
       </defs>
       <rect x={0} y={1180} width={W} height={H - 1180} fill={`url(#${id}-fade)`} />
       <g filter={`url(#${id})`}>
         <Logo logo={logo} y={190} width={210} left={90} />
-        <rect x={90} y={1430} width={150} height={150} rx={40} fill={`url(#${id}-gold)`} />
-        <Text x={165} y={1540} size={96} weight={800} fill={INK}>
+        <Text x={90} y={1370} size={fit(phrase, 84)} weight={800} fill={GOLD} anchor="start">
+          {phrase}
+        </Text>
+        <rect
+          x={92}
+          y={1432}
+          width={146}
+          height={146}
+          rx={42}
+          fill="#14121b"
+          fillOpacity={0.9}
+          stroke={GOLD}
+          strokeOpacity={0.6}
+          strokeWidth={4}
+        />
+        <Text x={165} y={1538} size={92} weight={800} fill={GOLD}>
           {done.code}
         </Text>
         <Text x={275} y={1495} size={58} weight={700} anchor="start">
           {short(workout.title, 22)}
         </Text>
         <Text x={275} y={1560} size={36} weight={500} anchor="start" opacity={0.85}>
-          {`Treino ${done.code} · ${done.nth}ª vez · ${dayLabel(done.date)}`}
+          {dayLabel(done.date)}
         </Text>
         <line
           x1={90}
@@ -662,13 +710,27 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
   const [logo, setLogo] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Starts on a phrase picked from the workout, so each one opens with a different line.
+  const [phrase, setPhrase] = useState<string>(
+    () =>
+      sharePhrases[
+        [...doneKey].reduce((sum, char) => sum + char.charCodeAt(0), 0) % sharePhrases.length
+      ],
+  )
+  const phraseList = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const list = phraseList.current
+    const chip = list?.querySelector<HTMLElement>('[aria-checked="true"]')
+    if (list && chip)
+      list.scrollLeft = chip.offsetLeft - list.clientWidth / 2 + chip.clientWidth / 2
+  }, [])
   const svgs = useRef<(SVGSVGElement | null)[]>([])
   const scroller = useRef<HTMLDivElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   // The PNG is prepared ahead of the tap: mobile browsers only allow share/copy while the
   // tap is still "fresh", so there is no time to render after it.
   const [ready, setReady] = useState<{ key: string; blob: Blob } | null>(null)
-  const renderKey = `${doneKey}|${index}|${background}|${color}|${photo ?? ''}|${logo ? 1 : 0}`
+  const renderKey = `${doneKey}|${index}|${background}|${color}|${photo ?? ''}|${logo ? 1 : 0}|${phrase}`
 
   // The wordmark goes into the sticker as a data URL so it survives the PNG export.
   useEffect(() => {
@@ -837,7 +899,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
             <div
               className={cx(
                 // Sized by height so the actions stay on screen on short phones.
-                'relative aspect-[9/16] h-[clamp(260px,calc(100svh-400px),440px)] overflow-hidden rounded-[22px] ring-1 ring-white/10',
+                'relative aspect-[9/16] h-[clamp(250px,calc(100svh-452px),430px)] overflow-hidden rounded-[22px] ring-1 ring-white/10',
                 background === 'sem-fundo' &&
                   'bg-[conic-gradient(#2b2834_25%,#1c1a23_0_50%,#2b2834_0_75%,#1c1a23_0)] bg-[length:18px_18px]',
                 background === 'foto' && 'bg-black',
@@ -877,6 +939,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
                   id={`share-${position}`}
                   all={all}
                   overall={overall}
+                  phrase={phrase}
                 />
               </svg>
             </div>
@@ -902,8 +965,52 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
       </div>
       <p className="mt-1.5 text-center text-sm font-semibold">{templates[index]}</p>
 
+      <div className="mt-3 flex items-center gap-2 pl-5">
+        <button
+          type="button"
+          onClick={() => {
+            const others = sharePhrases.filter((item) => item !== phrase)
+            const next = others[Math.floor(Math.random() * others.length)]
+            setPhrase(next)
+            phraseList.current
+              ?.querySelector<HTMLElement>(`[data-phrase="${CSS.escape(next)}"]`)
+              ?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+          }}
+          aria-label="Sortear frase"
+          title="Sortear frase"
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--app-gold)]/15 text-[var(--app-gold)]"
+        >
+          <Icon name="swap" className="size-4" />
+        </button>
+        <div
+          ref={phraseList}
+          className="flex gap-1.5 overflow-x-auto pr-5 [scrollbar-width:none]"
+          role="radiogroup"
+          aria-label="Frase do card"
+        >
+          {sharePhrases.map((item) => (
+            <button
+              key={item}
+              type="button"
+              role="radio"
+              aria-checked={phrase === item}
+              data-phrase={item}
+              onClick={() => setPhrase(item)}
+              className={cx(
+                'h-9 shrink-0 rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap transition-colors',
+                phrase === item
+                  ? 'bg-[var(--app-gold)] text-[#0d0a21]'
+                  : 'bg-white/[0.06] text-white/70',
+              )}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div
-        className="mx-5 mt-4 grid grid-cols-3 rounded-full bg-white/[0.06] p-1"
+        className="mx-5 mt-3 grid grid-cols-3 rounded-full bg-white/[0.06] p-1"
         role="radiogroup"
         aria-label="Fundo"
       >

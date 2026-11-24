@@ -1091,6 +1091,10 @@ export default function CustomDashboard({
   )
   const dashboardGridRef = useRef<HTMLElement | null>(null)
   const draggedWidgetRef = useRef<WidgetId | null>(null)
+  const lastDropTargetRef = useRef<WidgetId | null>(null)
+  const dragPointRef = useRef({ x: 0, y: 0 })
+  const autoScrollRef = useRef(0)
+  useEffect(() => () => window.cancelAnimationFrame(autoScrollRef.current), [])
   const resizeSessionRef = useRef<ResizeSession | null>(null)
 
   /* ---- Saved layouts (Operacional, Treino, Dieta, Comercial + the user's own) ---- */
@@ -1242,25 +1246,54 @@ export default function CustomDashboard({
     })
   }
 
-  const startDragging = (widget: WidgetId) => {
+  const startDragging = (widget: WidgetId, clientX: number, clientY: number) => {
     draggedWidgetRef.current = widget
+    dragPointRef.current = { x: clientX, y: clientY }
+    lastDropTargetRef.current = widget
     setDraggedWidget(widget)
     setFeedback('')
+    // Auto-scroll while the pointer sits near the top or bottom edge of the window, so a
+    // widget can be dragged to a spot that is off screen.
+    const tick = () => {
+      if (!draggedWidgetRef.current) return
+      const { y } = dragPointRef.current
+      const edge = 90
+      const speed =
+        y < edge
+          ? -Math.ceil((edge - y) / 6)
+          : y > window.innerHeight - edge
+            ? Math.ceil((y - (window.innerHeight - edge)) / 6)
+            : 0
+      if (speed) {
+        window.scrollBy(0, speed)
+        movePointerDrag(dragPointRef.current.x, y)
+      }
+      autoScrollRef.current = window.requestAnimationFrame(tick)
+    }
+    autoScrollRef.current = window.requestAnimationFrame(tick)
   }
 
   const stopDragging = () => {
     draggedWidgetRef.current = null
+    lastDropTargetRef.current = null
+    if (autoScrollRef.current) window.cancelAnimationFrame(autoScrollRef.current)
+    autoScrollRef.current = 0
     setDraggedWidget(null)
   }
 
   const movePointerDrag = (clientX: number, clientY: number) => {
     const sourceWidget = draggedWidgetRef.current
     if (!sourceWidget) return
+    dragPointRef.current = { x: clientX, y: clientY }
     const target = document
       .elementFromPoint(clientX, clientY)
       ?.closest<HTMLElement>('[data-widget-id]')
     const targetWidget = target?.dataset.widgetId as WidgetId | undefined
-    if (targetWidget) reorderWidget(sourceWidget, targetWidget)
+    // Move once per widget entered: after a move the neighbour shifts under the pointer,
+    // and reacting to it again would make widgets of different sizes flip back and forth.
+    if (!targetWidget || targetWidget === lastDropTargetRef.current) return
+    lastDropTargetRef.current = targetWidget
+    if (targetWidget !== sourceWidget) reorderWidget(sourceWidget, targetWidget)
   }
 
   const updateWidgetSize = (widget: WidgetId, columns: number, height: number) => {
@@ -1529,7 +1562,7 @@ export default function CustomDashboard({
                       onPointerDown={(event) => {
                         event.preventDefault()
                         event.currentTarget.setPointerCapture(event.pointerId)
-                        startDragging(item.widget)
+                        startDragging(item.widget, event.clientX, event.clientY)
                       }}
                       onPointerMove={(event) => movePointerDrag(event.clientX, event.clientY)}
                       onPointerUp={(event) => {
