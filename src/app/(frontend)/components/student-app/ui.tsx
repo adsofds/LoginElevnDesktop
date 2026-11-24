@@ -148,19 +148,75 @@ export function LinkButton({ children, onClick }: { children: ReactNode; onClick
 }
 
 /** Workout letter badge (Smart Fit style), in Elevn gold. */
+/** Simplified Elevn symbol (the two strokes), drawn as an SVG so it can be tinted and
+ * nested inside the share templates. Aspect ratio is about 2.1 : 1. */
+export const ELEVN_MARK_VIEWBOX = '0 290 1080 520'
+export const ELEVN_MARK_PATH = 'M36 750 L288 388 Q324 334 372 334 Q452 336 452 420 V766'
+export const ELEVN_MARK_STROKE = 64
+
+export function ElevnMark({
+  className,
+  color = 'currentColor',
+  x,
+  y,
+  width,
+  height,
+}: {
+  className?: string
+  color?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+}) {
+  return (
+    <svg
+      viewBox={ELEVN_MARK_VIEWBOX}
+      className={className}
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      aria-hidden
+      fill="none"
+      stroke={color}
+      strokeWidth={ELEVN_MARK_STROKE}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={ELEVN_MARK_PATH} />
+      <path d={ELEVN_MARK_PATH} transform="translate(594 0)" />
+    </svg>
+  )
+}
+
+/** Workout letter (A, B, C…): dark tile with a fine gold rim and a gold gradient letter. */
 export function LetterBadge({ code, size = 'md' }: { code: string; size?: 'md' | 'lg' | 'xl' }) {
   return (
     <span
       className={cx(
-        'grid shrink-0 place-items-center bg-[linear-gradient(145deg,var(--app-gold),var(--app-gold-deep))] font-bold text-[#0d0a21] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]',
+        'relative grid shrink-0 place-items-center overflow-hidden bg-[radial-gradient(120%_90%_at_50%_0%,rgba(197,187,131,0.24),rgba(197,187,131,0.03)_65%),linear-gradient(180deg,#1d1a26,#121019)] shadow-[inset_0_0_0_1px_rgba(197,187,131,0.38),inset_0_1px_0_rgba(255,255,255,0.08),0_8px_20px_-10px_rgba(197,187,131,0.55)]',
         size === 'xl'
-          ? 'size-16 rounded-2xl text-[28px]'
+          ? 'size-16 rounded-[20px]'
           : size === 'lg'
-            ? 'size-12 rounded-[14px] text-xl'
-            : 'size-9 rounded-[10px] text-sm',
+            ? 'size-12 rounded-2xl'
+            : 'size-9 rounded-xl',
       )}
     >
-      {code}
+      <span
+        className={cx(
+          'bg-[linear-gradient(180deg,#f4ecc2_0%,var(--app-gold)_55%,#a39759_100%)] bg-clip-text font-extrabold leading-none tracking-tight text-transparent',
+          size === 'xl' ? 'text-[30px]' : size === 'lg' ? 'text-[22px]' : 'text-[15px]',
+        )}
+      >
+        {code}
+      </span>
+      {size !== 'md' && (
+        <span
+          aria-hidden
+          className="absolute inset-x-[22%] bottom-[14%] h-px bg-[linear-gradient(90deg,transparent,rgba(197,187,131,0.6),transparent)]"
+        />
+      )}
     </span>
   )
 }

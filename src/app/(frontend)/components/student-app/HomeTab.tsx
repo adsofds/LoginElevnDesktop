@@ -1,18 +1,13 @@
 'use client'
 
 import { studentAdherence } from '@/lib/demo-adherence'
-import {
-  nextWorkoutCode,
-  studentProfile,
-  workoutHistory,
-  workouts,
-} from '@/lib/demo-student-app'
+import { nextWorkoutCode, studentProfile, workoutHistory, workouts } from '@/lib/demo-student-app'
 import { Face, type FaceScore } from '../students/FaceCheckin'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 import { currentMeal } from './DietTab'
 import { useStudentApp } from './StudentApp'
-import { Bar, Card, Chip, GoldButton, LetterBadge, LinkButton, SectionTitle } from './ui'
+import { Card, Chip, ElevnMark, GoldButton, LetterBadge, LinkButton, SectionTitle } from './ui'
 
 const weekdays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
@@ -51,35 +46,43 @@ export function weekStreak(trained: boolean[], today: Date) {
   return streak
 }
 
-/** Workouts done vs planned this month, and the face that sums it up. */
-export function trainingAdherence(today: Date, doneToday: boolean) {
-  const trained = trainedDaysThisMonth(today)
-  const done =
-    trained.slice(0, today.getDate()).filter(Boolean).length +
-    (doneToday && !trained[today.getDate() - 1] ? 1 : 0)
-  const planned = Math.max(1, Math.round((today.getDate() / 7) * studentProfile.weeklyTarget))
-  const rate = Math.min(100, Math.round((done / planned) * 100))
-  const mood: FaceScore = rate >= 80 ? 5 : rate >= 50 ? 3 : 1
-  return { done, planned, rate, mood }
+/**
+ * Weekly goal: workouts done this week vs the weekly target, and where the student
+ * should be by today (pro-rated, Sunday first) to decide the face.
+ */
+export function weeklyAdherence(weekDone: number, today: Date) {
+  const target = studentProfile.weeklyTarget
+  const expected = Math.max(1, Math.min(target, Math.round(((today.getDay() + 1) / 7) * target)))
+  const rate = Math.min(100, Math.round((weekDone / target) * 100))
+  const reached = weekDone >= target
+  const pace = weekDone / expected
+  const mood: FaceScore = reached || pace >= 0.8 ? 5 : pace >= 0.5 ? 3 : 1
+  const daysLeft = 6 - today.getDay()
+  return { done: weekDone, target, expected, rate, reached, mood, daysLeft }
 }
+
+type Adherence = ReturnType<typeof weeklyAdherence>
 
 const moodCopy: Record<
   1 | 3 | 5,
-  { title: string; text: (missing: number) => string; tone: string }
+  { title: (a: Adherence) => string; text: (a: Adherence) => string; tone: string }
 > = {
   5: {
-    title: 'Você está mandando bem!',
-    text: () => 'Seguindo o plano quase à risca. Mantém esse ritmo.',
+    title: (a) => (a.reached ? 'Meta da semana batida!' : 'Você está mandando bem!'),
+    text: (a) =>
+      a.reached
+        ? 'Tirou 11 na semana. O que vier agora é bônus.'
+        : `No ritmo certo. Faltam ${a.target - a.done} ${a.target - a.done === 1 ? 'treino' : 'treinos'} para fechar a meta.`,
     tone: 'text-[var(--app-green)]',
   },
   3: {
-    title: 'Dá pra melhorar',
-    text: (missing) =>
-      `Faltam ${missing} ${missing === 1 ? 'treino' : 'treinos'} para bater a meta do mês até aqui.`,
+    title: () => 'Dá pra melhorar',
+    text: (a) =>
+      `Faltam ${a.target - a.done} ${a.target - a.done === 1 ? 'treino' : 'treinos'} e ${a.daysLeft + 1} ${a.daysLeft === 0 ? 'dia' : 'dias'} para fechar a semana.`,
     tone: 'text-[var(--app-gold)]',
   },
   1: {
-    title: 'Bora retomar?',
+    title: () => 'Bora retomar?',
     text: () => 'Um treino hoje já muda a semana. Comece pelo próximo da lista.',
     tone: 'text-[var(--app-red)]',
   },
@@ -101,8 +104,6 @@ export function HomeTab() {
   const trained = trainedDaysThisMonth(today)
   const streak = weekStreak(trained, today)
   const workout = workouts.find((item) => item.code === nextWorkoutCode)!
-  const adherence = trainingAdherence(today, doneToday)
-  const copy = moodCopy[adherence.mood as 1 | 3 | 5]
 
   const sent = notifications.filter((item) => item.status === 'enviada')
   const mine = sent.filter((item) => item.audience.studentIds.includes(studentProfile.id))
@@ -121,6 +122,8 @@ export function HomeTab() {
     return { date, isToday, future, done }
   })
   const weekDone = week.filter((day) => day.done).length
+  const adherence = weeklyAdherence(weekDone, today)
+  const copy = moodCopy[adherence.mood as 1 | 3 | 5]
 
   const minutesNow = today.getHours() * 60 + today.getMinutes()
   const nextMeal = currentMeal(eatenMeals, today)
@@ -205,7 +208,7 @@ export function HomeTab() {
                   className={cx(
                     'grid aspect-square w-full max-w-9 place-items-center rounded-full text-[13px] font-semibold tabular-nums',
                     day.done
-                      ? 'bg-[var(--app-gold)] text-[#0d0a21]'
+                      ? 'bg-[var(--app-gold)]/14 text-[var(--app-gold)] ring-1 ring-[var(--app-gold)]/45 ring-inset'
                       : day.isToday
                         ? 'text-white ring-2 ring-[var(--app-gold)] ring-inset'
                         : day.future
@@ -213,7 +216,7 @@ export function HomeTab() {
                           : 'bg-white/[0.05] text-white/55',
                   )}
                 >
-                  {day.done ? <Icon name="check" className="size-4" /> : day.date.getDate()}
+                  {day.done ? <ElevnMark className="w-[58%]" /> : day.date.getDate()}
                 </span>
               </li>
             ))}
@@ -278,10 +281,10 @@ export function HomeTab() {
             <div className="flex items-center gap-4">
               <Face score={adherence.mood} className="size-14 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className={cx('text-[17px] font-semibold', copy.tone)}>{copy.title}</p>
-                <p className="mt-0.5 text-[13px] leading-5 text-white/60">
-                  {copy.text(Math.max(0, adherence.planned - adherence.done))}
+                <p className={cx('text-[17px] font-semibold', copy.tone)}>
+                  {copy.title(adherence)}
                 </p>
+                <p className="mt-0.5 text-[13px] leading-5 text-white/60">{copy.text(adherence)}</p>
               </div>
             </div>
             <div className="mt-4 flex items-baseline justify-between text-xs text-white/55">
@@ -289,25 +292,31 @@ export function HomeTab() {
                 <strong className="text-base font-semibold text-white tabular-nums">
                   {adherence.done}
                 </strong>{' '}
-                de {adherence.planned} treinos no mês
+                de {adherence.target} treinos nesta semana
               </span>
               <span className="font-semibold text-white tabular-nums">{adherence.rate}%</span>
             </div>
-            <div className="mt-2">
-              <Bar
-                value={adherence.rate}
-                max={100}
-                color={
-                  adherence.mood === 5
-                    ? 'var(--app-green)'
-                    : adherence.mood === 3
-                      ? 'var(--app-gold)'
-                      : 'var(--app-red)'
-                }
-              />
-            </div>
+            <ol className="mt-2 flex gap-1.5" aria-hidden>
+              {Array.from({ length: adherence.target }, (_, index) => (
+                <li
+                  key={index}
+                  className={cx(
+                    'h-2 flex-1 rounded-full',
+                    index < adherence.done
+                      ? adherence.mood === 5
+                        ? 'bg-[var(--app-green)]'
+                        : adherence.mood === 3
+                          ? 'bg-[var(--app-gold)]'
+                          : 'bg-[var(--app-red)]'
+                      : index < adherence.expected
+                        ? 'bg-white/[0.16]'
+                        : 'bg-white/[0.07]',
+                  )}
+                />
+              ))}
+            </ol>
             <p className="mt-3 text-xs text-white/45">
-              Meta: {studentProfile.weeklyTarget} treinos por semana · esta semana {weekDone}
+              Meta semanal: {adherence.target} treinos · renova todo domingo
             </p>
           </Card>
         </button>

@@ -1,25 +1,14 @@
 'use client'
 
-import { useState } from 'react'
 import { cx } from '../ui/cx'
+import { faceHistory, faceThemes, formatKg, type FaceScore, type LiveClinAnswers } from './liveclin'
 
 /**
- * Weekly check-in on a 5-face scale (Live Clean model): the student taps one face per
- * theme instead of writing paragraphs, and the coach reads the whole week at a glance.
+ * Weekly check-in read as faces: each theme's face is computed from the student's own
+ * LiveClin answers (see liveclin.ts), so the coach reads the week at a glance.
  */
 
-export type FaceScore = 1 | 2 | 3 | 4 | 5
-
-export const faceThemes = [
-  { id: 'treino', label: 'Treino', question: 'Como foram seus treinos nesta semana?' },
-  { id: 'alimentacao', label: 'Alimentação', question: 'Como você seguiu o plano alimentar?' },
-  { id: 'sono', label: 'Sono', question: 'Como está a qualidade do seu sono?' },
-  { id: 'energia', label: 'Energia', question: 'Como está sua energia no dia a dia?' },
-  { id: 'humor', label: 'Humor', question: 'Como está seu humor e motivação?' },
-  { id: 'intestino', label: 'Intestino/Digestão', question: 'Como está seu intestino e digestão?' },
-] as const
-
-export type FaceThemeId = (typeof faceThemes)[number]['id']
+export type { FaceScore } from './liveclin'
 
 export const faceLabels: Record<FaceScore, string> = {
   1: 'Muito ruim',
@@ -78,25 +67,6 @@ export function Face({ score, className }: { score: FaceScore; className?: strin
   )
 }
 
-/** Demo history: 5 weeks per theme (oldest first), deterministic per student. */
-export function getFaceHistory(studentId: string): Record<FaceThemeId, FaceScore[]> {
-  let seed = Array.from(studentId).reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  const next = () => {
-    seed = (seed * 9301 + 49297) % 233280
-    return seed / 233280
-  }
-  const base = 2 + (seed % 3) // 2, 3 or 4: some students struggle, some fly
-  return Object.fromEntries(
-    faceThemes.map((theme) => [
-      theme.id,
-      Array.from({ length: 5 }, () => {
-        const value = Math.round(base + (next() - 0.4) * 2.6)
-        return Math.min(5, Math.max(1, value)) as FaceScore
-      }),
-    ]),
-  ) as Record<FaceThemeId, FaceScore[]>
-}
-
 function Trend({ current, previous }: { current: FaceScore; previous: FaceScore }) {
   if (current === previous) return <span className="text-xs text-ink-3">= igual</span>
   const better = current > previous
@@ -110,18 +80,13 @@ function Trend({ current, previous }: { current: FaceScore; previous: FaceScore 
 export function FaceCheckin({
   studentId,
   studentName,
-  submittedAt,
-  weight,
-  note,
+  answers,
 }: {
   studentId: string
   studentName: string
-  submittedAt: string
-  weight: string
-  note?: string
+  answers: LiveClinAnswers
 }) {
-  const [showStudentView, setShowStudentView] = useState(false)
-  const history = getFaceHistory(studentId)
+  const history = faceHistory(studentId, answers)
   const rows = faceThemes.map((theme) => {
     const weeks = history[theme.id]
     return { ...theme, weeks, current: weeks[weeks.length - 1], previous: weeks[weeks.length - 2] }
@@ -131,18 +96,13 @@ export function FaceCheckin({
   return (
     <div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3">
-        <span>Enviado {submittedAt}</span>
+        <span>Enviado {answers.submittedAt}</span>
         <span>
-          Peso em jejum: <strong className="font-semibold text-ink">{weight}</strong>
+          Peso em jejum:{' '}
+          <strong className="font-semibold text-ink">{formatKg(answers.weightKg)}</strong>
+          {answers.weightTrend && ` (${answers.weightTrend})`}
         </span>
-        <button
-          type="button"
-          onClick={() => setShowStudentView((value) => !value)}
-          className="ml-auto font-medium text-brand hover:underline"
-          aria-expanded={showStudentView}
-        >
-          {showStudentView ? 'Ocultar visão do aluno' : 'Como o aluno responde'}
-        </button>
+        <span className="ml-auto">Carinhas calculadas a partir das respostas</span>
       </div>
 
       <p
@@ -233,32 +193,11 @@ export function FaceCheckin({
         </tbody>
       </table>
 
-      {note && (
+      {answers.feedback && (
         <blockquote className="mt-3 rounded-lg border border-line bg-subtle px-3 py-2 text-[13px] leading-5 text-ink-2">
-          <span className="block text-xs font-medium text-ink-3">Observação do aluno</span>“{note}”
+          <span className="block text-xs font-medium text-ink-3">Feedback aberto do aluno</span>“
+          {answers.feedback}”
         </blockquote>
-      )}
-
-      {showStudentView && (
-        <div className="mt-4 rounded-card border border-dashed border-line p-4">
-          <p className="text-xs font-semibold text-ink-3">
-            No LiveClin, o aluno responde assim (um toque por tema):
-          </p>
-          <p className="mt-2 text-sm font-medium text-ink">{faceThemes[0].question}</p>
-          <div className="mt-2 flex gap-2" aria-hidden="true">
-            {([1, 2, 3, 4, 5] as FaceScore[]).map((score) => (
-              <span key={score} className="flex w-14 flex-col items-center gap-1">
-                <Face score={score} className="size-9" />
-                <span className="text-center text-[10px] leading-3 text-ink-3">
-                  {faceLabels[score]}
-                </span>
-              </span>
-            ))}
-          </div>
-          <p className="mt-2 text-[11px] text-ink-3">
-            Seis temas, menos de 30 segundos. No fim, um campo opcional de observação.
-          </p>
-        </div>
       )}
     </div>
   )
