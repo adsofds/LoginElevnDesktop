@@ -1,7 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { workouts, type PlannedSet, type Workout } from '@/lib/demo-student-app'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+import { studentProfile, workouts, type PlannedSet, type Workout } from '@/lib/demo-student-app'
 import type { StudentNotification } from '@/lib/student-notifications'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
@@ -78,8 +86,13 @@ type AppContextValue = {
   lastFinished: FinishedSession | null
   eatenMeals: string[]
   toggleMeal: (mealId: string) => void
+  /** Profile photo (data URL or path); null shows the initials. */
+  avatar: string | null
+  setAvatar: (avatar: string | null) => void
   notifications: StudentNotification[]
 }
+
+const AVATAR_KEY = 'elevn-student-avatar'
 
 const AppContext = createContext<AppContextValue | null>(null)
 
@@ -134,11 +147,31 @@ export default function StudentApp({
   const [session, setSession] = useState<Session | null>(null)
   const [lastFinished, setLastFinished] = useState<FinishedSession | null>(null)
   const [eatenMeals, setEatenMeals] = useState<string[]>(['cafe', 'lanche1'])
+  const [avatar, setAvatarState] = useState<string | null>(studentProfile.avatar)
   const [now, setNow] = useState(() => Date.now())
   // Client-only: the app shows "today", streaks and timers, which differ from build time.
   const [mounted, setMounted] = useState(false)
   const [sheetHost, setSheetHost] = useState<HTMLDivElement | null>(null)
   useEffect(() => setMounted(true), [])
+
+  // Demo: the photo the student picks stays on this device. With app login it goes to the
+  // student's record (Payload Media) and shows in the panel too.
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(AVATAR_KEY)
+      if (saved !== null) setAvatarState(saved || null)
+    } catch {
+      /* storage unavailable: keep the default photo */
+    }
+  }, [])
+  const setAvatar = useCallback((next: string | null) => {
+    setAvatarState(next)
+    try {
+      window.localStorage.setItem(AVATAR_KEY, next ?? '')
+    } catch {
+      /* storage full or blocked: the photo still changes for this session */
+    }
+  }, [])
 
   useEffect(() => {
     if (!session) return
@@ -327,9 +360,11 @@ export default function StudentApp({
         setEatenMeals((current) =>
           current.includes(mealId) ? current.filter((id) => id !== mealId) : [...current, mealId],
         ),
+      avatar,
+      setAvatar,
       notifications,
     }
-  }, [tab, session, now, lastFinished, eatenMeals, notifications])
+  }, [tab, session, now, lastFinished, eatenMeals, avatar, setAvatar, notifications])
 
   const route = stack[stack.length - 1]
   const fullScreen =

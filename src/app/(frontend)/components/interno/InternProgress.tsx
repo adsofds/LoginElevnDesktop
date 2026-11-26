@@ -42,9 +42,23 @@ function Ring({ value }: { value: number }) {
   )
 }
 
-/** One card per intern: overall ring, a thin bar per format and a 7-day consistency strip. */
-export default function InternProgress({ goals }: { goals: Goal[] }) {
-  const interns = [...new Set(goals.map((goal) => goal.intern))]
+/**
+ * One card per person on the posting team: overall ring, a thin bar per format and a
+ * 7-day consistency strip. People without goals get a card that asks for one.
+ */
+export default function InternProgress({
+  goals,
+  people,
+  onSetGoal,
+  onAddPerson,
+}: {
+  goals: Goal[]
+  /** Active people on the team; defaults to whoever has goals. */
+  people?: string[]
+  onSetGoal?: (name: string) => void
+  onAddPerson?: () => void
+}) {
+  const interns = people ?? [...new Set(goals.map((goal) => goal.intern))]
   return (
     <section
       aria-label="Progresso por estagiário"
@@ -55,6 +69,28 @@ export default function InternProgress({ goals }: { goals: Goal[] }) {
         const target = own.reduce((sum, goal) => sum + goal.target, 0)
         const done = own.reduce((sum, goal) => sum + Math.min(goal.completed, goal.target), 0)
         const percent = target ? Math.round((done / target) * 100) : 0
+        if (own.length === 0) {
+          return (
+            <article
+              key={intern}
+              className="flex flex-col justify-between gap-3 rounded-card border border-dashed border-line bg-surface p-4"
+            >
+              <div>
+                <h3 className="truncate text-[15px] font-semibold text-ink">{intern}</h3>
+                <p className="text-xs text-ink-3">Sem metas nesta semana</p>
+              </div>
+              {onSetGoal && (
+                <button
+                  type="button"
+                  onClick={() => onSetGoal(intern)}
+                  className="h-8 cursor-pointer self-start rounded-control border border-line bg-surface px-3 text-xs font-semibold text-ink hover:border-ink-3"
+                >
+                  + Definir meta
+                </button>
+              )}
+            </article>
+          )
+        }
         return (
           <article key={intern} className="rounded-card border border-line bg-surface p-4">
             <header className="flex items-center gap-3">
@@ -115,6 +151,18 @@ export default function InternProgress({ goals }: { goals: Goal[] }) {
           </article>
         )
       })}
+      {onAddPerson && (
+        <button
+          type="button"
+          onClick={onAddPerson}
+          className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-1 rounded-card border border-dashed border-line bg-transparent p-4 text-sm font-semibold text-ink-2 hover:border-brand hover:text-brand"
+        >
+          <span className="text-2xl leading-none" aria-hidden>
+            +
+          </span>
+          Adicionar pessoa à equipe
+        </button>
+      )}
     </section>
   )
 }

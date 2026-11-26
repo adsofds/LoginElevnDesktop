@@ -434,3 +434,73 @@ export const formatClock = (totalSeconds: number) => {
   const pad = (n: number) => String(n).padStart(2, '0')
   return h ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`
 }
+
+/** Student photo, or the initials on a gold tile when there is none. */
+export function Avatar({
+  src,
+  name,
+  className,
+}: {
+  src: string | null
+  name: string
+  className?: string
+}) {
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" className={cx('rounded-full object-cover', className)} />
+  ) : (
+    <span
+      aria-hidden
+      className={cx(
+        'grid place-items-center rounded-full bg-[linear-gradient(145deg,#2a2536,#17151f)] font-semibold text-[var(--app-gold)]',
+        className,
+      )}
+    >
+      {initials}
+    </span>
+  )
+}
+
+/**
+ * Reads an image file and returns a square JPEG data URL (center crop), small enough to
+ * keep on the device.
+ */
+export function squarePhoto(file: File, size = 360): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => {
+      const side = Math.min(image.naturalWidth, image.naturalHeight)
+      const canvas = document.createElement('canvas')
+      canvas.width = size
+      canvas.height = size
+      const context = canvas.getContext('2d')
+      if (!context) return reject(new Error('canvas'))
+      context.drawImage(
+        image,
+        (image.naturalWidth - side) / 2,
+        (image.naturalHeight - side) / 2,
+        side,
+        side,
+        0,
+        0,
+        size,
+        size,
+      )
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.85))
+    }
+    image.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('image'))
+    }
+    image.src = url
+  })
+}
