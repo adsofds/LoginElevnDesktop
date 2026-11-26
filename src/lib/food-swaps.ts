@@ -1,6 +1,6 @@
 /*
- * Trocas inteligentes: food database and the math behind the swap calculator, the TMB
- * calculator and the barcode lookup in the student app (Dieta → Trocas inteligentes).
+ * Trocas inteligentes: food database and the math behind the swap calculator and the
+ * barcode lookup in the student app (Dieta → Trocas inteligentes).
  *
  * Values per 100 g from the Brazilian public food composition tables:
  * TBCA 7.2 (USP/FoRC), TACO 4ª ed. (NEPA/Unicamp) and manufacturer averages for
@@ -678,85 +678,6 @@ export function suggestSwaps(
       .sort((a, b) => a.score - b.score)
       .slice(0, limit)
   )
-}
-
-/* ---------------- TMB & macros (Harris-Benedict revisada) ---------------- */
-
-export type Sex = 'M' | 'F'
-export type DietGoal = 'cutting' | 'manutencao' | 'bulking'
-
-export const activityLevels = [
-  { factor: 1.2, label: 'Sedentário', hint: 'Pouco ou nenhum exercício' },
-  { factor: 1.375, label: 'Levemente ativo', hint: '1 a 3x por semana' },
-  { factor: 1.55, label: 'Moderadamente ativo', hint: '3 a 5x por semana' },
-  { factor: 1.725, label: 'Muito ativo', hint: '6 a 7x por semana' },
-  { factor: 1.9, label: 'Extremamente ativo', hint: '2x por dia ou trabalho pesado' },
-] as const
-
-export const dietGoals: {
-  id: DietGoal
-  label: string
-  hint: string
-  factor: number
-  split: { p: number; c: number; g: number }
-  note: string
-}[] = [
-  {
-    id: 'cutting',
-    label: 'Cutting',
-    hint: 'Perder gordura',
-    factor: 0.8,
-    split: { p: 0.35, c: 0.35, g: 0.3 },
-    note: 'Déficit de cerca de 20% sobre o gasto total',
-  },
-  {
-    id: 'manutencao',
-    label: 'Manutenção',
-    hint: 'Manter o peso',
-    factor: 1,
-    split: { p: 0.3, c: 0.4, g: 0.3 },
-    note: 'Calorias iguais ao gasto total',
-  },
-  {
-    id: 'bulking',
-    label: 'Bulking',
-    hint: 'Ganhar massa',
-    factor: 1.15,
-    split: { p: 0.3, c: 0.45, g: 0.25 },
-    note: 'Superávit de cerca de 15% sobre o gasto total',
-  },
-]
-
-export function energyPlan(input: {
-  sex: Sex
-  age: number
-  weightKg: number
-  heightCm: number
-  activity: number
-  goal: DietGoal
-}) {
-  const { sex, age, weightKg, heightCm, activity } = input
-  const tmb =
-    sex === 'M'
-      ? 88.362 + 13.397 * weightKg + 4.799 * heightCm - 5.677 * age
-      : 447.593 + 9.247 * weightKg + 3.098 * heightCm - 4.33 * age
-  const get = tmb * activity
-  const goal = dietGoals.find((item) => item.id === input.goal) ?? dietGoals[1]
-  const diet = get * goal.factor
-  const macro = (share: number, kcalPerGram: number) => ({
-    share,
-    kcal: Math.round(diet * share),
-    grams: Math.round((diet * share) / kcalPerGram),
-  })
-  return {
-    tmb: Math.round(tmb),
-    get: Math.round(get),
-    diet: Math.round(diet),
-    goal,
-    p: macro(goal.split.p, 4),
-    c: macro(goal.split.c, 4),
-    g: macro(goal.split.g, 9),
-  }
 }
 
 /* ---------------- Barcode (Open Food Facts) ---------------- */

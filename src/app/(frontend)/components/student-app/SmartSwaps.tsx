@@ -1,12 +1,9 @@
 'use client'
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
-import { dietPlan, studentProfile } from '@/lib/demo-student-app'
+import { dietPlan } from '@/lib/demo-student-app'
 import {
-  activityLevels,
   categoryLabels,
-  dietGoals,
-  energyPlan,
   findFood,
   goalOptions,
   lookupBarcode,
@@ -15,10 +12,8 @@ import {
   suggestSwaps,
   swapFor,
   unitOptions,
-  type DietGoal,
   type Macros,
   type ScannedProduct,
-  type Sex,
   type SwapFood,
   type SwapGoal,
   type SwapResult,
@@ -29,17 +24,15 @@ import { Icon } from '../ui/icons'
 import { Card, GoldButton } from './ui'
 
 /*
- * Dieta → Trocas inteligentes. Three tools, same as the FA.team page the coach uses:
- * swap calculator (same calories, closest macros), barcode lookup (Open Food Facts) and
- * TMB & macros (Harris-Benedict revisada).
+ * Dieta → Trocas inteligentes. Two tools, as on the FA.team page the coach uses: swap
+ * calculator (same calories, closest macros) and barcode lookup (Open Food Facts).
  */
 
-type Tool = 'trocas' | 'escanear' | 'tmb'
+type Tool = 'trocas' | 'escanear'
 
 const tools: { id: Tool; label: string }[] = [
   { id: 'trocas', label: 'Trocas' },
   { id: 'escanear', label: 'Escanear' },
-  { id: 'tmb', label: 'TMB e macros' },
 ]
 
 const fmt = (value: number, digits = 1) =>
@@ -114,7 +107,7 @@ export function SmartSwaps() {
       <div
         role="tablist"
         aria-label="Ferramentas de trocas"
-        className="mt-4 grid grid-cols-3 gap-1 rounded-full bg-white/[0.06] p-1"
+        className="mt-4 grid grid-cols-2 gap-1 rounded-full bg-white/[0.06] p-1"
       >
         {tools.map((item) => (
           <button
@@ -136,7 +129,6 @@ export function SmartSwaps() {
       <div className="mt-4 pb-2">
         {tool === 'trocas' && <SwapCalculator />}
         {tool === 'escanear' && <BarcodeLookup />}
-        {tool === 'tmb' && <EnergyCalculator />}
       </div>
     </div>
   )
@@ -833,261 +825,5 @@ function ProductCard({ product }: { product: ScannedProduct }) {
       </div>
       <p className="mt-3 text-[11px] text-white/40">Fonte: Open Food Facts</p>
     </Card>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/* TMB & macros                                                        */
-/* ------------------------------------------------------------------ */
-
-const macroColors = {
-  p: 'var(--app-green)',
-  c: 'var(--app-gold)',
-  g: 'var(--app-red)',
-}
-
-function EnergyCalculator() {
-  const [sex, setSex] = useState<Sex>('M')
-  const [age, setAge] = useState('')
-  const [weight, setWeight] = useState(() => studentProfile.weight.replace(/[^\d,]/g, ''))
-  const [height, setHeight] = useState('')
-  const [activity, setActivity] = useState<number>(1.55)
-  const [goal, setGoal] = useState<DietGoal>('cutting')
-  const [result, setResult] = useState<ReturnType<typeof energyPlan> | null>(null)
-  const [error, setError] = useState('')
-  const resultRef = useRef<HTMLDivElement>(null)
-
-  const num = (value: string) => Number(value.replace(',', '.')) || 0
-
-  const calculate = () => {
-    const values = { age: num(age), weightKg: num(weight), heightCm: num(height) }
-    if (
-      values.age < 10 ||
-      values.age > 100 ||
-      values.weightKg < 30 ||
-      values.weightKg > 300 ||
-      values.heightCm < 100 ||
-      values.heightCm > 250
-    ) {
-      setError('Preencha idade (10 a 100), peso (30 a 300 kg) e altura (100 a 250 cm).')
-      setResult(null)
-      return
-    }
-    setError('')
-    setResult(energyPlan({ sex, activity, goal, ...values }))
-    window.setTimeout(
-      () => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-      60,
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      <Card className="p-4">
-        <StepTitle step="1">Seus dados</StepTitle>
-        <div role="radiogroup" aria-label="Sexo" className="grid grid-cols-2 gap-2">
-          {(
-            [
-              ['M', 'Masculino'],
-              ['F', 'Feminino'],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={sex === id}
-              onClick={() => setSex(id)}
-              className={cx(
-                'h-11 rounded-2xl text-sm font-semibold transition-colors',
-                sex === id
-                  ? 'bg-white text-[#0d0a21]'
-                  : 'bg-white/[0.06] text-white/70 ring-1 ring-white/10 ring-inset',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {(
-            [
-              ['Idade', 'anos', age, setAge, '30'],
-              ['Peso', 'kg', weight, setWeight, '80'],
-              ['Altura', 'cm', height, setHeight, '175'],
-            ] as const
-          ).map(([label, unit, value, setter, placeholder]) => (
-            <label key={label} className="block">
-              <span className="mb-1.5 block text-xs text-white/55">{label}</span>
-              <span className="relative block">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={value}
-                  placeholder={placeholder}
-                  onChange={(event) => setter(event.target.value.replace(/[^\d.,]/g, ''))}
-                  className={cx(inputClass, 'px-3 pr-9 tabular-nums')}
-                />
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[11px] text-white/40"
-                >
-                  {unit}
-                </span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </Card>
-
-      <Card className="p-4">
-        <StepTitle step="2">Nível de atividade</StepTitle>
-        <div role="radiogroup" aria-label="Nível de atividade" className="space-y-1.5">
-          {activityLevels.map((level) => (
-            <button
-              key={level.factor}
-              type="button"
-              role="radio"
-              aria-checked={activity === level.factor}
-              onClick={() => setActivity(level.factor)}
-              className={cx(
-                'flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left ring-1 ring-inset transition-colors',
-                activity === level.factor
-                  ? 'bg-[var(--app-gold)]/10 ring-[var(--app-gold)]/45'
-                  : 'bg-white/[0.03] ring-white/[0.06]',
-              )}
-            >
-              <span
-                className={cx(
-                  'grid size-5 shrink-0 place-items-center rounded-full ring-2 ring-inset',
-                  activity === level.factor ? 'ring-[var(--app-gold)]' : 'ring-white/25',
-                )}
-              >
-                {activity === level.factor && (
-                  <span className="size-2.5 rounded-full bg-[var(--app-gold)]" />
-                )}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[14px] font-medium">{level.label}</span>
-                <span className="block text-xs text-white/50">{level.hint}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      <Card className="p-4">
-        <StepTitle step="3">Objetivo</StepTitle>
-        <div role="radiogroup" aria-label="Objetivo" className="grid grid-cols-3 gap-2">
-          {dietGoals.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="radio"
-              aria-checked={goal === item.id}
-              onClick={() => setGoal(item.id)}
-              className={cx(
-                'rounded-2xl px-2 py-3 text-center ring-1 ring-inset transition-colors',
-                goal === item.id
-                  ? 'bg-[var(--app-gold)]/10 ring-[var(--app-gold)]/45'
-                  : 'bg-white/[0.03] ring-white/[0.06]',
-              )}
-            >
-              <span className="block text-[14px] font-semibold">{item.label}</span>
-              <span className="block text-[11px] text-white/50">{item.hint}</span>
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      {error && <p className="px-1 text-[13px] text-[var(--app-red)]">{error}</p>}
-      <GoldButton onClick={calculate}>Calcular TMB e macros</GoldButton>
-
-      <div ref={resultRef} className="scroll-mt-4">
-        {result && (
-          <Card className="mt-2 p-4">
-            <p className="text-[13px] font-semibold text-white/70">Resultado</p>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {(
-                [
-                  ['TMB', result.tmb, 'Em repouso'],
-                  ['GET', result.get, 'Gasto total'],
-                  ['Dieta', result.diet, result.goal.label],
-                ] as const
-              ).map(([label, value, hint], index) => (
-                <div
-                  key={label}
-                  className={cx(
-                    'rounded-2xl px-2 py-3 text-center',
-                    index === 2
-                      ? 'bg-[var(--app-gold)]/12 ring-1 ring-[var(--app-gold)]/35 ring-inset'
-                      : 'bg-white/[0.05]',
-                  )}
-                >
-                  <p className="text-[11px] font-semibold tracking-wide text-white/55 uppercase">
-                    {label}
-                  </p>
-                  <p
-                    className={cx(
-                      'text-[22px] leading-7 font-bold tabular-nums',
-                      index === 2 && 'text-[var(--app-gold)]',
-                    )}
-                  >
-                    {result[index === 0 ? 'tmb' : index === 1 ? 'get' : 'diet'].toLocaleString(
-                      'pt-BR',
-                    )}
-                  </p>
-                  <p className="text-[10px] leading-3 text-white/45">kcal/dia</p>
-                  <p className="mt-0.5 text-[10px] leading-3 text-white/45">{hint}</p>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-xs text-white/50">{result.goal.note}.</p>
-
-            <p className="mt-5 mb-2 text-[13px] font-semibold text-white/70">
-              Distribuição de macronutrientes
-            </p>
-            <div className="flex h-3 overflow-hidden rounded-full" aria-hidden>
-              {(['p', 'c', 'g'] as const).map((key) => (
-                <span
-                  key={key}
-                  style={{ width: `${result[key].share * 100}%`, background: macroColors[key] }}
-                />
-              ))}
-            </div>
-            <ul className="mt-3 divide-y divide-[var(--app-line)]">
-              {(
-                [
-                  ['p', 'Proteína'],
-                  ['c', 'Carboidrato'],
-                  ['g', 'Gordura'],
-                ] as const
-              ).map(([key, label]) => (
-                <li key={key} className="flex items-center gap-3 py-2.5">
-                  <span
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ background: macroColors[key] }}
-                  />
-                  <span className="flex-1 text-[14px]">{label}</span>
-                  <span className="text-[15px] font-semibold tabular-nums">
-                    {result[key].grams} g
-                  </span>
-                  <span className="w-[72px] text-right text-xs text-white/50 tabular-nums">
-                    {result[key].kcal} kcal
-                  </span>
-                  <span className="w-9 text-right text-xs text-white/50 tabular-nums">
-                    {Math.round(result[key].share * 100)}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 rounded-2xl bg-white/[0.04] px-3.5 py-3 text-[11px] leading-4 text-white/50">
-              Estimativa pela fórmula de Harris-Benedict revisada. A sua dieta é a que a nutri
-              montou para você: use este cálculo só como referência.
-            </p>
-          </Card>
-        )}
-      </div>
-    </div>
   )
 }

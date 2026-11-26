@@ -260,7 +260,7 @@ export default function AppAlunoView() {
                 <dd className="text-ink-2">
                   Calorias do dia e de cada refeição, alimentos com as porções e substituições da
                   nutri. A aba Trocas inteligentes calcula trocas com as mesmas calorias (base TACO
-                  e TBCA), consulta produtos pelo código de barras e estima TMB e macros.
+                  e TBCA) e consulta produtos pelo código de barras.
                 </dd>
               </div>
               <div>
