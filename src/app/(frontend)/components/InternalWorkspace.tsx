@@ -1,11 +1,6 @@
 'use client'
 
-import {
-  useEffect,
-  useState,
-  type CSSProperties,
-  type FormEvent,
-} from 'react'
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import {
   initialSiteFormSubmissions,
   type LeadTemperature,
@@ -15,6 +10,9 @@ import { agendaTypeColor, demoAgenda, type AgendaType } from '@/lib/demo-agenda'
 import LeadsSpreadsheet from './interno/LeadsSpreadsheet'
 import InternProgress from './interno/InternProgress'
 import WeekCalendar, { type CalendarAppointment } from './interno/WeekCalendar'
+import Link from 'next/link'
+import { panelHref } from './panel/navigation'
+import { initialEmployees } from './SettingsWorkspace'
 import { Segmented } from './ui/Segmented'
 import { Button } from './ui/Button'
 import { cx } from './ui/cx'
@@ -351,7 +349,7 @@ const starterContentGoals: ContentGoal[] = [
   },
   {
     id: 'goal-feed',
-    intern: 'Renata Alves',
+    intern: 'Felipe Santos',
     category: 'Feed',
     target: 2,
     completed: 0,
@@ -360,6 +358,14 @@ const starterContentGoals: ContentGoal[] = [
     description: 'Publicar conteúdo educativo com chamada para conversa.',
   },
 ]
+
+/**
+ * Who can be responsible for a posting goal: active team members registered in
+ * Configurações → Equipe e permissões with the Postagens permission.
+ */
+const postingTeam = initialEmployees.filter(
+  (member) => member.status === 'Ativo' && member.permissions.manageInternal,
+)
 
 const starterContentNotes: ContentNote[] = [
   {
@@ -1907,7 +1913,10 @@ export default function InternalWorkspace({
                   <div>
                     <span>CONTROLE DO ADMINISTRADOR</span>
                     <h3>Metas de cada semana</h3>
-                    <p>Cadastre o combinado para cada estagiário e ajuste a quantidade esperada.</p>
+                    <p>
+                      Cadastre o combinado para cada pessoa da equipe e ajuste a quantidade
+                      esperada.
+                    </p>
                   </div>
                   <strong>{contentGoals.length} metas ativas</strong>
                 </header>
@@ -1957,13 +1966,21 @@ export default function InternalWorkspace({
                       <h4>Definir entrega</h4>
                     </header>
                     <label>
-                      <span>Estagiário</span>
-                      <select name="goal-intern" defaultValue="Marina Lopes">
-                        <option>Marina Lopes</option>
-                        <option>Felipe Santos</option>
-                        <option>Renata Alves</option>
-                        <option>João Pedro</option>
+                      <span>Responsável</span>
+                      <select name="goal-intern" defaultValue={postingTeam[0]?.name} required>
+                        {postingTeam.map((member) => (
+                          <option key={member.id}>{member.name}</option>
+                        ))}
                       </select>
+                      <small className="mt-1 block text-xs text-ink-3">
+                        A lista vem da equipe com permissão de Postagens.{' '}
+                        <Link
+                          href={panelHref('/configuracoes')}
+                          className="font-medium text-brand hover:underline"
+                        >
+                          Gerenciar equipe
+                        </Link>
+                      </small>
                     </label>
                     <label>
                       <span>Categoria</span>

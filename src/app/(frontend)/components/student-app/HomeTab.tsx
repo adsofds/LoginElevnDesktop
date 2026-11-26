@@ -7,7 +7,16 @@ import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 import { currentMeal } from './DietTab'
 import { useStudentApp } from './StudentApp'
-import { Card, Chip, ElevnMark, GoldButton, LetterBadge, LinkButton, SectionTitle } from './ui'
+import {
+  Avatar,
+  Card,
+  Chip,
+  ElevnMark,
+  GoldButton,
+  LetterBadge,
+  LinkButton,
+  SectionTitle,
+} from './ui'
 
 const weekdays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
@@ -89,7 +98,7 @@ const moodCopy: Record<
 }
 
 export function HomeTab() {
-  const { push, setTab, session, lastFinished, notifications, startSession, eatenMeals } =
+  const { push, setTab, session, lastFinished, notifications, startSession, eatenMeals, avatar } =
     useStudentApp()
   const today = new Date()
   const doneToday = lastFinished !== null
@@ -131,11 +140,10 @@ export function HomeTab() {
           aria-label="Minha conta"
           className="shrink-0"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={studentProfile.avatar}
-            alt=""
-            className="size-11 rounded-full object-cover ring-2 ring-[var(--app-gold)]/40"
+          <Avatar
+            src={avatar}
+            name={studentProfile.name}
+            className="size-11 text-sm ring-2 ring-[var(--app-gold)]/40"
           />
         </button>
         <div className="min-w-0 flex-1">

@@ -7,7 +7,16 @@ import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 import { planExpiration } from './HomeTab'
 import { useStudentApp } from './StudentApp'
-import { Card, Chip, GhostButton, GoldButton, PhoneSheet, ScreenHeader } from './ui'
+import {
+  Avatar,
+  Card,
+  Chip,
+  GhostButton,
+  GoldButton,
+  PhoneSheet,
+  ScreenHeader,
+  squarePhoto,
+} from './ui'
 
 /* ---------------------------------------------------------------- Account (Smart Fit "Conta") */
 
@@ -27,8 +36,28 @@ function openCoachWhatsApp(text: string) {
 }
 
 export function AccountTab() {
-  const { push } = useStudentApp()
-  const [sheet, setSheet] = useState<'renovar' | 'whatsapp' | 'config' | null>(null)
+  const { push, avatar, setAvatar } = useStudentApp()
+  const [sheet, setSheet] = useState<'renovar' | 'whatsapp' | 'config' | 'foto' | null>(null)
+  const [photoError, setPhotoError] = useState('')
+  const cameraInput = useRef<HTMLInputElement>(null)
+  const galleryInput = useRef<HTMLInputElement>(null)
+
+  const onPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Escolha uma imagem (JPG, PNG ou HEIC).')
+      return
+    }
+    try {
+      setAvatar(await squarePhoto(file))
+      setPhotoError('')
+      setSheet(null)
+    } catch {
+      setPhotoError('Não foi possível abrir essa imagem. Tente outra.')
+    }
+  }
   const [renewPlan, setRenewPlan] = useState(studentProfile.plan)
   const [prefs, setPrefs] = useState({ treino: true, som: true })
 
@@ -66,13 +95,35 @@ export function AccountTab() {
   return (
     <div>
       <section className="px-5 pt-6 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={studentProfile.avatar}
-          alt=""
-          className="mx-auto size-24 rounded-full object-cover ring-4 ring-[var(--app-gold)]/25"
-        />
-        <h1 className="mt-4 text-[26px] leading-8 font-semibold tracking-[-0.02em]">
+        <button
+          type="button"
+          onClick={() => {
+            setPhotoError('')
+            setSheet('foto')
+          }}
+          aria-label="Trocar foto de perfil"
+          className="relative mx-auto block rounded-full transition-transform active:scale-95"
+        >
+          <Avatar
+            src={avatar}
+            name={studentProfile.name}
+            className="size-24 text-[28px] ring-4 ring-[var(--app-gold)]/25"
+          />
+          <span className="absolute right-0 bottom-0 grid size-8 place-items-center rounded-full bg-[var(--app-gold)] text-[#0d0a21] ring-4 ring-[var(--app-bg)]">
+            <Icon name="photo" className="size-4" />
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setPhotoError('')
+            setSheet('foto')
+          }}
+          className="mt-2 text-[13px] font-semibold text-[var(--app-gold)]"
+        >
+          {avatar ? 'Trocar foto' : 'Adicionar foto'}
+        </button>
+        <h1 className="mt-2 text-[26px] leading-8 font-semibold tracking-[-0.02em]">
           {studentProfile.name}
         </h1>
         <div className="mt-2 flex justify-center gap-1.5">
@@ -140,6 +191,60 @@ export function AccountTab() {
       >
         <Icon name="logout" className="size-4" /> Sair
       </button>
+
+      <PhoneSheet open={sheet === 'foto'} onClose={() => setSheet(null)} title="Foto de perfil">
+        <div className="flex items-center gap-4 pb-4">
+          <Avatar src={avatar} name={studentProfile.name} className="size-16 text-xl" />
+          <p className="text-[13px] leading-5 text-white/60">
+            Aparece no seu perfil e para a equipe da Elevn na sua ficha.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => cameraInput.current?.click()}
+            className="flex h-12 w-full items-center gap-3 rounded-2xl bg-white/[0.06] px-4 text-[15px] font-medium active:bg-white/10"
+          >
+            <Icon name="photo" className="size-5 text-[var(--app-gold)]" /> Tirar foto
+          </button>
+          <button
+            type="button"
+            onClick={() => galleryInput.current?.click()}
+            className="flex h-12 w-full items-center gap-3 rounded-2xl bg-white/[0.06] px-4 text-[15px] font-medium active:bg-white/10"
+          >
+            <Icon name="download" className="size-5 rotate-180 text-[var(--app-gold)]" /> Escolher
+            da galeria
+          </button>
+          {avatar && (
+            <button
+              type="button"
+              onClick={() => {
+                setAvatar(null)
+                setSheet(null)
+              }}
+              className="flex h-12 w-full items-center gap-3 rounded-2xl px-4 text-[15px] font-medium text-[var(--app-red)] active:bg-white/[0.06]"
+            >
+              <Icon name="trash" className="size-5" /> Remover foto
+            </button>
+          )}
+        </div>
+        {photoError && <p className="mt-3 text-[13px] text-[var(--app-red)]">{photoError}</p>}
+        <input
+          ref={cameraInput}
+          type="file"
+          accept="image/*"
+          capture="user"
+          className="hidden"
+          onChange={onPhoto}
+        />
+        <input
+          ref={galleryInput}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={onPhoto}
+        />
+      </PhoneSheet>
 
       <PhoneSheet open={sheet === 'renovar'} onClose={() => setSheet(null)} title="Renovar plano">
         <div role="radiogroup" aria-label="Plano" className="space-y-2">
