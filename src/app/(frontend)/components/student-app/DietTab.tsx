@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { dietPlan, type Meal } from '@/lib/demo-student-app'
+import { dietPlan, portionLabel, type Meal } from '@/lib/demo-student-app'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 import { useStudentApp } from './StudentApp'
 import { SmartSwaps } from './SmartSwaps'
-import { Card, Chip, PhoneSheet, Ring, ScreenHeader } from './ui'
+import { Card, Chip, Ring, ScreenHeader } from './ui'
 
 /*
  * Plano: calories per meal and the portions to eat (protein, carbs and fat of the plan stay
@@ -17,25 +17,33 @@ import { Card, Chip, PhoneSheet, Ring, ScreenHeader } from './ui'
 const mealKcal = (meal: Meal) => meal.foods.reduce((sum, food) => sum + food.kcal, 0)
 
 /**
- * The meal to show as "Agora" / "Próxima refeição": the first one not eaten yet whose time
- * is at most 30 minutes ago. Shared by Início and Dieta so both say the same thing.
+ * The meal to show as "Próxima refeição": the first one not checked after the last meal the
+ * student checked (a skipped lunch stays the next meal even at 16:30). With nothing checked
+ * yet, the first meal of the day. Shared by Início and Dieta so both say the same thing.
  */
-export function currentMeal(eatenMeals: string[], now = new Date()) {
-  const minutesNow = now.getHours() * 60 + now.getMinutes()
-  return dietPlan.meals.find((meal) => {
-    const [h, m] = meal.time.split(':').map(Number)
-    return h * 60 + m >= minutesNow - 30 && !eatenMeals.includes(meal.id)
-  })
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function currentMeal(eatenMeals: string[], _now = new Date()) {
+  const meals = dietPlan.meals
+  const lastEaten = meals.reduce(
+    (last, meal, index) => (eatenMeals.includes(meal.id) ? index : last),
+    -1,
+  )
+  return (
+    meals.slice(lastEaten + 1).find((meal) => !eatenMeals.includes(meal.id)) ??
+    meals.find((meal) => !eatenMeals.includes(meal.id))
+  )
 }
+
+/** Calories of the whole day: the sum of the meals, so checking all of them reaches 100%. */
+export const dayKcal = dietPlan.meals.reduce((sum, meal) => sum + mealKcal(meal), 0)
 
 export function DietTab() {
   const { eatenMeals, toggleMeal } = useStudentApp()
   const [view, setView] = useState<'plano' | 'trocas'>('plano')
   const [open, setOpen] = useState<string | null>(null)
-  const [sheet, setSheet] = useState<Meal | null>(null)
   const kcalOf = mealKcal
 
-  const target = dietPlan.targets.kcal
+  const target = dayKcal
   const consumed = dietPlan.meals
     .filter((meal) => eatenMeals.includes(meal.id))
     .reduce((sum, meal) => sum + kcalOf(meal), 0)
@@ -171,20 +179,32 @@ export function DietTab() {
                               className="flex items-center justify-between gap-3 py-3"
                             >
                               <span className="text-[15px]">{food.name}</span>
-                              <span className="shrink-0 text-[13px] text-white/50">
-                                {food.amount}
+                              <span className="shrink-0 text-right text-[13px] text-white/55 tabular-nums">
+                                {portionLabel(food)}
                               </span>
                             </li>
                           ))}
                         </ul>
-                        <button
-                          type="button"
-                          disabled={!meal.swaps}
-                          onClick={() => setSheet(meal)}
-                          className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-[13px] font-medium disabled:opacity-35"
-                        >
-                          <Icon name="swap" className="size-4" /> Ver substituições da nutri
-                        </button>
+                        {meal.swaps && meal.swaps.length > 0 && (
+                          <details className="group mt-2 overflow-hidden rounded-2xl bg-white/[0.05]">
+                            <summary className="flex h-11 cursor-pointer list-none items-center gap-2 px-4 text-[13px] font-medium [&::-webkit-details-marker]:hidden">
+                              <Icon name="swap" className="size-4 text-[var(--app-gold)]" />
+                              Substituições da nutri
+                              <span className="text-white/45">({meal.swaps.length})</span>
+                              <Icon
+                                name="chevronRight"
+                                className="ml-auto size-4 text-white/40 transition-transform group-open:rotate-90"
+                              />
+                            </summary>
+                            <ul className="space-y-1.5 border-t border-[var(--app-line)] px-4 py-3">
+                              {meal.swaps.map((item) => (
+                                <li key={item} className="text-[13px] leading-5 text-white/75">
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
                       </div>
                     )}
                   </Card>
@@ -193,34 +213,33 @@ export function DietTab() {
             })}
           </ul>
 
-          <Card className="mx-5 mt-4 flex gap-3 p-4">
-            <span className="text-xl" aria-hidden="true">
-              📝
-            </span>
-            <div>
-              <p className="text-xs font-semibold text-[var(--app-gold)]">Recado da nutri</p>
-              <p className="mt-0.5 text-sm leading-5 text-white/80">{dietPlan.note}</p>
-            </div>
-          </Card>
+          <details className="group mx-5 mt-4 overflow-hidden rounded-[22px] bg-[var(--app-card)] ring-1 ring-white/[0.06] ring-inset">
+            <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[var(--app-gold)]/15 text-[var(--app-gold)]">
+                <Icon name="nutrition" className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold">Orientações gerais</span>
+                <span className="block text-xs text-white/50">
+                  {dietPlan.guidelines.length} orientações da nutri
+                </span>
+              </span>
+              <Icon
+                name="chevronRight"
+                className="size-4 text-white/40 transition-transform group-open:rotate-90"
+              />
+            </summary>
+            <ul className="space-y-2.5 border-t border-[var(--app-line)] px-4 py-4">
+              {dietPlan.guidelines.map((item) => (
+                <li key={item} className="flex gap-2.5 text-sm leading-5 text-white/80">
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-[var(--app-gold)]" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </details>
         </>
       )}
-
-      <PhoneSheet
-        open={sheet !== null}
-        onClose={() => setSheet(null)}
-        title={`Substituições · ${sheet?.name ?? ''}`}
-      >
-        <p className="mb-3 text-[13px] text-white/55">
-          Troque um alimento por outro, sem mudar o resto da refeição.
-        </p>
-        <ul className="space-y-2">
-          {sheet?.swaps?.map((item) => (
-            <li key={item} className="rounded-2xl bg-white/[0.05] px-4 py-3 text-sm">
-              {item}
-            </li>
-          ))}
-        </ul>
-      </PhoneSheet>
     </div>
   )
 }

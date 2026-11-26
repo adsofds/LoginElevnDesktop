@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -21,7 +22,7 @@ import { Sheet } from './ui/Sheet'
 import { Table, TD, TH, THead, TR } from './ui/Table'
 import { Tabs } from './ui/Tabs'
 import { FaceCheckin } from './students/FaceCheckin'
-import { LiveClinAnswersView } from './students/LiveClinAnswersView'
+import { CheckinsBoard } from './students/CheckinsBoard'
 import { faceThemes, formatKg, weightLabel, type LiveClinAnswers } from './students/liveclin'
 import { FichaSection } from './students/FichaSection'
 import { WhatsAppGlyph, whatsappUrl } from './dashboard/AttentionActions'
@@ -124,6 +125,8 @@ type StudentRecord = {
   daysToExpire: number
   renewalState: RenewalState
   nonRenewalReason?: string
+  /** Months of the last confirmed renewal (3, 6 or 12). */
+  renewedMonths?: number
   status: StudentHealth
   weightChange: string
   hasLogin?: boolean
@@ -1652,12 +1655,17 @@ const FICHA_SECTIONS_KEY = 'elevn-ficha-secoes'
 
 type StudentsWorkspaceProps = {
   /** Top-level tab of the page: the roster or the notifications center. */
-  section?: 'carteira' | 'notificacoes'
-  onSectionChange?: (section: 'carteira' | 'notificacoes') => void
+  section?: 'carteira' | 'checkins' | 'notificacoes'
+  onSectionChange?: (section: 'carteira' | 'checkins' | 'notificacoes') => void
+  /** Student whose check-in is open in the Check-ins tab (?checkin=). */
+  checkinStudentId?: string | null
+  onCheckinSelect?: (studentId: string | null) => void
   /** Rendered in place of the roster when section is "notificacoes". */
   notificationsContent?: ReactNode
   /** "Notificar" in the student file. */
   onNotifyStudent?: (studentId: string) => void
+  /** "Ver check-in" in the student file: opens the Check-ins tab on that student. */
+  onOpenCheckin?: (studentId: string) => void
   /** Student file opened from the URL (?ficha=&aba=). null closes it. */
   ficha?: { studentId: string; tab: FichaTab } | null
   /** Saved view requested from the URL (?visao=vencendo), e.g. from a Dashboard KPI. */
@@ -1989,32 +1997,119 @@ function WeightTrend({ photos, current }: { photos: StudentAppPhoto[]; current: 
   )
 }
 
+export const RENEWAL_OPTIONS = [
+  { months: 3, label: '3 meses', plan: 'Trimestral' },
+  { months: 6, label: '6 meses', plan: 'Semestral' },
+  { months: 12, label: '1 ano', plan: 'Anual' },
+] as const
+
+export const renewalLabel = (months?: number) =>
+  RENEWAL_OPTIONS.find((option) => option.months === months)?.label ?? `${months} meses`
+
+/** Asks for how long the plan was renewed before confirming it. */
+export function RenewalChooser({
+  name,
+  onPick,
+  onCancel,
+}: {
+  name: string
+  onPick: (months: number) => void
+  onCancel: () => void
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={`Por quanto tempo ${name} renovou?`}
+      className="mt-2 rounded-control border border-success/30 bg-success-soft/60 p-2.5"
+    >
+      <p className="text-xs font-semibold text-ink">Renovou por quanto tempo?</p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {RENEWAL_OPTIONS.map((option) => (
+          <Button
+            key={option.months}
+            size="sm"
+            variant="secondary"
+            onClick={() => onPick(option.months)}
+          >
+            {option.label}
+          </Button>
+        ))}
+        <Button size="sm" variant="ghost" onClick={onCancel}>
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+const PRIORITY_COLLAPSED_KEY = 'elevn-prioridades-recolhidas'
+
+/** Priority card with a dropdown header: collapsing is remembered per card. */
 function PriorityPanel({
+  id,
   title,
   source,
   total,
   onSeeAll,
   children,
 }: {
+  id: string
   title: string
   source: string
   total: number
   onSeeAll: () => void
   children: ReactNode
 }) {
+  const [open, setOpen] = useState(true)
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(PRIORITY_COLLAPSED_KEY) ?? '[]')
+      if (Array.isArray(stored) && stored.includes(id)) setOpen(false)
+    } catch {
+      /* ignore */
+    }
+  }, [id])
+  const toggle = () => {
+    const next = !open
+    setOpen(next)
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(PRIORITY_COLLAPSED_KEY) ?? '[]')
+      const list: string[] = Array.isArray(stored) ? stored : []
+      window.localStorage.setItem(
+        PRIORITY_COLLAPSED_KEY,
+        JSON.stringify(next ? list.filter((item) => item !== id) : [...new Set([...list, id])]),
+      )
+    } catch {
+      /* preference not saved */
+    }
+  }
   return (
-    <article className="flex min-w-0 flex-col rounded-card border border-line bg-surface">
-      <header className="flex items-start justify-between gap-3 border-b border-line-subtle px-5 pt-4 pb-3">
+    <article className="flex min-w-0 flex-col self-start rounded-card border border-line bg-surface">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        className={cx(
+          'flex w-full cursor-pointer items-start justify-between gap-3 px-5 pt-4 pb-3 text-left hover:bg-subtle/50',
+          open && 'border-b border-line-subtle',
+        )}
+      >
         <div>
           <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-3 uppercase">
             {source}
           </p>
           <h2 className="mt-0.5 text-[15px] font-semibold text-ink">{title}</h2>
         </div>
-        <span className="mt-1 text-sm font-semibold text-ink-2 tabular-nums">{total}</span>
-      </header>
-      <div className="flex flex-1 flex-col divide-y divide-line-subtle">{children}</div>
-      {total > 3 && (
+        <span className="mt-1 flex items-center gap-2 text-sm font-semibold text-ink-2 tabular-nums">
+          {total}
+          <Icon
+            name="chevronRight"
+            className={cx('size-4 text-ink-3 transition-transform', open && 'rotate-90')}
+          />
+        </span>
+      </button>
+      {open && <div className="flex flex-1 flex-col divide-y divide-line-subtle">{children}</div>}
+      {open && total > 3 && (
         <button
           type="button"
           onClick={onSeeAll}
@@ -2070,6 +2165,9 @@ export default function StudentsWorkspace({
   onSectionChange,
   notificationsContent,
   onNotifyStudent,
+  onOpenCheckin,
+  checkinStudentId = null,
+  onCheckinSelect,
   ficha,
   onFichaChange,
   startNew,
@@ -2556,6 +2654,15 @@ export default function StudentsWorkspace({
     )
   }
 
+  const [renewingId, setRenewingId] = useState<string | null>(null)
+  const checkinAnswersFor = useCallback(
+    (id: string) => {
+      const student = students.find((item) => item.id === id)
+      return getLiveClinAnswers(student ?? students[0])
+    },
+    [students],
+  )
+
   const completeCheckin = (studentId: string) => {
     setStudents((current) =>
       current.map((student) =>
@@ -2572,7 +2679,10 @@ export default function StudentsWorkspace({
     )
   }
 
-  const recoverStudentPlan = (studentId: string) => {
+  const recoverStudentPlan = (studentId: string, months: number) => {
+    const until = new Date()
+    until.setMonth(until.getMonth() + months)
+    const option = RENEWAL_OPTIONS.find((item) => item.months === months)
     setStudents((current) =>
       current.map((student) =>
         student.id === studentId
@@ -2580,13 +2690,19 @@ export default function StudentsWorkspace({
               ...student,
               renewalState: 'Recuperado',
               nonRenewalReason: undefined,
+              renewedMonths: months,
+              plan: option?.plan ?? student.plan,
               status: 'Em dia',
-              daysToExpire: 90,
-              expirationDate: 'Renovado (+90d)',
+              daysToExpire: Math.round((until.getTime() - Date.now()) / 86_400_000),
+              expirationDate: new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' })
+                .format(until)
+                .replace('.', '')
+                .replace(' de ', ' '),
             }
           : student,
       ),
     )
+    setRenewingId(null)
     setNonRenewalOpenForId(null)
     if (priorityNonRenewalId === studentId) {
       setPriorityNonRenewalId(null)
@@ -2964,12 +3080,29 @@ export default function StudentsWorkspace({
         onChange={(next) => onSectionChange?.(next)}
         items={[
           { id: 'carteira', label: 'Carteira', count: students.length },
+          {
+            id: 'checkins',
+            label: 'Check-ins',
+            count: students.filter((student) => student.checkinState !== 'Realizado').length,
+          },
           { id: 'notificacoes', label: 'Notificações' },
         ]}
       />
 
       {section === 'notificacoes' ? (
         notificationsContent
+      ) : section === 'checkins' ? (
+        <CheckinsBoard
+          students={students}
+          answersFor={checkinAnswersFor}
+          selectedId={checkinStudentId}
+          onSelect={(id) => onCheckinSelect?.(id)}
+          onComplete={completeCheckin}
+          onOpenFicha={(id) => {
+            onCheckinSelect?.(null)
+            openStudentModal(id)
+          }}
+        />
       ) : (
         <>
           <KpiStrip
@@ -3028,10 +3161,11 @@ export default function StudentsWorkspace({
 
           <section className="mb-8 grid gap-4 lg:grid-cols-3" aria-label="Prioridades de hoje">
             <PriorityPanel
+              id="checkins"
               title="Check-ins para avaliar"
               source="LiveClin"
               total={pendingCheckinsCount}
-              onSeeAll={() => showStatuses(['pendentes', 'atrasados'])}
+              onSeeAll={() => onSectionChange?.('checkins')}
             >
               {students
                 .filter(
@@ -3062,6 +3196,7 @@ export default function StudentsWorkspace({
             </PriorityPanel>
 
             <PriorityPanel
+              id="treinos"
               title="Treinos concluídos"
               source="MFIT"
               total={completedCheckinsCount}
@@ -3101,6 +3236,7 @@ export default function StudentsWorkspace({
             </PriorityPanel>
 
             <PriorityPanel
+              id="renovacoes"
               title="Vencimentos e renovações"
               source="Retenção"
               total={expiringSoonCount + recoveredCount + nonRenewedCount}
@@ -3128,7 +3264,9 @@ export default function StudentsWorkspace({
                     }
                     context={
                       student.renewalState === 'Recuperado'
-                        ? 'Renovação confirmada, próximo ciclo liberado.'
+                        ? student.renewedMonths
+                          ? `Renovou por ${renewalLabel(student.renewedMonths)} · novo vencimento ${student.expirationDate}.`
+                          : 'Renovação confirmada, próximo ciclo liberado.'
                         : student.renewalState === 'Não renovou'
                           ? `Motivo: ${student.nonRenewalReason || 'registrado pela administração.'}`
                           : `Vence em ${student.daysToExpire} ${student.daysToExpire === 1 ? 'dia' : 'dias'}: acionar o aluno.`
@@ -3138,18 +3276,24 @@ export default function StudentsWorkspace({
                         <Button
                           size="sm"
                           variant="accent"
-                          onClick={() => recoverStudentPlan(student.id)}
+                          onClick={() => setRenewingId(student.id)}
                         >
                           Renovar
                         </Button>
                       ) : student.renewalState === 'Não renovou' ? (
-                        <Button size="sm" onClick={() => recoverStudentPlan(student.id)}>
+                        <Button size="sm" onClick={() => setRenewingId(student.id)}>
                           Recuperar
                         </Button>
                       ) : undefined
                     }
                     extra={
-                      priorityNonRenewalId === student.id ? (
+                      renewingId === student.id ? (
+                        <RenewalChooser
+                          name={student.name}
+                          onPick={(months) => recoverStudentPlan(student.id, months)}
+                          onCancel={() => setRenewingId(null)}
+                        />
+                      ) : priorityNonRenewalId === student.id ? (
                         <div className="mt-2 flex flex-col gap-2">
                           <input
                             type="text"
@@ -3603,13 +3747,103 @@ export default function StudentsWorkspace({
                   <span>CHECK-IN SEMANAL (LIVECLIN)</span>
                   <strong>{modalStudent.checkinState}</strong>
                   <small>{modalLiveClin.submittedAt}</small>
+                  {onOpenCheckin && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="mt-2 self-start"
+                      onClick={() => {
+                        const id = modalStudent.id
+                        setModalStudentId(null)
+                        onOpenCheckin(id)
+                      }}
+                    >
+                      Ver check-in →
+                    </Button>
+                  )}
                 </div>
                 <div>
                   <span>STATUS DE RENOVAÇÃO</span>
-                  <strong>{modalStudent.renewalState}</strong>
+                  <strong>
+                    {modalStudent.renewalState}
+                    {modalStudent.renewalState === 'Recuperado' &&
+                      modalStudent.renewedMonths &&
+                      ` · ${renewalLabel(modalStudent.renewedMonths)}`}
+                  </strong>
                   <small>Vencimento: {modalStudent.expirationDate}</small>
+                  {renewingId !== modalStudent.id && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setRenewingId(modalStudent.id)}
+                      >
+                        <Icon name="check" className="size-3.5" />
+                        {modalStudent.renewalState === 'Recuperado' ? 'Renovar de novo' : 'Renovar'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => {
+                          setNonRenewalOpenForId(
+                            nonRenewalOpenForId === modalStudent.id ? null : modalStudent.id,
+                          )
+                          setNonRenewalDraft(modalStudent.nonRenewalReason ?? '')
+                        }}
+                      >
+                        {modalStudent.renewalState === 'Não renovou'
+                          ? 'Editar motivo'
+                          : 'Não renovou'}
+                      </Button>
+                    </div>
+                  )}
+                  {renewingId === modalStudent.id && (
+                    <RenewalChooser
+                      name={modalStudent.name}
+                      onPick={(months) => recoverStudentPlan(modalStudent.id, months)}
+                      onCancel={() => setRenewingId(null)}
+                    />
+                  )}
                 </div>
               </section>
+
+              {modalStudent.renewalState === 'Não renovou' &&
+                modalStudent.nonRenewalReason &&
+                nonRenewalOpenForId !== modalStudent.id && (
+                  <div className="inspector-nonrenewal-box">
+                    <span>MOTIVO DA NÃO RENOVAÇÃO (REGISTRADO PELO ADMIN)</span>
+                    <p>{modalStudent.nonRenewalReason}</p>
+                  </div>
+                )}
+              {nonRenewalOpenForId === modalStudent.id && (
+                <div className="modal-non-renewal-box">
+                  <label>
+                    <span>Motivo da não renovação (preenchido pelo Admin)</span>
+                    <textarea
+                      rows={2}
+                      value={nonRenewalDraft}
+                      onChange={(event) => setNonRenewalDraft(event.target.value)}
+                      placeholder="Ex.: Pausa financeira, mudança para consultoria presencial, viagem..."
+                      autoFocus
+                    />
+                  </label>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => markNonRenewed(modalStudent.id, nonRenewalDraft)}
+                    >
+                      Salvar motivo da não renovação
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel"
+                      onClick={() => setNonRenewalOpenForId(null)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {(() => {
                 const open = sectionsOpenFor(modalStudent.id)
@@ -3624,211 +3858,8 @@ export default function StudentsWorkspace({
                     setModalTab(id)
                   }
                 }
-                const lowThemes = faceThemes.filter(
-                  (theme) => theme.score(modalLiveClin) <= 2,
-                ).length
                 return (
                   <>
-                    <FichaSection
-                      id="checkin"
-                      title="Check-in semanal"
-                      open={open.includes('checkin')}
-                      onToggle={() => toggle('checkin')}
-                      badge={
-                        lowThemes > 0 ? (
-                          <Badge tone="danger" dot>
-                            {lowThemes} {lowThemes === 1 ? 'alerta' : 'alertas'}
-                          </Badge>
-                        ) : (
-                          <Badge tone="success" dot>
-                            Em ordem
-                          </Badge>
-                        )
-                      }
-                      summary={`${modalStudent.checkinState} · ${modalLiveClin.submittedAt}`}
-                    >
-                      <div className="student-modal-columns">
-                        <div className="min-w-0">
-                          <FaceCheckin
-                            studentId={modalStudent.id}
-                            studentName={modalStudent.name}
-                            answers={modalLiveClin}
-                          />
-                          <details className="group mt-4 rounded-lg border border-line">
-                            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[13px] font-medium text-ink-2 [&::-webkit-details-marker]:hidden">
-                              Respostas do aluno no LiveClin (14 perguntas)
-                              <Icon
-                                name="chevronRight"
-                                className="size-4 text-ink-3 transition-transform group-open:rotate-90"
-                              />
-                            </summary>
-                            <div className="border-t border-line p-3">
-                              <p className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-3">
-                                <span>
-                                  {modalLiveClin.protocolName} · {modalLiveClin.submittedAt}
-                                </span>
-                                <span>Como o aluno preencheu, pergunta por pergunta</span>
-                              </p>
-                              <LiveClinAnswersView answers={modalLiveClin} />
-                            </div>
-                          </details>
-                        </div>
-                        <section className="modal-app-and-coach-section">
-                          <div className="modal-quick-plans-card">
-                            <header>
-                              <span>PROTOCOLO ATUAL DO ALUNO</span>
-                              <h3>Treino (MFIT) & Dieta (WebDiet)</h3>
-                            </header>
-                            <div className="modal-quick-plans-grid">
-                              <div>
-                                <span>TREINO PRESCRITO (MFIT)</span>
-                                <strong>{modalWorkoutPlan.splitName}</strong>
-                                <small>{modalWorkoutPlan.frequency}</small>
-                                <button type="button" onClick={() => setModalTab('treino')}>
-                                  Ver treino no MFIT
-                                </button>
-                              </div>
-                              <div>
-                                <span>DIETA PRESCRITA (WEBDIET)</span>
-                                <strong>{modalDietPlan.strategyName}</strong>
-                                <small>{modalDietPlan.dailyCalories}</small>
-                                <button type="button" onClick={() => setModalTab('dieta')}>
-                                  Ver dieta no WebDiet
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="app-observations-card">
-                            <header>
-                              <div>
-                                <span>COMENTÁRIOS DO ALUNO POR TREINO NO APP (MFIT)</span>
-                                <h3>Comentários recebidos: Treino A, Treino B e Treino C</h3>
-                              </div>
-                              <small>Para responder, fale com o aluno no WhatsApp</small>
-                            </header>
-                            <div className="app-observations-list">
-                              {modalWorkoutComments.map((wc) => (
-                                <article key={wc.workoutCode} className="workout-comment-item">
-                                  <header>
-                                    <span className="obs-tag tag-treino">
-                                      {wc.workoutCode} · {wc.workoutTitle}
-                                    </span>
-                                    <time>{wc.sentAt}</time>
-                                  </header>
-                                  <p>{wc.comment}</p>
-                                </article>
-                              ))}
-                              {modalStudent.appObservations.map((obs) => (
-                                <article key={obs.id}>
-                                  <header>
-                                    <span className={`obs-tag tag-${obs.category.toLowerCase()}`}>
-                                      {obs.category}
-                                    </span>
-                                    <time>{obs.when}</time>
-                                  </header>
-                                  <p>{obs.note}</p>
-                                </article>
-                              ))}
-                            </div>
-                          </div>
-
-                          {modalStudent.renewalState === 'Não renovou' &&
-                            modalStudent.nonRenewalReason && (
-                              <div className="inspector-nonrenewal-box">
-                                <span>MOTIVO DA NÃO RENOVAÇÃO (REGISTRADO PELO ADMIN)</span>
-                                <p>{modalStudent.nonRenewalReason}</p>
-                              </div>
-                            )}
-
-                          <div className="inspector-checkin-form">
-                            <p className="text-[13px] leading-5 text-ink-3">
-                              O retorno do check-in é feito pelo WhatsApp. Depois de responder,
-                              marque o check-in como avaliado.
-                            </p>
-                            <div className="inspector-form-buttons">
-                              <a
-                                href={whatsappUrl(
-                                  modalStudent.whatsapp,
-                                  `Oi ${modalStudent.name.split(' ')[0]}! Vi seu check-in desta semana no LiveClin.`,
-                                )}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2"
-                              >
-                                <WhatsAppGlyph className="size-4 text-[#1f9d55]" />
-                                Responder no WhatsApp
-                              </a>
-                              <button
-                                type="button"
-                                onClick={() => completeCheckin(modalStudent.id)}
-                                disabled={modalStudent.checkinState === 'Realizado'}
-                              >
-                                {modalStudent.checkinState === 'Realizado'
-                                  ? 'Check-in avaliado'
-                                  : 'Marcar check-in como avaliado'}
-                              </button>
-                              {modalStudent.renewalState !== 'Recuperado' && (
-                                <button
-                                  type="button"
-                                  className="recover-btn"
-                                  onClick={() => recoverStudentPlan(modalStudent.id)}
-                                >
-                                  Confirmar renovação
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                className="non-renew-btn"
-                                onClick={() => {
-                                  setNonRenewalOpenForId(
-                                    nonRenewalOpenForId === modalStudent.id
-                                      ? null
-                                      : modalStudent.id,
-                                  )
-                                  setNonRenewalDraft(modalStudent.nonRenewalReason ?? '')
-                                }}
-                              >
-                                {modalStudent.renewalState === 'Não renovou'
-                                  ? 'Editar motivo de não renovação'
-                                  : 'Não renovou (escrever motivo)'}
-                              </button>
-                            </div>
-                          </div>
-
-                          {nonRenewalOpenForId === modalStudent.id && (
-                            <div className="modal-non-renewal-box">
-                              <label>
-                                <span>Motivo da não renovação (preenchido pelo Admin)</span>
-                                <textarea
-                                  rows={2}
-                                  value={nonRenewalDraft}
-                                  onChange={(event) => setNonRenewalDraft(event.target.value)}
-                                  placeholder="Ex.: Pausa financeira, mudança para consultoria presencial, viagem..."
-                                  autoFocus
-                                />
-                              </label>
-                              <div>
-                                <button
-                                  type="button"
-                                  onClick={() => markNonRenewed(modalStudent.id, nonRenewalDraft)}
-                                >
-                                  Salvar motivo da não renovação
-                                </button>
-                                <button
-                                  type="button"
-                                  className="cancel"
-                                  onClick={() => setNonRenewalOpenForId(null)}
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </section>
-                      </div>
-                    </FichaSection>
-
                     <FichaSection
                       id="treino"
                       title="Treino"
@@ -3865,16 +3896,6 @@ export default function StudentsWorkspace({
                                 </div>
                                 <em>{session.schedule}</em>
                               </header>
-
-                              <div className="workout-student-comment-box">
-                                <header>
-                                  <span>
-                                    COMENTÁRIO DO ALUNO NO APP ({session.code.toUpperCase()})
-                                  </span>
-                                  <time>{session.commentSentAt}</time>
-                                </header>
-                                <p>“{session.studentAppComment}”</p>
-                              </div>
 
                               <div className="workout-exercise-list">
                                 {session.exercises.map((exercise) => (
@@ -3953,9 +3974,24 @@ export default function StudentsWorkspace({
                                   <li key={item}>{item}</li>
                                 ))}
                               </ul>
-                              <footer>
-                                <strong>Opções de substituição:</strong> {meal.substitutions}
-                              </footer>
+                              <details className="group mt-3 rounded-control border border-line bg-subtle/50">
+                                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-ink-2 [&::-webkit-details-marker]:hidden">
+                                  Opções de substituição
+                                  <Icon
+                                    name="chevronRight"
+                                    className="size-3.5 text-ink-3 transition-transform group-open:rotate-90"
+                                  />
+                                </summary>
+                                <ul className="space-y-1 border-t border-line-subtle px-3 py-2 text-xs leading-5 text-ink-2">
+                                  {meal.substitutions
+                                    .split(/(?<=\.)\s+|;\s*|\n+/)
+                                    .map((option) => option.trim())
+                                    .filter(Boolean)
+                                    .map((option) => (
+                                      <li key={option}>• {option}</li>
+                                    ))}
+                                </ul>
+                              </details>
                             </article>
                           ))}
                         </div>

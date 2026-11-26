@@ -9,7 +9,13 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { studentProfile, workouts, type PlannedSet, type Workout } from '@/lib/demo-student-app'
+import {
+  studentProfile,
+  workouts,
+  type ExerciseAlternative,
+  type PlannedSet,
+  type Workout,
+} from '@/lib/demo-student-app'
 import type { StudentNotification } from '@/lib/student-notifications'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
@@ -51,6 +57,8 @@ export type Session = {
   startedAt: number
   sets: Record<string, SetLog[]>
   rest: { endsAt: number; total: number; exercise: string } | null
+  /** Exercises swapped for a coach-approved substitute today (exercise id → alternative). */
+  swaps?: Record<string, ExerciseAlternative>
 }
 
 export type FinishedSession = {
@@ -77,6 +85,8 @@ type AppContextValue = {
   startSession: (code: Workout['code']) => void
   updateSet: (exerciseId: string, index: number, patch: Partial<SetLog>) => void
   toggleSetDone: (exerciseId: string, index: number) => void
+  /** Swap an exercise for one of its substitutes (null goes back to the original). */
+  swapExercise: (exerciseId: string, alternative: ExerciseAlternative | null) => void
   addSet: (exerciseId: string) => void
   adjustRest: (deltaSec: number) => void
   skipRest: () => void
@@ -315,6 +325,23 @@ export default function StudentApp({
             : current,
         ),
       skipRest: () => setSession((current) => (current ? { ...current, rest: null } : current)),
+      swapExercise: (exerciseId, alternative) =>
+        setSession((current) => {
+          if (!current) return current
+          const swaps = { ...current.swaps }
+          if (alternative) swaps[exerciseId] = alternative
+          else delete swaps[exerciseId]
+          // Loads of another exercise don't compare: no "Anterior" and no records for it.
+          const original = workoutOf(current.code).exercises.find((item) => item.id === exerciseId)
+          const sets = current.sets[exerciseId].map((set, index) => ({
+            ...set,
+            previous: alternative ? undefined : original?.sets[index]?.previous,
+            kgInput: '',
+            repsInput: '',
+            done: false,
+          }))
+          return { ...current, swaps, sets: { ...current.sets, [exerciseId]: sets } }
+        }),
       finishSession: (note?: string) => {
         if (!session) return
         const workout = workoutOf(session.code)
@@ -334,7 +361,12 @@ export default function StudentApp({
             if (pr) prs += 1
             done.push({ type: set.type, kg, reps, pr })
           }
-          log.push({ id: exercise.id, name: exercise.name, muscle: exercise.muscle, sets: done })
+          log.push({
+            id: exercise.id,
+            name: session.swaps?.[exercise.id]?.name ?? exercise.name,
+            muscle: exercise.muscle,
+            sets: done,
+          })
         }
         setLastFinished({
           code: session.code,

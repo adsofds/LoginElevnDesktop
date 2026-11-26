@@ -46,6 +46,7 @@ export function ScreenHeader({
         </button>
       )}
       <div className="min-w-0 flex-1">
+        {!onBack && <ElevnMark className="mb-1.5 w-6 text-[var(--app-gold)]" />}
         <h1
           className={cx(
             'truncate font-semibold tracking-[-0.02em] text-white',
@@ -503,4 +504,102 @@ export function squarePhoto(file: File, size = 360): Promise<string> {
     }
     image.src = url
   })
+}
+
+/** Gold medal with the Elevn mark, drawn in SVG. */
+export function MedalIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 120 150" className={className} aria-hidden>
+      <defs>
+        <linearGradient id="medal-gold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#f6eec4" />
+          <stop offset="0.5" stopColor="#c5bb83" />
+          <stop offset="1" stopColor="#8f8350" />
+        </linearGradient>
+      </defs>
+      <path d="M34 0h22l14 40H48Z" fill="#6b6133" />
+      <path d="M86 0H64L50 40h22Z" fill="#a39759" />
+      <circle cx="60" cy="92" r="46" fill="url(#medal-gold)" />
+      <circle
+        cx="60"
+        cy="92"
+        r="37"
+        fill="none"
+        stroke="#0d0a21"
+        strokeOpacity="0.25"
+        strokeWidth="3"
+      />
+      <ElevnMark color="#0d0a21" x={33} y={79} width={54} height={26} />
+    </svg>
+  )
+}
+
+/**
+ * "Novo recorde!" burst over the app when a checked set beats the previous best. Closes on
+ * its own after a few seconds, or on tap.
+ */
+export function RecordMedal({
+  record,
+  onClose,
+}: {
+  record: {
+    exercise: string
+    kg: number
+    reps: number
+    previous: { kg: number; reps: number }
+  } | null
+  onClose: () => void
+}) {
+  const host = useContext(SheetHostContext)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  useEffect(() => {
+    if (!record) return
+    const timer = window.setTimeout(() => onCloseRef.current(), 2800)
+    return () => window.clearTimeout(timer)
+  }, [record])
+  if (!record) return null
+  const kg = (value: number) => value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+  const burst = (
+    <div
+      role="status"
+      aria-live="polite"
+      className="absolute inset-0 z-[70] grid place-items-center bg-black/55 px-8 backdrop-blur-[2px]"
+      style={{ animation: 'medal-fade 0.2s ease-out' }}
+      onClick={() => onCloseRef.current()}
+    >
+      <div
+        className="medal-anim relative w-full max-w-[300px] text-center"
+        style={{ animation: 'medal-pop 0.55s cubic-bezier(.2,.9,.3,1.2)' }}
+      >
+        <div
+          aria-hidden
+          className="medal-rays pointer-events-none absolute top-[-40px] left-1/2 size-[260px] -translate-x-1/2 rounded-full opacity-60"
+          style={{
+            background:
+              'repeating-conic-gradient(from 0deg, rgba(197,187,131,0.35) 0deg 8deg, transparent 8deg 24deg)',
+            maskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+            WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+            animation: 'medal-rays 9s linear infinite',
+          }}
+        />
+        <MedalIcon className="relative mx-auto h-36 w-auto drop-shadow-[0_10px_30px_rgba(197,187,131,0.45)]" />
+        <p className="relative mt-3 text-[13px] font-semibold tracking-[0.18em] text-[var(--app-gold)] uppercase">
+          Novo recorde!
+        </p>
+        <p className="relative mt-1 text-[22px] leading-7 font-bold">{record.exercise}</p>
+        <p className="relative mt-1 text-[15px] text-white/80 tabular-nums">
+          {kg(record.kg)} kg × {record.reps}
+          <span className="text-white/45">
+            {' '}
+            · antes {kg(record.previous.kg)} kg × {record.previous.reps}
+          </span>
+        </p>
+        <p className="relative mt-3 text-[13px] font-medium text-white/60">
+          Tirou 11! Continua assim.
+        </p>
+      </div>
+    </div>
+  )
+  return host ? createPortal(burst, host) : burst
 }

@@ -363,6 +363,8 @@ export function PhotosScreen() {
   const [photos, setPhotos] = useState<ProgressPhoto[]>(progressPhotos)
   const [pose, setPose] = useState<ProgressPhoto['pose']>('Frente')
   const [date, setDate] = useState(todayIso)
+  const [weight, setWeight] = useState(() => studentProfile.weight.replace(/[^\d,]/g, ''))
+  const [weightError, setWeightError] = useState('')
   const sorted = [...photos].sort((a, b) => a.dateIso.localeCompare(b.dateIso))
   const [beforeId, setBeforeId] = useState(sorted[0]?.id ?? '')
   // Default comparison: first photo vs. the latest one in the same pose.
@@ -380,18 +382,32 @@ export function PhotosScreen() {
   const onFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
+    const weightKg = Number(weight.replace(',', '.'))
     const created: ProgressPhoto = {
       id: `upload-${Date.now()}`,
       url: URL.createObjectURL(file),
       dateIso: date,
       pose,
+      weightKg: weightKg >= 30 && weightKg <= 300 ? weightKg : undefined,
     }
     setPhotos((current) => [...current, created])
     setAfterId(created.id)
     event.target.value = ''
   }
 
-  const optionLabel = (photo: ProgressPhoto) => `${photoDate(photo.dateIso)} · ${photo.pose}`
+  const kgLabel = (kg: number) => `${kg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg`
+  const optionLabel = (photo: ProgressPhoto) =>
+    `${photoDate(photo.dateIso)} · ${photo.pose}${photo.weightKg ? ` · ${kgLabel(photo.weightKg)}` : ''}`
+  const weightDiff = before?.weightKg && after?.weightKg ? after.weightKg - before.weightKg : null
+  const pickPhoto = () => {
+    const kg = Number(weight.replace(',', '.'))
+    if (!(kg >= 30 && kg <= 300)) {
+      setWeightError('Informe o seu peso no dia da foto (ex.: 81,4).')
+      return
+    }
+    setWeightError('')
+    input.current?.click()
+  }
 
   return (
     <div>
@@ -429,6 +445,25 @@ export function PhotosScreen() {
               Depois
             </span>
           </div>
+          {weightDiff !== null && (
+            <p className="mt-3 flex items-center justify-center gap-2 text-sm">
+              <span className="text-white/55">Peso</span>
+              <span className="font-semibold tabular-nums">{kgLabel(before!.weightKg!)}</span>
+              <span className="text-white/40">→</span>
+              <span className="font-semibold tabular-nums">{kgLabel(after!.weightKg!)}</span>
+              <span
+                className={cx(
+                  'rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
+                  weightDiff <= 0
+                    ? 'bg-[var(--app-green)]/15 text-[var(--app-green)]'
+                    : 'bg-white/[0.08] text-white/70',
+                )}
+              >
+                {weightDiff > 0 ? '+' : '−'}
+                {kgLabel(Math.abs(weightDiff))}
+              </span>
+            </p>
+          )}
           <input
             type="range"
             min={0}
@@ -497,6 +532,25 @@ export function PhotosScreen() {
               className="mt-1 h-11 w-full rounded-2xl bg-white/[0.06] px-3 text-sm text-white ring-1 ring-white/10 ring-inset [color-scheme:dark] focus:ring-[var(--app-gold)] focus:outline-none"
             />
           </label>
+          <label className="mt-3 block">
+            <span className="text-xs text-white/50">Seu peso no dia da foto</span>
+            <span className="relative mt-1 block">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={weight}
+                onChange={(event) => setWeight(event.target.value.replace(/[^\d.,]/g, ''))}
+                placeholder="81,4"
+                className="h-11 w-full rounded-2xl bg-white/[0.06] px-3 pr-10 text-base text-white ring-1 ring-white/10 ring-inset focus:ring-[var(--app-gold)] focus:outline-none"
+              />
+              <span className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-sm text-white/45">
+                kg
+              </span>
+            </span>
+            {weightError && (
+              <span className="mt-1 block text-xs text-[var(--app-red)]">{weightError}</span>
+            )}
+          </label>
           <input
             ref={input}
             type="file"
@@ -506,7 +560,7 @@ export function PhotosScreen() {
             onChange={onFile}
             tabIndex={-1}
           />
-          <GoldButton className="mt-3" onClick={() => input.current?.click()}>
+          <GoldButton className="mt-3" onClick={pickPhoto}>
             <Icon name="photo" className="size-5" /> Tirar ou escolher foto
           </GoldButton>
         </Card>
@@ -524,6 +578,7 @@ export function PhotosScreen() {
             <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pt-5 pb-1.5 text-[10px] leading-3">
               <span className="block font-semibold">{photo.pose}</span>
               {photoDate(photo.dateIso)}
+              {photo.weightKg && <span className="block">{kgLabel(photo.weightKg)}</span>}
             </span>
           </li>
         ))}

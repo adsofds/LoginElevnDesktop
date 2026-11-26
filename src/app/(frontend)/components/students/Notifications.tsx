@@ -16,6 +16,7 @@ import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
 import { Sheet } from '../ui/Sheet'
+import { NotificationSchedules } from './NotificationSchedules'
 
 type Student = (typeof studentDirectory)[number]
 
@@ -23,7 +24,11 @@ const field =
   'mt-1 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-3 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20 focus-visible:outline-none'
 
 /** Audience filters: id → label + who matches. */
-const audienceFilters: { id: string; label: string; match: (student: Student) => boolean }[] = [
+export const audienceFilters: {
+  id: string
+  label: string
+  match: (student: Student) => boolean
+}[] = [
   { id: 'ativos', label: 'Todos os alunos ativos', match: () => true },
   {
     id: 'checkin-pendente',
@@ -481,7 +486,9 @@ const statusLabel: Record<StudentNotification['status'], string> = {
 
 /** "Notificações" tab in Alunos: what was sent or scheduled, and a button to write a new one. */
 export function NotificationsCenter({ onCompose }: { onCompose: () => void }) {
-  const { notifications, cancelNotification } = usePanel()
+  const { notifications, cancelNotification, schedules } = usePanel()
+  const [view, setView] = useState<'historico' | 'agendamentos'>('historico')
+  const activeSchedules = schedules.filter((item) => item.active).length
   const nameOf = (id: string) =>
     studentDirectory.find((student) => student.id === id)?.name ?? 'Aluno'
   const scheduled = notifications.filter((item) => item.status === 'agendada').length
@@ -511,7 +518,7 @@ export function NotificationsCenter({ onCompose }: { onCompose: () => void }) {
         {[
           ['Enviadas (7 dias)', sentWeek],
           ['Agendadas', scheduled],
-          ['Total no histórico', notifications.length],
+          ['Agendamentos ativos', activeSchedules],
         ].map(([label, value]) => (
           <div key={label} className="bg-surface px-4 py-3">
             <dt className="text-xs text-ink-3">{label}</dt>
@@ -520,88 +527,107 @@ export function NotificationsCenter({ onCompose }: { onCompose: () => void }) {
         ))}
       </dl>
 
-      <div className="mt-5 overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full min-w-[760px] border-collapse text-left text-sm text-ink">
-          <caption className="sr-only">Histórico de notificações</caption>
-          <thead>
-            <tr className="border-b border-line bg-subtle/60 text-xs text-ink-3">
-              {['Data', 'Mensagem', 'Destinatários', 'Enviada por', 'Situação', ''].map(
-                (label, index) => (
-                  <th
-                    key={index}
-                    scope="col"
-                    className={cx('h-10 px-4 font-semibold whitespace-nowrap')}
-                  >
-                    {label}
-                  </th>
-                ),
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {notifications.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-10 text-center text-sm text-ink-3">
-                  Nenhuma notificação ainda.
-                </td>
-              </tr>
-            )}
-            {notifications.map((item) => {
-              const ids = item.audience.studentIds
-              const template = notificationTemplates.find((t) => t.id === item.templateId)
-              return (
-                <tr
-                  key={item.id}
-                  className={cx(
-                    'border-b border-line-subtle last:border-0',
-                    item.status === 'cancelada' && 'text-ink-3',
-                  )}
-                >
-                  <td className="px-4 py-3 align-top whitespace-nowrap text-ink-2 tabular-nums">
-                    {dateTime.format(new Date(item.atIso)).replace('.', '')}
-                  </td>
-                  <td className="max-w-[300px] px-4 py-3 align-top">
-                    <span className="block text-xs text-ink-3">{template?.label}</span>
-                    <span
-                      className={cx(
-                        'block truncate font-medium',
-                        item.status === 'cancelada' && 'line-through',
-                      )}
+      <Segmented
+        className="mt-5"
+        label="Visão de notificações"
+        value={view}
+        onChange={setView}
+        items={[
+          { id: 'historico', label: 'Histórico', count: notifications.length },
+          { id: 'agendamentos', label: 'Agendamentos', count: schedules.length },
+        ]}
+      />
+
+      {view === 'agendamentos' ? (
+        <NotificationSchedules />
+      ) : (
+        <div className="mt-5 overflow-x-auto rounded-card border border-line bg-surface">
+          <table className="w-full min-w-[760px] border-collapse text-left text-sm text-ink">
+            <caption className="sr-only">Histórico de notificações</caption>
+            <thead>
+              <tr className="border-b border-line bg-subtle/60 text-xs text-ink-3">
+                {['Data', 'Mensagem', 'Destinatários', 'Enviada por', 'Situação', ''].map(
+                  (label, index) => (
+                    <th
+                      key={index}
+                      scope="col"
+                      className={cx('h-10 px-4 font-semibold whitespace-nowrap')}
                     >
-                      {item.title}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 align-top" title={ids.map(nameOf).join(', ')}>
-                    <span className="block font-medium tabular-nums">
-                      {ids.length} {ids.length === 1 ? 'aluno' : 'alunos'}
-                    </span>
-                    <span className="block max-w-[200px] truncate text-xs text-ink-3">
-                      {item.audience.kind === 'filtro'
-                        ? item.audience.label
-                        : ids.map((id) => nameOf(id).split(' ')[0]).join(', ')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 align-top whitespace-nowrap text-ink-2">
-                    {item.sentBy}
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    <Badge tone={statusTone[item.status]} dot>
-                      {statusLabel[item.status]}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right align-top">
-                    {item.status === 'agendada' && (
-                      <Button size="sm" variant="ghost" onClick={() => cancelNotification(item.id)}>
-                        Cancelar envio
-                      </Button>
-                    )}
+                      {label}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {notifications.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-sm text-ink-3">
+                    Nenhuma notificação ainda.
                   </td>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+              )}
+              {notifications.map((item) => {
+                const ids = item.audience.studentIds
+                const template = notificationTemplates.find((t) => t.id === item.templateId)
+                return (
+                  <tr
+                    key={item.id}
+                    className={cx(
+                      'border-b border-line-subtle last:border-0',
+                      item.status === 'cancelada' && 'text-ink-3',
+                    )}
+                  >
+                    <td className="px-4 py-3 align-top whitespace-nowrap text-ink-2 tabular-nums">
+                      {dateTime.format(new Date(item.atIso)).replace('.', '')}
+                    </td>
+                    <td className="max-w-[300px] px-4 py-3 align-top">
+                      <span className="block text-xs text-ink-3">{template?.label}</span>
+                      <span
+                        className={cx(
+                          'block truncate font-medium',
+                          item.status === 'cancelada' && 'line-through',
+                        )}
+                      >
+                        {item.title}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-top" title={ids.map(nameOf).join(', ')}>
+                      <span className="block font-medium tabular-nums">
+                        {ids.length} {ids.length === 1 ? 'aluno' : 'alunos'}
+                      </span>
+                      <span className="block max-w-[200px] truncate text-xs text-ink-3">
+                        {item.audience.kind === 'filtro'
+                          ? item.audience.label
+                          : ids.map((id) => nameOf(id).split(' ')[0]).join(', ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-top whitespace-nowrap text-ink-2">
+                      {item.sentBy}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <Badge tone={statusTone[item.status]} dot>
+                        {statusLabel[item.status]}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right align-top">
+                      {item.status === 'agendada' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => cancelNotification(item.id)}
+                        >
+                          Cancelar envio
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   )
 }
