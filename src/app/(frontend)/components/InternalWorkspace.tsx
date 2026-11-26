@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import {
   initialSiteFormSubmissions,
   type LeadTemperature,
@@ -9,8 +9,10 @@ import {
 import { agendaTypeColor, demoAgenda, type AgendaType } from '@/lib/demo-agenda'
 import LeadsSpreadsheet from './interno/LeadsSpreadsheet'
 import InternProgress from './interno/InternProgress'
-import PostingTeam, { type PostingPerson, type RemovalPlan } from './interno/PostingTeam'
 import WeekCalendar, { type CalendarAppointment } from './interno/WeekCalendar'
+import Link from 'next/link'
+import { panelHref } from './panel/navigation'
+import { initialEmployees } from './SettingsWorkspace'
 import { Segmented } from './ui/Segmented'
 import { Button } from './ui/Button'
 import { cx } from './ui/cx'
@@ -347,7 +349,7 @@ const starterContentGoals: ContentGoal[] = [
   },
   {
     id: 'goal-feed',
-    intern: 'Renata Alves',
+    intern: 'Felipe Santos',
     category: 'Feed',
     target: 2,
     completed: 0,
@@ -357,40 +359,13 @@ const starterContentGoals: ContentGoal[] = [
   },
 ]
 
-const starterPostingPeople: PostingPerson[] = [
-  {
-    id: 'person-marina',
-    name: 'Marina Lopes',
-    role: 'Estagiário(a) de social media',
-    instagram: '@marina.lopes',
-    whatsapp: '',
-    status: 'Ativo',
-  },
-  {
-    id: 'person-felipe',
-    name: 'Felipe Santos',
-    role: 'Social media',
-    instagram: '@felipesantos',
-    whatsapp: '',
-    status: 'Ativo',
-  },
-  {
-    id: 'person-renata',
-    name: 'Renata Alves',
-    role: 'Designer',
-    instagram: '',
-    whatsapp: '',
-    status: 'Ativo',
-  },
-  {
-    id: 'person-joao',
-    name: 'João Pedro',
-    role: 'Editor(a) de vídeo',
-    instagram: '',
-    whatsapp: '',
-    status: 'Ativo',
-  },
-]
+/**
+ * Who can be responsible for a posting goal: active team members registered in
+ * Configurações → Equipe e permissões with the Postagens permission.
+ */
+const postingTeam = initialEmployees.filter(
+  (member) => member.status === 'Ativo' && member.permissions.manageInternal,
+)
 
 const starterContentNotes: ContentNote[] = [
   {
@@ -553,67 +528,8 @@ export default function InternalWorkspace({
     selectCalendarDay(date)
   }
 
-  const [postView, setPostView] = useState<'week' | 'month' | 'goals' | 'notes' | 'team'>('goals')
+  const [postView, setPostView] = useState<'week' | 'month' | 'goals' | 'notes'>('goals')
   const [contentGoals, setContentGoals] = useState(starterContentGoals)
-  const [postingPeople, setPostingPeople] = useState(starterPostingPeople)
-  const [addingPerson, setAddingPerson] = useState(false)
-  const [goalFor, setGoalFor] = useState<{ name: string; at: number } | null>(null)
-  const newGoalRef = useRef<HTMLDetailsElement>(null)
-  const activePeople = postingPeople.filter((person) => person.status === 'Ativo')
-
-  // "Definir meta" from the team: open the goal form with that person picked.
-  useEffect(() => {
-    if (!goalFor || postView !== 'goals') return
-    const details = newGoalRef.current
-    if (!details) return
-    details.open = true
-    details.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [goalFor, postView])
-
-  const goalCountFor = (name: string) => contentGoals.filter((goal) => goal.intern === name).length
-
-  const addPostingPerson = (data: Omit<PostingPerson, 'id' | 'status'>) =>
-    setPostingPeople((current) => [...current, { id: makeId('person'), status: 'Ativo', ...data }])
-
-  const updatePostingPerson = (id: string, data: Omit<PostingPerson, 'id' | 'status'>) => {
-    const before = postingPeople.find((person) => person.id === id)
-    setPostingPeople((current) =>
-      current.map((person) => (person.id === id ? { ...person, ...data } : person)),
-    )
-    // Goals and notes point to the person by name: carry them over on a rename.
-    if (before && before.name !== data.name) {
-      setContentGoals((current) =>
-        current.map((goal) =>
-          goal.intern === before.name ? { ...goal, intern: data.name } : goal,
-        ),
-      )
-      setContentNotes((current) =>
-        current.map((note) =>
-          note.intern === before.name ? { ...note, intern: data.name } : note,
-        ),
-      )
-    }
-  }
-
-  const togglePostingPerson = (id: string) =>
-    setPostingPeople((current) =>
-      current.map((person) =>
-        person.id === id
-          ? { ...person, status: person.status === 'Ativo' ? 'Pausado' : 'Ativo' }
-          : person,
-      ),
-    )
-
-  const removePostingPerson = (id: string, plan: RemovalPlan) => {
-    const person = postingPeople.find((item) => item.id === id)
-    if (!person) return
-    setContentGoals((current) =>
-      plan.kind === 'transfer'
-        ? current.map((goal) => (goal.intern === person.name ? { ...goal, intern: plan.to } : goal))
-        : current.filter((goal) => goal.intern !== person.name),
-    )
-    setPostingPeople((current) => current.filter((item) => item.id !== id))
-  }
   const [contentNotes, setContentNotes] = useState(starterContentNotes)
   const [replyingNoteId, setReplyingNoteId] = useState<string | null>(null)
   const [conversationSaved, setConversationSaved] = useState(false)
@@ -1807,53 +1723,22 @@ export default function InternalWorkspace({
                   label: 'Anotações',
                   ...(unreadNotes > 0 ? { count: unreadNotes } : {}),
                 },
-                { id: 'team' as const, label: 'Equipe', count: postingPeople.length },
               ]}
               value={postView}
               onChange={setPostView}
             />
           </header>
 
-          {postView !== 'team' && (
-            <InternProgress
-              goals={contentGoals}
-              people={activePeople.map((person) => person.name)}
-              onSetGoal={(name) => {
-                setPostView('goals')
-                setGoalFor({ name, at: Date.now() })
-              }}
-              onAddPerson={() => {
-                setPostView('team')
-                setAddingPerson(true)
-              }}
-            />
-          )}
+          <InternProgress goals={contentGoals} />
 
-          {postView === 'team' && (
-            <PostingTeam
-              people={postingPeople}
-              goalCount={goalCountFor}
-              adding={addingPerson}
-              onAddingChange={setAddingPerson}
-              onAdd={addPostingPerson}
-              onUpdate={updatePostingPerson}
-              onToggleStatus={togglePostingPerson}
-              onRemove={removePostingPerson}
-              onSetGoal={(name) => {
-                setPostView('goals')
-                setGoalFor({ name, at: Date.now() })
-              }}
-            />
-          )}
-
-          <div className={cx('content-planner-body', postView === 'team' && 'hidden')}>
+          <div className="content-planner-body">
             {postView === 'week' && (
               <section className="content-week-view">
                 <header className="content-view-heading">
                   <div>
                     <span>SEMANA ATUAL</span>
                     <h3>Entregas de 03 a 09 de novembro</h3>
-                    <p>Visão administrativa das entregas registradas pela equipe de postagens.</p>
+                    <p>Visão administrativa das entregas registradas pelos estagiários.</p>
                   </div>
                   <strong>
                     {totalGoalCompleted} de {totalGoalTarget} entregas
@@ -2041,9 +1926,7 @@ export default function InternalWorkspace({
                     <article key={goal.id}>
                       <span>{goal.category}</span>
                       <strong>{goal.target}</strong>
-                      <small>
-                        {goal.cadence} · {goal.intern}
-                      </small>
+                      <small>{goal.cadence}</small>
                       <p>{goal.description}</p>
                     </article>
                   ))}
@@ -2075,7 +1958,7 @@ export default function InternalWorkspace({
                   </div>
                 </section>
 
-                <details className="new-goal-details" ref={newGoalRef}>
+                <details className="new-goal-details">
                   <summary>Adicionar outra meta</summary>
                   <form className="goal-composer" onSubmit={createContentGoal}>
                     <header>
@@ -2084,26 +1967,20 @@ export default function InternalWorkspace({
                     </header>
                     <label>
                       <span>Responsável</span>
-                      <select
-                        key={goalFor?.at ?? 0}
-                        name="goal-intern"
-                        defaultValue={goalFor?.name ?? activePeople[0]?.name}
-                        required
-                      >
-                        {activePeople.map((person) => (
-                          <option key={person.id}>{person.name}</option>
+                      <select name="goal-intern" defaultValue={postingTeam[0]?.name} required>
+                        {postingTeam.map((member) => (
+                          <option key={member.id}>{member.name}</option>
                         ))}
                       </select>
-                      <button
-                        type="button"
-                        className="mt-1 cursor-pointer text-left text-xs font-medium text-brand hover:underline"
-                        onClick={() => {
-                          setPostView('team')
-                          setAddingPerson(true)
-                        }}
-                      >
-                        + Cadastrar outra pessoa na equipe
-                      </button>
+                      <small className="mt-1 block text-xs text-ink-3">
+                        A lista vem da equipe com permissão de Postagens.{' '}
+                        <Link
+                          href={panelHref('/configuracoes')}
+                          className="font-medium text-brand hover:underline"
+                        >
+                          Gerenciar equipe
+                        </Link>
+                      </small>
                     </label>
                     <label>
                       <span>Categoria</span>
@@ -2173,11 +2050,7 @@ export default function InternalWorkspace({
                   </div>
                   <fieldset>
                     <legend>Com quem</legend>
-                    {[
-                      'Breno',
-                      ...activePeople.map((item) => item.name.split(' ')[0]),
-                      'Equipe completa',
-                    ].map((person) => (
+                    {['Breno', 'Marina', 'Felipe', 'Equipe completa'].map((person) => (
                       <label key={person}>
                         <input type="radio" name="conversation-person" value={person} />
                         <span>{person}</span>
@@ -2209,8 +2082,8 @@ export default function InternalWorkspace({
                     <span>CAIXA DE ENTRADA</span>
                     <h4>Acompanhamento da equipe</h4>
                     <p>
-                      As anotações são criadas pela equipe de postagens. Como Admin, você pode
-                      confirmar a leitura ou enviar uma orientação.
+                      As anotações são criadas pelos estagiários. Como Admin, você pode confirmar a
+                      leitura ou enviar uma orientação.
                     </p>
                     <div>
                       <strong>{contentNotes.length}</strong>
@@ -2286,7 +2159,7 @@ export default function InternalWorkspace({
                                 name="note-reply"
                                 defaultValue={note.reply}
                                 rows={3}
-                                placeholder="Escreva uma orientação para a pessoa..."
+                                placeholder="Escreva uma orientação para o estagiário..."
                                 autoFocus
                               />
                               <div>
