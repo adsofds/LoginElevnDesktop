@@ -258,8 +258,9 @@ export default function AppAlunoView() {
               <div>
                 <dt className="font-medium text-ink">Dieta</dt>
                 <dd className="text-ink-2">
-                  Calorias do dia e de cada refeição, alimentos com as porções, substituições e
-                  trocas inteligentes. Proteína, carboidrato e gordura ficam só com a nutri.
+                  Calorias do dia e de cada refeição, alimentos com as porções e substituições da
+                  nutri. A aba Trocas inteligentes calcula trocas com as mesmas calorias (base TACO
+                  e TBCA), consulta produtos pelo código de barras e estima TMB e macros.
                 </dd>
               </div>
               <div>

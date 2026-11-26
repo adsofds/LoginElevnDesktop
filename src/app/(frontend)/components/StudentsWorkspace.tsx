@@ -2985,7 +2985,7 @@ export default function StudentsWorkspace({
               },
               {
                 id: 'pendentes',
-                label: 'Check-ins pendentes',
+                label: 'Check-ins LiveClin pendentes',
                 value: pendingCheckinsCount + 10,
                 delta: { text: `${pendingCheckinsCount} para responder hoje`, tone: 'warning' },
                 active: sameStatuses(statusFilters, ['pendentes', 'atrasados']),
@@ -3029,7 +3029,7 @@ export default function StudentsWorkspace({
           <section className="mb-8 grid gap-4 lg:grid-cols-3" aria-label="Prioridades de hoje">
             <PriorityPanel
               title="Check-ins para avaliar"
-              source="LiveClin · MFIT · WebDiet"
+              source="LiveClin"
               total={pendingCheckinsCount}
               onSeeAll={() => showStatuses(['pendentes', 'atrasados'])}
             >
@@ -3048,7 +3048,7 @@ export default function StudentsWorkspace({
                         <Badge tone={checkinTone[student.checkinState]} dot>
                           {student.checkinState}
                         </Badge>
-                        <span className="truncate">{student.lastCheckin}</span>
+                        <span className="truncate">{student.lastCheckin} via LiveClin</span>
                       </>
                     }
                     context={student.checkinNote}
@@ -3062,7 +3062,7 @@ export default function StudentsWorkspace({
             </PriorityPanel>
 
             <PriorityPanel
-              title="Treinos e check-ins concluídos"
+              title="Treinos concluídos"
               source="MFIT"
               total={completedCheckinsCount}
               onSeeAll={() => showStatuses(['realizados'])}
@@ -3181,16 +3181,29 @@ export default function StudentsWorkspace({
                           </div>
                         </div>
                       ) : student.renewalState !== 'Não renovou' ? (
-                        <button
-                          type="button"
-                          className="mt-1 cursor-pointer text-xs font-medium text-ink-3 underline-offset-2 hover:text-danger hover:underline"
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          className="mt-2"
                           onClick={() => {
                             setPriorityNonRenewalId(student.id)
                             setPriorityNonRenewalDraft(student.nonRenewalReason ?? '')
                           }}
                         >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            className="size-3.5"
+                            aria-hidden
+                          >
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M5.6 5.6l12.8 12.8" />
+                          </svg>
                           Registrar não renovação
-                        </button>
+                        </Button>
                       ) : null
                     }
                   />

@@ -78,9 +78,6 @@ type AppContextValue = {
   lastFinished: FinishedSession | null
   eatenMeals: string[]
   toggleMeal: (mealId: string) => void
-  /** Smart swap chosen for a meal today (meal id → swap id). */
-  mealSwaps: Record<string, string>
-  setMealSwap: (mealId: string, swapId: string | null) => void
   notifications: StudentNotification[]
 }
 
@@ -137,7 +134,6 @@ export default function StudentApp({
   const [session, setSession] = useState<Session | null>(null)
   const [lastFinished, setLastFinished] = useState<FinishedSession | null>(null)
   const [eatenMeals, setEatenMeals] = useState<string[]>(['cafe', 'lanche1'])
-  const [mealSwaps, setMealSwaps] = useState<Record<string, string>>({})
   const [now, setNow] = useState(() => Date.now())
   // Client-only: the app shows "today", streaks and timers, which differ from build time.
   const [mounted, setMounted] = useState(false)
@@ -331,17 +327,9 @@ export default function StudentApp({
         setEatenMeals((current) =>
           current.includes(mealId) ? current.filter((id) => id !== mealId) : [...current, mealId],
         ),
-      mealSwaps,
-      setMealSwap: (mealId, swapId) =>
-        setMealSwaps((current) => {
-          const next = { ...current }
-          if (swapId) next[mealId] = swapId
-          else delete next[mealId]
-          return next
-        }),
       notifications,
     }
-  }, [tab, session, now, lastFinished, eatenMeals, mealSwaps, notifications])
+  }, [tab, session, now, lastFinished, eatenMeals, notifications])
 
   const route = stack[stack.length - 1]
   const fullScreen =
