@@ -11,7 +11,7 @@ import { Card, Chip, PhoneSheet, Ring, ScreenHeader } from './ui'
 /*
  * Plano: calories per meal and the portions to eat (protein, carbs and fat of the plan stay
  * with the nutritionist). Trocas inteligentes: a separate calculator to swap any food for
- * another with the same calories, plus TMB and barcode lookups.
+ * another with the same calories, plus a barcode lookup.
  */
 
 const mealKcal = (meal: Meal) => meal.foods.reduce((sum, food) => sum + food.kcal, 0)
