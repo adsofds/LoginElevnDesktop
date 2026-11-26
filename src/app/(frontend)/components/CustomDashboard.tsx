@@ -658,8 +658,8 @@ function RenewalsOverview() {
       <ul className="mt-2 divide-y divide-line-subtle">
         {records.map((item) => (
           <li key={item.id} className="py-2.5">
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div className="min-w-[150px] flex-1">
                 <p className="truncate text-sm font-medium text-ink">{item.name}</p>
                 <p className="text-xs text-ink-3">
                   Plano {item.plan} · vence {item.due}
@@ -668,39 +668,19 @@ function RenewalsOverview() {
               <Badge tone={renewalTone[item.status]} dot>
                 {item.status}
               </Badge>
-              <Menu
-                label={`Ações de ${item.name}`}
-                items={[
-                  ...(item.status !== 'Recuperado'
-                    ? [
-                        {
-                          id: 'renovou',
-                          label: 'Marcar como renovado',
-                          onSelect: () => markAsRecovered(item.id),
-                        },
-                      ]
-                    : []),
-                  {
-                    id: 'nao-renovou',
-                    label: item.status === 'Não renovou' ? 'Editar motivo' : 'Não renovou…',
-                    description: 'Registre o motivo para a gestão',
-                    onSelect: () => openReasonEditor(item),
-                  },
-                ]}
-                trigger={({ open, toggle, id }) => (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Ações de ${item.name}`}
-                    aria-haspopup="menu"
-                    aria-expanded={open}
-                    aria-controls={open ? id : undefined}
-                    onClick={toggle}
-                  >
-                    <Icon name="dots" className="size-4" />
+              {editingReasonId !== item.id && (
+                <div className="flex gap-1.5">
+                  {item.status !== 'Recuperado' && (
+                    <Button size="sm" variant="secondary" onClick={() => markAsRecovered(item.id)}>
+                      <Icon name="check" className="size-3.5" />
+                      Renovou
+                    </Button>
+                  )}
+                  <Button size="sm" variant="danger" onClick={() => openReasonEditor(item)}>
+                    {item.status === 'Não renovou' ? 'Editar motivo' : 'Não renovou'}
                   </Button>
-                )}
-              />
+                </div>
+              )}
             </div>
 
             {item.status === 'Não renovou' && item.reason && editingReasonId !== item.id && (

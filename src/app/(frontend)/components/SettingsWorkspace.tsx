@@ -1009,16 +1009,17 @@ export default function SettingsWorkspace({
                       ))}
                     </ul>
                     {sessions.length > 1 && (
-                      <button
-                        type="button"
-                        className="mt-1 text-xs font-medium text-danger hover:underline"
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        className="mt-1 self-start"
                         onClick={() => {
                           setSessions((current) => current.filter((item) => item.current))
                           showToast('Todas as outras sessões foram encerradas.')
                         }}
                       >
-                        Encerrar todas as outras
-                      </button>
+                        Encerrar todas as outras sessões
+                      </Button>
                     )}
                   </section>
                 </aside>
