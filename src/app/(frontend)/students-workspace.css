@@ -682,14 +682,16 @@
   line-height: 1.45;
 }
 
-.inspector-form-buttons button.recover-btn {
+.inspector-form-buttons button.recover-btn[type='button'] {
   color: var(--green-23);
   background: var(--sand-92-2);
+  border: 1px solid color-mix(in srgb, var(--green-23) 30%, transparent);
 }
 
-.inspector-form-buttons button.non-renew-btn {
+.inspector-form-buttons button.non-renew-btn[type='button'] {
   color: var(--red-43);
   background: var(--sand-93-2);
+  border: 1px solid color-mix(in srgb, var(--red-43) 35%, transparent);
 }
 
 .modal-non-renewal-box {

@@ -76,6 +76,10 @@ export type LiveClinQuestion =
       max: number
       minLabel: string
       maxLabel: string
+      /** Singular and plural unit for the one-line summary ("1 refeição", "3 litros"). */
+      unit: [string, string]
+      /** The top value means "or more". */
+      orMore?: boolean
       noteLabel?: string
     })
   | (Base & { kind: 'options'; options: string[]; noteLabel?: string; noteWhen?: number[] })
@@ -121,6 +125,8 @@ export const liveClinQuestions: LiveClinQuestion[] = [
     max: 9,
     minLabel: '(0) Nenhuma',
     maxLabel: '(9) ou mais',
+    unit: ['refeição fora do plano', 'refeições fora do plano'],
+    orMore: true,
     noteLabel: 'Descreva as quantidades de forma resumida',
   },
   {
@@ -141,6 +147,8 @@ export const liveClinQuestions: LiveClinQuestion[] = [
     max: 5,
     minLabel: '(0) Pouco',
     maxLabel: '(5) ou mais',
+    unit: ['litro por dia', 'litros por dia'],
+    orMore: true,
   },
   {
     id: 'bowel',
@@ -180,6 +188,8 @@ export const liveClinQuestions: LiveClinQuestion[] = [
     max: 7,
     minLabel: '(0) Nenhuma',
     maxLabel: '(7) ou +',
+    unit: ['treino de força', 'treinos de força'],
+    orMore: true,
   },
   {
     id: 'performance',
@@ -200,6 +210,7 @@ export const liveClinQuestions: LiveClinQuestion[] = [
     max: 7,
     minLabel: '(0) Nenhuma',
     maxLabel: '(7) Sessões',
+    unit: ['sessão de aeróbico', 'sessões de aeróbico'],
   },
   {
     id: 'sleep',
@@ -211,6 +222,7 @@ export const liveClinQuestions: LiveClinQuestion[] = [
     max: 10,
     minLabel: '(1) Pouco',
     maxLabel: '(10) Muito',
+    unit: ['hora de sono', 'horas de sono'],
   },
   {
     id: 'dedication',
@@ -292,6 +304,27 @@ export function answerFor(
     default:
       return {}
   }
+}
+
+/** One-line version of an answer, for the compact list in the student's file. */
+export function answerSummary(question: LiveClinQuestion, answers: LiveClinAnswers) {
+  const { value, note } = answerFor(question, answers)
+  let main = ''
+  if (question.kind === 'kg') {
+    main = [formatKg(Number(value)), answers.weightTrend].filter(Boolean).join(' · ')
+  } else if (question.kind === 'scale') {
+    const amount = Number(value)
+    const more = question.orMore && amount === question.max ? ' ou mais' : ''
+    main = `${amount}${more} ${amount === 1 && !more ? question.unit[0] : question.unit[1]}`
+  } else if (question.kind === 'options') {
+    main = question.options[Number(value)] ?? 'Sem resposta'
+  } else if (question.kind === 'emoji') {
+    const index = 5 - Number(value)
+    main = `${emojiFor(Number(value) as FaceScore)} ${question.options[index] ?? 'Sem resposta'}`
+  } else {
+    main = typeof value === 'string' && value ? value : 'Sem resposta'
+  }
+  return { main, note }
 }
 
 const clampFace = (value: number) => Math.min(5, Math.max(1, value)) as FaceScore

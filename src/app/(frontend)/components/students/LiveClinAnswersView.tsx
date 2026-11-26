@@ -1,10 +1,11 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { cx } from '../ui/cx'
 import { Face, faceLabels } from './FaceCheckin'
 import {
   answerFor,
+  answerSummary,
   emojiFor,
   faceForQuestion,
   formatKg,
@@ -64,11 +65,11 @@ const iconPaths: Record<QuestionIcon, ReactNode> = {
 
 function QuestionGlyph({ icon }: { icon: QuestionIcon }) {
   return (
-    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-subtle text-ink-2">
+    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-subtle text-ink-2">
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
-        className="size-[18px]"
+        className="size-4"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.7"
@@ -207,49 +208,102 @@ function Answer({ question, answers }: { question: LiveClinQuestion; answers: Li
   return <NoteBox title={question.label} text={typeof value === 'string' ? value : undefined} />
 }
 
-/** The 14 LiveClin questions with the student's answers, laid out like the form. */
+/**
+ * The 14 LiveClin questions as a compact list: one line per question with the answer and
+ * the computed face. Opening a line shows it exactly as the student saw it in LiveClin.
+ */
 export function LiveClinAnswersView({ answers }: { answers: LiveClinAnswers }) {
-  // Two columns only when the container (not the screen) is wide enough.
+  const [open, setOpen] = useState<string[]>([])
+  const allOpen = open.length === liveClinQuestions.length
+  const toggle = (id: string) =>
+    setOpen((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    )
+
   return (
     <div className="@container">
-      <ol className="grid gap-3 @2xl:grid-cols-2">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-xs text-ink-3">Toque numa pergunta para ver como no LiveClin.</p>
+        <button
+          type="button"
+          onClick={() => setOpen(allOpen ? [] : liveClinQuestions.map((item) => item.id))}
+          className="shrink-0 cursor-pointer rounded-control border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink-2 hover:border-ink-3 hover:text-ink"
+        >
+          {allOpen ? 'Recolher todas' : 'Expandir todas'}
+        </button>
+      </div>
+      <ol className="grid gap-1.5 @2xl:grid-cols-2">
         {liveClinQuestions.map((question, index) => {
           const face = faceForQuestion(question.id, answers)
-          const wide = question.kind === 'text'
+          const expanded = open.includes(question.id)
+          const { main, note } = answerSummary(question, answers)
+          const low = face !== null && face <= 2
+          const panelId = `liveclin-${question.id}`
           return (
             <li
               key={question.id}
               className={cx(
-                'rounded-xl border border-line bg-surface p-4',
-                wide && '@2xl:col-span-2',
-                face !== null && face <= 2 && 'border-danger/40 bg-danger-soft/40',
+                'overflow-hidden rounded-lg border bg-surface',
+                (question.kind === 'text' || expanded) && '@2xl:col-span-2',
+                low ? 'border-danger/40 bg-danger-soft/40' : 'border-line',
               )}
             >
-              <div className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => toggle(question.id)}
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left hover:bg-subtle/60"
+              >
                 <QuestionGlyph icon={question.icon} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium text-ink-3 tabular-nums">
-                    Pergunta {index + 1} de {liveClinQuestions.length}
-                  </p>
-                  <h4 className="text-sm font-semibold text-ink">{question.title}</h4>
-                </div>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline gap-1.5">
+                    <span className="text-[11px] text-ink-3 tabular-nums">{index + 1}.</span>
+                    <span className="truncate text-[13px] font-semibold text-ink">
+                      {question.title}
+                    </span>
+                  </span>
+                  <span className="block truncate text-[13px] text-ink-2">
+                    {main}
+                    {note && <span className="text-ink-3"> · “{note}”</span>}
+                  </span>
+                </span>
                 {face !== null && (
-                  <span
-                    className="inline-flex shrink-0 items-center gap-1.5 text-xs text-ink-2"
-                    title={`Carinha calculada: ${faceLabels[face]}`}
-                  >
-                    <Face score={face} className="size-6" />
-                    <span className="max-sm:sr-only">{faceLabels[face]}</span>
+                  <span title={`Carinha calculada: ${faceLabels[face]}`} className="shrink-0">
+                    <Face score={face} className="size-5" />
+                    <span className="sr-only">{faceLabels[face]}</span>
                   </span>
                 )}
-              </div>
-              <p className="mt-2.5 text-[13px] leading-5 text-ink">
-                {question.question}
-                {question.example && (
-                  <span className="mt-1 block text-ink-3">{question.example}</span>
-                )}
-              </p>
-              <Answer question={question} answers={answers} />
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className={cx(
+                    'size-4 shrink-0 text-ink-3 transition-transform',
+                    expanded && 'rotate-180',
+                  )}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+              {expanded && (
+                <div id={panelId} className="border-t border-line-subtle px-3 pt-2.5 pb-3">
+                  <p className="text-[11px] text-ink-3 tabular-nums">
+                    Pergunta {index + 1} de {liveClinQuestions.length}
+                  </p>
+                  <p className="mt-0.5 text-[13px] leading-5 text-ink">
+                    {question.question}
+                    {question.example && (
+                      <span className="mt-1 block text-ink-3">{question.example}</span>
+                    )}
+                  </p>
+                  <Answer question={question} answers={answers} />
+                </div>
+              )}
             </li>
           )
         })}
