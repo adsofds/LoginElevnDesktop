@@ -89,16 +89,8 @@ const moodCopy: Record<
 }
 
 export function HomeTab() {
-  const {
-    push,
-    setTab,
-    session,
-    lastFinished,
-    notifications,
-    startSession,
-    mealSwaps,
-    eatenMeals,
-  } = useStudentApp()
+  const { push, setTab, session, lastFinished, notifications, startSession, eatenMeals } =
+    useStudentApp()
   const today = new Date()
   const doneToday = lastFinished !== null
   const trained = trainedDaysThisMonth(today)
@@ -127,11 +119,8 @@ export function HomeTab() {
 
   const minutesNow = today.getHours() * 60 + today.getMinutes()
   const nextMeal = currentMeal(eatenMeals, today)
-  const nextSwap = nextMeal?.smartSwaps?.find((swap) => swap.id === mealSwaps[nextMeal.id])
-  const nextFoods = nextSwap ? nextSwap.foods : (nextMeal?.foods ?? [])
-  const nextKcal = nextSwap
-    ? nextSwap.kcal
-    : (nextMeal?.foods ?? []).reduce((sum, food) => sum + food.kcal, 0)
+  const nextFoods = nextMeal?.foods ?? []
+  const nextKcal = nextFoods.reduce((sum, food) => sum + food.kcal, 0)
 
   return (
     <div className="pb-4">
@@ -339,9 +328,7 @@ export function HomeTab() {
             {nextMeal ? (
               <>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">
-                    {nextSwap ? nextSwap.name : nextMeal.name}
-                  </span>
+                  <span className="block font-semibold">{nextMeal.name}</span>
                   <span className="block truncate text-[13px] text-white/50">
                     {nextMeal.time} · {nextFoods.map((food) => food.name).join(', ')}
                   </span>

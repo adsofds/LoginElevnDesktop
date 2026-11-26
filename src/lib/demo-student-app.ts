@@ -366,14 +366,6 @@ export const workoutHistory: HistoryEntry[] = [
 ]
 
 export type Food = { name: string; amount: string; kcal: number; p: number; c: number; g: number }
-export type SmartSwap = {
-  id: string
-  name: string
-  /** Why it fits: eating out, no time to cook… */
-  context: string
-  kcal: number
-  foods: { name: string; amount: string }[]
-}
 
 export type Meal = {
   id: string
@@ -382,8 +374,6 @@ export type Meal = {
   foods: Food[]
   /** Food-by-food substitutions approved by the nutritionist. */
   swaps?: string[]
-  /** Whole-meal alternatives with similar calories ("Trocas inteligentes"). */
-  smartSwaps?: SmartSwap[]
 }
 
 export const dietPlan = {
@@ -401,31 +391,6 @@ export const dietPlan = {
         { name: 'Mamão', amount: '1 fatia média', kcal: 55, p: 1, c: 13, g: 0 },
       ],
       swaps: ['Pão integral ↔ 4 col. de tapioca', 'Mamão ↔ 1 banana pequena'],
-      smartSwaps: [
-        {
-          id: 'cafe-padaria',
-          name: 'Café na padaria',
-          context: 'Saiu cedo de casa',
-          kcal: 400,
-          foods: [
-            { name: 'Pão na chapa sem manteiga', amount: '1 unidade' },
-            { name: 'Omelete simples', amount: '2 ovos' },
-            { name: 'Café com leite desnatado', amount: '1 copo' },
-          ],
-        },
-        {
-          id: 'cafe-rapido',
-          name: 'Shake rápido',
-          context: 'Sem tempo de cozinhar',
-          kcal: 390,
-          foods: [
-            { name: 'Whey protein', amount: '1 scoop' },
-            { name: 'Banana', amount: '1 unidade' },
-            { name: 'Aveia', amount: '3 col. sopa' },
-            { name: 'Leite desnatado', amount: '200 ml' },
-          ],
-        },
-      ],
     },
     {
       id: 'lanche1',
@@ -454,31 +419,6 @@ export const dietPlan = {
         },
       ],
       swaps: ['Frango ↔ 150 g de patinho moído', 'Arroz ↔ 150 g de batata-doce'],
-      smartSwaps: [
-        {
-          id: 'almoco-restaurante',
-          name: 'Prato feito no restaurante',
-          context: 'Almoço fora de casa',
-          kcal: 540,
-          foods: [
-            { name: 'Grelhado (frango, peixe ou carne magra)', amount: '1 filé médio' },
-            { name: 'Arroz', amount: '4 col. sopa' },
-            { name: 'Feijão', amount: '1 concha' },
-            { name: 'Salada', amount: 'metade do prato' },
-          ],
-        },
-        {
-          id: 'almoco-japones',
-          name: 'Japonês',
-          context: 'Encontro com amigos',
-          kcal: 520,
-          foods: [
-            { name: 'Sashimi de salmão', amount: '8 fatias' },
-            { name: 'Sushi', amount: '6 peças' },
-            { name: 'Sunomono', amount: '1 porção' },
-          ],
-        },
-      ],
     },
     {
       id: 'pre',
@@ -499,29 +439,6 @@ export const dietPlan = {
         { name: 'Azeite de oliva', amount: '1 col. sopa', kcal: 90, p: 0, c: 0, g: 10 },
       ],
       swaps: ['Tilápia ↔ 150 g de frango'],
-      smartSwaps: [
-        {
-          id: 'jantar-delivery',
-          name: 'Delivery de poke',
-          context: 'Cansado para cozinhar',
-          kcal: 380,
-          foods: [
-            { name: 'Poke de atum', amount: 'tamanho pequeno' },
-            { name: 'Base de folhas no lugar do arroz', amount: '—' },
-          ],
-        },
-        {
-          id: 'jantar-omelete',
-          name: 'Omelete de legumes',
-          context: 'Geladeira vazia',
-          kcal: 340,
-          foods: [
-            { name: 'Ovos', amount: '3 unidades' },
-            { name: 'Legumes picados', amount: '1 xícara' },
-            { name: 'Queijo branco', amount: '1 fatia' },
-          ],
-        },
-      ],
     },
     {
       id: 'ceia',
