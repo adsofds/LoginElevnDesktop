@@ -71,12 +71,14 @@ export const sharePhrases = [
 
 /** Font size that fits `text` in `width` (Figtree bold is ~0.56 em per character). */
 const fit = (text: string, max: number, width = 900) =>
-  Math.min(max, Math.floor(width / (text.length * 0.56)))
+  text ? Math.min(max, Math.floor(width / (text.length * 0.56))) : max
 
 type TemplateProps = {
   done: DoneWorkout
-  /** Catchphrase shown as the headline. */
+  /** Catchphrase shown as the headline ('' = no phrase). */
   phrase: string
+  /** "Só letras": no panels or boxes behind the text, only the letters. */
+  bare: boolean
   logo: string | null
   id: string
   /** Every finished workout, newest first. */
@@ -249,7 +251,7 @@ function NumbersTemplate({ done, logo, id, phrase }: TemplateProps) {
   )
 }
 
-function LetterTemplate({ done, logo, id, phrase }: TemplateProps) {
+function LetterTemplate({ done, logo, id, phrase, bare }: TemplateProps) {
   const workout = workoutOf(done.code)
   return (
     <>
@@ -264,9 +266,9 @@ function LetterTemplate({ done, logo, id, phrase }: TemplateProps) {
           height={320}
           rx={88}
           fill="#14121b"
-          fillOpacity={0.92}
+          fillOpacity={bare ? 0 : 0.92}
           stroke={GOLD}
-          strokeOpacity={0.6}
+          strokeOpacity={bare ? 0 : 0.6}
           strokeWidth={5}
         />
         <Text y={706} size={200} weight={800} fill={GOLD}>
@@ -296,7 +298,7 @@ function LetterTemplate({ done, logo, id, phrase }: TemplateProps) {
   )
 }
 
-function ExercisesTemplate({ done, logo, id, phrase }: TemplateProps) {
+function ExercisesTemplate({ done, logo, id, phrase, bare }: TemplateProps) {
   const workout = workoutOf(done.code)
   // Without marked sets, list the plan's exercises (with no load).
   const rows = exercisesDone(done).slice(0, 6)
@@ -309,15 +311,17 @@ function ExercisesTemplate({ done, logo, id, phrase }: TemplateProps) {
       <defs>
         <Shadow id={id} />
       </defs>
-      <rect
-        x={90}
-        y={380}
-        width={900}
-        height={bottom - 380 + 200}
-        rx={56}
-        fill="#0b0a12"
-        fillOpacity={0.55}
-      />
+      {!bare && (
+        <rect
+          x={90}
+          y={380}
+          width={900}
+          height={bottom - 380 + 200}
+          rx={56}
+          fill="#0b0a12"
+          fillOpacity={0.55}
+        />
+      )}
       <g filter={`url(#${id})`}>
         <Text x={150} y={480} size={fit(phrase, 68, 780)} weight={800} fill={GOLD} anchor="start">
           {phrase}
@@ -372,7 +376,7 @@ function ExercisesTemplate({ done, logo, id, phrase }: TemplateProps) {
   )
 }
 
-function WeekTemplate({ done, logo, id, phrase }: TemplateProps) {
+function WeekTemplate({ done, logo, id, phrase, bare }: TemplateProps) {
   const workout = workoutOf(done.code)
   const today = new Date()
   const trained = trainedDaysThisMonth(today)
@@ -445,7 +449,7 @@ function WeekTemplate({ done, logo, id, phrase }: TemplateProps) {
 }
 
 /** Hevy-like card: the body map, the last 7 days and how often the student trained. */
-function CardTemplate({ done, logo, id, all, overall, phrase }: TemplateProps) {
+function CardTemplate({ done, logo, id, all, overall, phrase, bare }: TemplateProps) {
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(done.date)
@@ -471,9 +475,9 @@ function CardTemplate({ done, logo, id, all, overall, phrase }: TemplateProps) {
         height={1530}
         rx={72}
         fill="#0d0b14"
-        fillOpacity={0.94}
+        fillOpacity={bare ? 0 : 0.94}
         stroke="#fff"
-        strokeOpacity={0.1}
+        strokeOpacity={bare ? 0 : 0.1}
         strokeWidth={3}
       />
       <Text y={400} size={fit(phrase, 84, 780)} weight={800} fill={GOLD}>
@@ -502,7 +506,7 @@ function CardTemplate({ done, logo, id, all, overall, phrase }: TemplateProps) {
         height={barHeight}
         rx={barHeight / 2}
         fill="#fff"
-        fillOpacity={0.06}
+        fillOpacity={bare ? 0 : 0.06}
       />
       {days.map((day, index) => {
         const cx = left + index * step
@@ -529,7 +533,7 @@ function CardTemplate({ done, logo, id, all, overall, phrase }: TemplateProps) {
 }
 
 /** Strava-like strip at the bottom, meant to sit over the student's photo. */
-function StripTemplate({ done, logo, id, phrase }: TemplateProps) {
+function StripTemplate({ done, logo, id, phrase, bare }: TemplateProps) {
   const workout = workoutOf(done.code)
   const stats: [string, string][] = [
     ['Tempo', durationLabel(done.seconds)],
@@ -549,7 +553,7 @@ function StripTemplate({ done, logo, id, phrase }: TemplateProps) {
           <stop offset="1" stopColor="#000" stopOpacity={0.72} />
         </linearGradient>
       </defs>
-      <rect x={0} y={1180} width={W} height={H - 1180} fill={`url(#${id}-fade)`} />
+      {!bare && <rect x={0} y={1180} width={W} height={H - 1180} fill={`url(#${id}-fade)`} />}
       <g filter={`url(#${id})`}>
         <Logo logo={logo} y={190} width={210} left={90} />
         <Text x={90} y={1370} size={fit(phrase, 84)} weight={800} fill={GOLD} anchor="start">
@@ -562,9 +566,9 @@ function StripTemplate({ done, logo, id, phrase }: TemplateProps) {
           height={146}
           rx={42}
           fill="#14121b"
-          fillOpacity={0.9}
+          fillOpacity={bare ? 0 : 0.9}
           stroke={GOLD}
-          strokeOpacity={0.6}
+          strokeOpacity={bare ? 0 : 0.6}
           strokeWidth={4}
         />
         <Text x={165} y={1538} size={92} weight={800} fill={GOLD}>
@@ -718,6 +722,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
       ],
   )
   const phraseList = useRef<HTMLDivElement>(null)
+  const [bare, setBare] = useState(false)
   useEffect(() => {
     const list = phraseList.current
     const chip = list?.querySelector<HTMLElement>('[aria-checked="true"]')
@@ -730,7 +735,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
   // The PNG is prepared ahead of the tap: mobile browsers only allow share/copy while the
   // tap is still "fresh", so there is no time to render after it.
   const [ready, setReady] = useState<{ key: string; blob: Blob } | null>(null)
-  const renderKey = `${doneKey}|${index}|${background}|${color}|${photo ?? ''}|${logo ? 1 : 0}|${phrase}`
+  const renderKey = `${doneKey}|${index}|${background}|${color}|${photo ?? ''}|${logo ? 1 : 0}|${phrase}|${bare ? 1 : 0}`
 
   // The wordmark goes into the sticker as a data URL so it survives the PNG export.
   useEffect(() => {
@@ -899,7 +904,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
             <div
               className={cx(
                 // Sized by height so the actions stay on screen on short phones.
-                'relative aspect-[9/16] h-[clamp(250px,calc(100svh-452px),430px)] overflow-hidden rounded-[22px] ring-1 ring-white/10',
+                'relative aspect-[9/16] h-[clamp(230px,calc(100svh-500px),420px)] overflow-hidden rounded-[22px] ring-1 ring-white/10',
                 background === 'sem-fundo' &&
                   'bg-[conic-gradient(#2b2834_25%,#1c1a23_0_50%,#2b2834_0_75%,#1c1a23_0)] bg-[length:18px_18px]',
                 background === 'foto' && 'bg-black',
@@ -940,6 +945,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
                   all={all}
                   overall={overall}
                   phrase={phrase}
+                  bare={bare}
                 />
               </svg>
             </div>
@@ -988,6 +994,21 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
           role="radiogroup"
           aria-label="Frase do card"
         >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={phrase === ''}
+            data-phrase=""
+            onClick={() => setPhrase('')}
+            className={cx(
+              'h-9 shrink-0 rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap transition-colors',
+              phrase === ''
+                ? 'bg-white text-[#0d0a21]'
+                : 'bg-white/[0.06] text-white/70 ring-1 ring-white/15 ring-inset',
+            )}
+          >
+            Sem frase
+          </button>
           {sharePhrases.map((item) => (
             <button
               key={item}
@@ -1010,7 +1031,34 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
       </div>
 
       <div
-        className="mx-5 mt-3 grid grid-cols-3 rounded-full bg-white/[0.06] p-1"
+        className="mx-5 mt-3 grid grid-cols-2 rounded-full bg-white/[0.06] p-1"
+        role="radiogroup"
+        aria-label="Estilo do card"
+      >
+        {(
+          [
+            [false, 'Com painel'],
+            [true, 'Só letras'],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={label}
+            type="button"
+            role="radio"
+            aria-checked={bare === value}
+            onClick={() => setBare(value)}
+            className={cx(
+              'h-9 rounded-full text-[13px] font-semibold transition-colors',
+              bare === value ? 'bg-white text-[#0d0a21]' : 'text-white/60',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div
+        className="mx-5 mt-2 grid grid-cols-3 rounded-full bg-white/[0.06] p-1"
         role="radiogroup"
         aria-label="Fundo"
       >

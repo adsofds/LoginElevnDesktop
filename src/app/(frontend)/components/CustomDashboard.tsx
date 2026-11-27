@@ -36,6 +36,7 @@ import {
 } from './dashboard/DashboardWidgets'
 import { TemperaturePicker } from './interno/LeadsSpreadsheet'
 import { Badge, type BadgeTone } from './ui/Badge'
+import { RENEWAL_OPTIONS, RenewalChooser, renewalLabel } from './StudentsWorkspace'
 import { Button } from './ui/Button'
 import { cx } from './ui/cx'
 import { Segmented } from './ui/Segmented'
@@ -514,6 +515,8 @@ type RenewalRecord = {
   due: string
   status: 'Recuperado' | 'Em conversa' | 'Não renovou'
   reason?: string
+  /** Months of the confirmed renewal (3, 6 or 12). */
+  renewedMonths?: number
 }
 
 const initialRenewalRecords: RenewalRecord[] = [
@@ -572,6 +575,7 @@ const renewalTone: Record<RenewalRecord['status'], BadgeTone> = {
 function RenewalsOverview() {
   const [records, setRecords] = useState<RenewalRecord[]>(initialRenewalRecords)
   const [editingReasonId, setEditingReasonId] = useState<string | null>(null)
+  const [renewingId, setRenewingId] = useState<string | null>(null)
   const [reasonDraft, setReasonDraft] = useState('')
 
   const expiringTotal = 18
@@ -597,12 +601,22 @@ function RenewalsOverview() {
     setReasonDraft('')
   }
 
-  const markAsRecovered = (id: string) => {
+  const markAsRecovered = (id: string, months: number) => {
+    const option = RENEWAL_OPTIONS.find((item) => item.months === months)
     setRecords((current) =>
       current.map((item) =>
-        item.id === id ? { ...item, status: 'Recuperado', reason: undefined } : item,
+        item.id === id
+          ? {
+              ...item,
+              status: 'Recuperado',
+              reason: undefined,
+              renewedMonths: months,
+              plan: option?.plan ?? item.plan,
+            }
+          : item,
       ),
     )
+    setRenewingId(null)
     if (editingReasonId === id) {
       setEditingReasonId(null)
       setReasonDraft('')
@@ -662,16 +676,18 @@ function RenewalsOverview() {
               <div className="min-w-[150px] flex-1">
                 <p className="truncate text-sm font-medium text-ink">{item.name}</p>
                 <p className="text-xs text-ink-3">
-                  Plano {item.plan} · vence {item.due}
+                  {item.status === 'Recuperado' && item.renewedMonths
+                    ? `Renovou por ${renewalLabel(item.renewedMonths)} · plano ${item.plan}`
+                    : `Plano ${item.plan} · vence ${item.due}`}
                 </p>
               </div>
               <Badge tone={renewalTone[item.status]} dot>
                 {item.status}
               </Badge>
-              {editingReasonId !== item.id && (
+              {editingReasonId !== item.id && renewingId !== item.id && (
                 <div className="flex gap-1.5">
                   {item.status !== 'Recuperado' && (
-                    <Button size="sm" variant="secondary" onClick={() => markAsRecovered(item.id)}>
+                    <Button size="sm" variant="secondary" onClick={() => setRenewingId(item.id)}>
                       <Icon name="check" className="size-3.5" />
                       Renovou
                     </Button>
@@ -687,6 +703,14 @@ function RenewalsOverview() {
               <p className="mt-1.5 rounded-md bg-subtle px-2.5 py-1.5 text-xs leading-5 text-ink-2">
                 <span className="font-medium text-ink">Motivo:</span> {item.reason}
               </p>
+            )}
+
+            {renewingId === item.id && (
+              <RenewalChooser
+                name={item.name}
+                onPick={(months) => markAsRecovered(item.id, months)}
+                onCancel={() => setRenewingId(null)}
+              />
             )}
 
             {editingReasonId === item.id && (

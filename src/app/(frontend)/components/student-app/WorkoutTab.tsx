@@ -24,7 +24,7 @@ import {
   type DoneWorkout,
 } from './history'
 import { trainedDaysThisMonth, weekStreak } from './HomeTab'
-import { useStudentApp } from './StudentApp'
+import { useStudentApp, type SetLog } from './StudentApp'
 import {
   Card,
   Chip,
@@ -419,15 +419,6 @@ export function DoneWorkoutScreen({ doneKey }: { doneKey: string }) {
           <ShareButton onClick={() => push({ name: 'share', key: done.key })} />
         </RecapCard>
 
-        {done.comment && (
-          <Card className="mt-3 p-4">
-            <p className="text-[11px] font-semibold text-white/45">
-              Observação para o {studentProfile.coachFirstName}
-            </p>
-            <p className="mt-1 text-sm leading-5 text-white/80">{done.comment}</p>
-          </Card>
-        )}
-
         <h2 className="mt-7 mb-3 text-[17px] font-semibold">O que você fez</h2>
         {done.sets === 0 ? (
           <Card className="p-4">
@@ -600,6 +591,14 @@ const setTag: Record<SetType, { label: string; className: string; title: string 
   falha: { label: 'F', className: 'text-[var(--app-red)]', title: 'Até a falha' },
 }
 
+/** A checked set that beats the last time (more kg × reps than "Anterior"). */
+function isRecord(set: SetLog) {
+  if (!set.done || !set.previous) return false
+  const kg = Number(set.kgInput.replace(',', '.')) || 0
+  const reps = Number(set.repsInput) || 0
+  return kg > 0 && kg * reps > set.previous.kg * set.previous.reps
+}
+
 export function SessionScreen() {
   const {
     session,
@@ -612,10 +611,11 @@ export function SessionScreen() {
     skipRest,
     finishSession,
     discardSession,
+    swapExercise,
   } = useStudentApp()
   const [video, setVideo] = useState<Exercise | null>(null)
   const [confirm, setConfirm] = useState<'finalizar' | 'descartar' | null>(null)
-  const [note, setNote] = useState('')
+  const [swapFor, setSwapFor] = useState<Exercise | null>(null)
 
   if (!session) {
     return (
@@ -696,6 +696,8 @@ export function SessionScreen() {
       <div className="space-y-7 px-4 pt-5 pb-6">
         {workout.exercises.map((exercise) => {
           const logs = session.sets[exercise.id]
+          const swapped = session.swaps?.[exercise.id]
+          const shownName = swapped?.name ?? exercise.name
           let normalIndex = 0
           return (
             <section key={exercise.id} aria-label={exercise.name}>
@@ -708,12 +710,30 @@ export function SessionScreen() {
                 />
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate text-[15px] font-semibold text-[var(--app-gold)]">
-                    {exercise.name}
+                    {shownName}
                   </h2>
-                  <p className="text-xs text-white/50">
-                    {exercise.muscle} · descanso {restLabel(exercise.restSec)}
+                  <p className="truncate text-xs text-white/50">
+                    {swapped
+                      ? `Substituindo ${exercise.name}`
+                      : `${exercise.muscle} · descanso ${restLabel(exercise.restSec)}`}
                   </p>
                 </div>
+                {exercise.alternatives && exercise.alternatives.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSwapFor(exercise)}
+                    aria-label={`Trocar ${shownName}`}
+                    className={cx(
+                      'flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold',
+                      swapped
+                        ? 'bg-[var(--app-gold)]/15 text-[var(--app-gold)]'
+                        : 'bg-white/[0.07] text-white/70',
+                    )}
+                  >
+                    <Icon name="swap" className="size-3.5" />
+                    {swapped ? 'Trocado' : 'Trocar'}
+                  </button>
+                )}
               </div>
               {exercise.trainerNote && (
                 <p className="mt-2 rounded-lg bg-white/[0.04] px-3 py-2 text-[13px] leading-5 text-white/70">
@@ -767,9 +787,15 @@ export function SessionScreen() {
                           <span className="sr-only"> ({tag.title})</span>
                         </td>
                         <td className="py-1.5 text-[13px] text-white/45 tabular-nums">
-                          {set.previous
-                            ? `${formatKg(set.previous.kg)} × ${set.previous.reps}`
-                            : '—'}
+                          {isRecord(set) ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--app-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--app-gold)]">
+                              🏅 Recorde
+                            </span>
+                          ) : set.previous ? (
+                            `${formatKg(set.previous.kg)} × ${set.previous.reps}`
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="py-1.5">
                           <input
@@ -804,7 +830,7 @@ export function SessionScreen() {
                             type="button"
                             onClick={() => toggleSetDone(exercise.id, index)}
                             aria-pressed={set.done}
-                            aria-label={`${set.done ? 'Desmarcar' : 'Concluir'} série ${label} de ${exercise.name}`}
+                            aria-label={`${set.done ? 'Desmarcar' : 'Concluir'} série ${label} de ${shownName}`}
                             className={cx(
                               'mx-auto grid size-9 place-items-center rounded-lg transition-all active:scale-90',
                               set.done
@@ -934,39 +960,17 @@ export function SessionScreen() {
             <p className="text-sm text-white/70">
               {doneSets
                 ? `${doneSets} de ${totalSets} séries concluídas em ${formatClock(elapsed)}.`
-                : `Nenhuma série marcada (${formatClock(elapsed)} de treino). Sem problema: deixe uma observação para o ${studentProfile.coachFirstName} e salve.`}
+                : `Nenhuma série marcada (${formatClock(elapsed)} de treino). Sem problema: o treino fica registrado mesmo assim.`}
             </p>
             {doneSets > 0 && doneSets < totalSets && (
               <p className="mt-2 text-xs text-white/45">
                 As séries não marcadas ficam de fora do registro.
               </p>
             )}
-            <label htmlFor="finish-note" className="mt-4 block text-sm font-semibold">
-              Observação para o {studentProfile.coachFirstName}{' '}
-              <span className="font-normal text-white/45">
-                {doneSets ? '(opcional)' : '(obrigatória sem séries)'}
-              </span>
-            </label>
-            <textarea
-              id="finish-note"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              rows={3}
-              maxLength={280}
-              placeholder={
-                doneSets
-                  ? 'Como foi? Alguma dor, alguma carga ficou leve?'
-                  : 'Ex.: fiz o treino todo, mas não anotei as cargas.'
-              }
-              className="mt-2 w-full resize-none rounded-2xl bg-white/[0.06] px-3 py-2.5 text-sm text-white placeholder:text-white/35 focus:bg-white/10 focus:outline-none"
-            />
-            <GoldButton
-              className="mt-4"
-              disabled={!doneSets && note.trim().length < 3}
-              onClick={() => finishSession(note)}
-            >
+            <GoldButton className="mt-5" onClick={() => finishSession()}>
               Salvar treino
             </GoldButton>
+            <CoachWhatsAppButton className="mt-2" />
           </>
         )}
         <GhostButton className="mt-2 w-full border-0" onClick={() => setConfirm(null)}>
@@ -975,7 +979,94 @@ export function SessionScreen() {
       </PhoneSheet>
 
       <ExerciseVideoSheet exercise={video} onClose={() => setVideo(null)} />
+
+      <PhoneSheet open={swapFor !== null} onClose={() => setSwapFor(null)} title="Trocar exercício">
+        {swapFor && (
+          <>
+            <p className="rounded-2xl bg-[var(--app-gold)]/10 px-4 py-3 text-[13px] leading-5 text-white/80 ring-1 ring-[var(--app-gold)]/25 ring-inset">
+              ⚠️ Use só em caso de urgência: aparelho ocupado, academia lotada ou um dia sem tempo.
+              Sempre que der, siga o treino original do {studentProfile.coachFirstName}.
+            </p>
+            <p className="mt-4 text-xs font-semibold tracking-wide text-white/45 uppercase">
+              No lugar de {swapFor.name}
+            </p>
+            <ul className="mt-2 space-y-2">
+              {swapFor.alternatives?.map((alternative) => {
+                const active = session.swaps?.[swapFor.id]?.id === alternative.id
+                return (
+                  <li key={alternative.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        swapExercise(swapFor.id, alternative)
+                        setSwapFor(null)
+                      }}
+                      className={cx(
+                        'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left ring-1 ring-inset',
+                        active
+                          ? 'bg-[var(--app-gold)]/12 ring-[var(--app-gold)]/50'
+                          : 'bg-white/[0.05] ring-white/[0.06] active:bg-white/10',
+                      )}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[15px] font-semibold">{alternative.name}</span>
+                        <span className="block text-xs text-white/50">
+                          {alternative.equipment}
+                          {alternative.note && ` · ${alternative.note}`}
+                        </span>
+                      </span>
+                      {active && <Icon name="check" className="size-4 text-[var(--app-gold)]" />}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="mt-3 text-xs text-white/45">
+              Substitutos cadastrados pelo {studentProfile.coachFirstName}. As séries deste
+              exercício recomeçam e não contam recorde.
+            </p>
+            {session.swaps?.[swapFor.id] && (
+              <GhostButton
+                className="mt-3 w-full"
+                onClick={() => {
+                  swapExercise(swapFor.id, null)
+                  setSwapFor(null)
+                }}
+              >
+                Voltar para {swapFor.name}
+              </GhostButton>
+            )}
+          </>
+        )}
+      </PhoneSheet>
     </div>
+  )
+}
+
+/** "Tem alguma observação? Comente no WhatsApp": comments go to the coach's WhatsApp. */
+function CoachWhatsAppButton({ className }: { className?: string }) {
+  const text = `Oi ${studentProfile.coachFirstName}! Sobre o treino de hoje: `
+  return (
+    <a
+      href={`https://wa.me/${studentProfile.coachWhatsapp}?text=${encodeURIComponent(text)}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cx(
+        'flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#1f9d55]/15 px-4 text-center text-[13px] font-semibold text-[#5fd394] ring-1 ring-[#1f9d55]/40 ring-inset active:bg-[#1f9d55]/25',
+        className,
+      )}
+    >
+      <WhatsAppMark className="size-4 shrink-0" />
+      Tem alguma observação? Comente no WhatsApp
+    </a>
+  )
+}
+
+function WhatsAppMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.7 11.5 11.5 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z" />
+    </svg>
   )
 }
 
@@ -984,8 +1075,6 @@ export function SessionScreen() {
 export function SummaryScreen() {
   const { setTab, push } = useStudentApp()
   const done = useDoneWorkouts().find((item) => item.key === 'hoje')
-  const [comment, setComment] = useState('')
-  const [sent, setSent] = useState(false)
   if (!done) return null
 
   return (
@@ -1006,41 +1095,7 @@ export function SummaryScreen() {
         </RecapCard>
       </div>
 
-      <Card className="mt-4 p-4">
-        {done.comment || sent ? (
-          <>
-            <p className="flex items-center gap-2 text-sm text-[var(--app-green)]">
-              <Icon name="check" className="size-4" /> Observação enviada para o{' '}
-              {studentProfile.coachFirstName}.
-            </p>
-            <p className="mt-2 rounded-2xl bg-white/[0.05] px-3 py-2.5 text-sm leading-5 text-white/75">
-              {done.comment ?? comment}
-            </p>
-          </>
-        ) : (
-          <>
-            <label htmlFor="treino-comentario" className="text-sm font-semibold">
-              Comentário para o {studentProfile.coachFirstName}{' '}
-              <span className="font-normal text-white/45">(opcional)</span>
-            </label>
-            <textarea
-              id="treino-comentario"
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-              rows={3}
-              maxLength={280}
-              placeholder="Como foi? Sentiu alguma dor, alguma carga ficou leve?"
-              className="mt-2 w-full resize-none rounded-2xl bg-white/[0.06] px-3 py-2.5 text-sm text-white placeholder:text-white/35 focus:bg-white/10 focus:outline-none"
-            />
-            <p className="mt-1 text-[11px] text-white/45">
-              Ele vê na sua ficha. Para conversar, use o WhatsApp.
-            </p>
-            <GhostButton className="mt-3 w-full" onClick={() => comment.trim() && setSent(true)}>
-              Enviar comentário
-            </GhostButton>
-          </>
-        )}
-      </Card>
+      <CoachWhatsAppButton className="mt-4" />
 
       <div className="mt-5 space-y-2">
         <GhostButton className="w-full" onClick={() => push({ name: 'done', key: 'hoje' })}>
@@ -1054,119 +1109,194 @@ export function SummaryScreen() {
 
 /* ---------------------------------------------------------------- Calendar (Smart Fit) */
 
+/** Trained days of a month: the real history for this month, a steady pattern before. */
+function trainedDaysOf(year: number, month: number, today: Date) {
+  if (year === today.getFullYear() && month === today.getMonth()) return trainedDaysThisMonth(today)
+  const days = new Date(year, month + 1, 0).getDate()
+  return Array.from({ length: 31 }, (_, index) => {
+    if (index >= days) return false
+    const date = new Date(year, month, index + 1)
+    const weekday = date.getDay()
+    // Mon, Tue, Thu, Fri, and every other Wednesday, skipping a few days here and there.
+    const planned =
+      [1, 2, 4, 5].includes(weekday) || (weekday === 3 && Math.floor(index / 7) % 2 === 0)
+    return planned && (index * 7 + month * 3) % 11 !== 0
+  })
+}
+
+/**
+ * Monthly calendar in the Smart Fit style: month switcher, round days, trained days filled
+ * in gold with the Elevn mark, today ringed, and the day's workout below.
+ */
 export function CalendarScreen() {
   const { pop, setTab, push, lastFinished } = useStudentApp()
   const doneList = useDoneWorkouts()
   const today = new Date()
+  const [offset, setOffset] = useState(0)
+  const view = new Date(today.getFullYear(), today.getMonth() + offset, 1)
+  const year = view.getFullYear()
+  const month = view.getMonth()
+  const isCurrent = offset === 0
+  const lastDay = isCurrent ? today.getDate() : new Date(year, month + 1, 0).getDate()
   const [selected, setSelected] = useState(today.getDate())
-  const trained = trainedDaysThisMonth()
-  const year = today.getFullYear()
-  const month = today.getMonth()
+  const trained = trainedDaysOf(year, month, today)
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   // Sunday first, like the week on Início (D S T Q Q S S).
   const firstWeekday = new Date(year, month, 1).getDay()
   const isDone = (day: number) =>
-    (day === today.getDate() && lastFinished) || (day <= today.getDate() && trained[day - 1])
+    Boolean(
+      (isCurrent && day === today.getDate() && lastFinished) ||
+      (day <= lastDay && trained[day - 1]),
+    )
+  const monthCount = Array.from({ length: daysInMonth }, (_, i) => i + 1).filter(isDone).length
   // Weekly goal (Sunday first): days of this week, inside this month, already trained.
+  const thisMonth = trainedDaysThisMonth(today)
   const weekStartDay = today.getDate() - today.getDay()
   const weekDone = Array.from({ length: today.getDay() + 1 }, (_, i) => weekStartDay + i).filter(
-    (day) => day >= 1 && isDone(day),
+    (day) => day >= 1 && ((day === today.getDate() && lastFinished) || thisMonth[day - 1]),
   ).length
   const weeklyTarget = studentProfile.weeklyTarget
-  const streak = weekStreak(trained, today)
-  const selectedDate = new Date(year, month, selected)
-  const history = doneList.find(
-    (entry) => entry.date.getMonth() === month && entry.date.getDate() === selected,
-  )
-  const doneSelected = isDone(selected)
-  const code = history?.code ?? (['A', 'B', 'C', 'D'] as const)[selected % 4]
+  const streak = weekStreak(thisMonth, today)
+  const selectedDay = Math.min(selected, daysInMonth)
+  const selectedDate = new Date(year, month, selectedDay)
+  const history = isCurrent
+    ? doneList.find(
+        (entry) => entry.date.getMonth() === month && entry.date.getDate() === selectedDay,
+      )
+    : undefined
+  const doneSelected = isDone(selectedDay)
+  const code = history?.code ?? (['A', 'B', 'C', 'D'] as const)[selectedDay % 4]
+  const isTodaySelected = isCurrent && selectedDay === today.getDate()
+
+  const changeMonth = (step: number) => {
+    const next = Math.min(0, Math.max(-5, offset + step))
+    setOffset(next)
+    setSelected(next === 0 ? today.getDate() : 1)
+  }
 
   return (
     <div>
-      <ScreenHeader title="Calendário" onBack={pop} />
-      <div className="grid grid-cols-2 gap-2 px-5">
-        <Card className="py-4 text-center">
-          <p className="text-2xl font-bold tabular-nums">🔥 {streak}</p>
-          <p className="text-xs text-white/55">Semanas seguidas</p>
-        </Card>
-        <Card className="py-4 text-center">
-          <p className="text-2xl font-bold tabular-nums">
-            {weekDone}
-            <span className="text-base font-semibold text-white/40">/{weeklyTarget}</span>
-          </p>
-          <p className="text-xs text-white/55">
-            {weekDone >= weeklyTarget ? 'Meta da semana batida' : 'Meta da semana'}
-          </p>
-        </Card>
+      <ScreenHeader title="Frequência" onBack={pop} />
+      <div className="grid grid-cols-3 gap-2 px-5">
+        {(
+          [
+            [String(monthCount), isCurrent ? 'Treinos no mês' : 'Treinos', false],
+            [`${weekDone}/${weeklyTarget}`, 'Meta da semana', weekDone >= weeklyTarget],
+            [`🔥 ${streak}`, streak === 1 ? 'Semana seguida' : 'Semanas seguidas', false],
+          ] as const
+        ).map(([value, label, highlight]) => (
+          <Card
+            key={label}
+            className={cx('py-3.5 text-center', highlight && 'ring-[var(--app-green)]/40')}
+          >
+            <p className="text-[22px] leading-7 font-bold tabular-nums">{value}</p>
+            <p className="text-[11px] text-white/55">{label}</p>
+          </Card>
+        ))}
       </div>
 
-      <p className="mt-6 text-center text-[17px] font-semibold first-letter:uppercase">
-        {new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(today)}
-      </p>
-      <div
-        className="mt-4 grid grid-cols-7 gap-y-2 px-3 text-center"
-        role="grid"
-        aria-label="Dias do mês"
-      >
-        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => (
-          <span key={index} className="text-xs font-semibold text-white/60" aria-hidden="true">
-            {day}
-          </span>
-        ))}
-        {Array.from({ length: firstWeekday }, (_, index) => (
-          <span key={`pad-${index}`} />
-        ))}
-        {Array.from({ length: daysInMonth }, (_, index) => {
-          const day = index + 1
-          const future = day > today.getDate()
-          const done = isDone(day)
-          const isSelected = day === selected
-          return (
-            <button
-              key={day}
-              type="button"
-              role="gridcell"
-              disabled={future}
-              aria-selected={isSelected}
-              aria-label={`${day}${done ? ', treinou' : ''}`}
-              onClick={() => setSelected(day)}
-              className={cx(
-                'mx-auto grid size-11 place-items-center rounded-xl text-[15px] font-semibold tabular-nums transition-colors',
-                future && 'text-white/25',
-                !future &&
-                  done &&
-                  'bg-[var(--app-gold)]/[0.12] text-[var(--app-gold)] ring-1 ring-[var(--app-gold)]/30 ring-inset',
-                !future && !done && 'text-white/85',
-                isSelected && 'ring-2 ring-[var(--app-gold)]',
-              )}
+      <Card className="mx-5 mt-4 px-3 pt-3 pb-4">
+        <div className="flex items-center justify-between px-1">
+          <button
+            type="button"
+            onClick={() => changeMonth(-1)}
+            disabled={offset <= -5}
+            aria-label="Mês anterior"
+            className="grid size-10 place-items-center rounded-full text-white/70 active:bg-white/10 disabled:opacity-30"
+          >
+            <Icon name="chevronRight" className="size-5 rotate-180" />
+          </button>
+          <p className="text-[16px] font-semibold first-letter:uppercase">
+            {new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(view)}
+          </p>
+          <button
+            type="button"
+            onClick={() => changeMonth(1)}
+            disabled={isCurrent}
+            aria-label="Próximo mês"
+            className="grid size-10 place-items-center rounded-full text-white/70 active:bg-white/10 disabled:opacity-30"
+          >
+            <Icon name="chevronRight" className="size-5" />
+          </button>
+        </div>
+        <div
+          className="mt-2 grid grid-cols-7 gap-y-1.5 text-center"
+          role="grid"
+          aria-label="Dias do mês"
+        >
+          {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => (
+            <span
+              key={index}
+              className="pb-1 text-[11px] font-semibold text-white/45"
+              aria-hidden="true"
             >
-              {done && !future ? (
-                <span className="flex flex-col items-center gap-[3px]">
-                  <ElevnMark className="w-[22px]" />
-                  <span className="text-[10px] leading-none font-semibold text-[var(--app-gold)]/80">
-                    {day === today.getDate() ? 'Hoje' : day}
-                  </span>
+              {day}
+            </span>
+          ))}
+          {Array.from({ length: firstWeekday }, (_, index) => (
+            <span key={`pad-${index}`} />
+          ))}
+          {Array.from({ length: daysInMonth }, (_, index) => {
+            const day = index + 1
+            const future = isCurrent && day > today.getDate()
+            const done = isDone(day)
+            const isToday = isCurrent && day === today.getDate()
+            const isSelected = day === selectedDay
+            return (
+              <button
+                key={day}
+                type="button"
+                role="gridcell"
+                disabled={future}
+                aria-selected={isSelected}
+                aria-label={`${day}${done ? ', treinou' : ''}${isToday ? ', hoje' : ''}`}
+                onClick={() => setSelected(day)}
+                className="mx-auto grid size-11 place-items-center rounded-full"
+              >
+                <span
+                  className={cx(
+                    'relative grid size-10 place-items-center rounded-full text-[14px] font-semibold tabular-nums transition-colors',
+                    done
+                      ? 'bg-[var(--app-gold)] text-[#0d0a21]'
+                      : future
+                        ? 'text-white/20'
+                        : 'text-white/80',
+                    isToday && !done && 'ring-2 ring-[var(--app-gold)] ring-inset',
+                    isSelected && 'outline-2 outline-offset-2 outline-white/70 outline-solid',
+                  )}
+                >
+                  {done ? <ElevnMark className="w-[62%]" /> : day}
                 </span>
-              ) : day === today.getDate() ? (
-                'Hoje'
-              ) : (
-                day
-              )}
-            </button>
-          )
-        })}
-      </div>
+              </button>
+            )
+          })}
+        </div>
+        <p className="mt-3 flex items-center justify-center gap-4 text-[11px] text-white/50">
+          <span className="flex items-center gap-1.5">
+            <span className="grid size-4 place-items-center rounded-full bg-[var(--app-gold)] text-[#0d0a21]">
+              <ElevnMark className="w-[62%]" />
+            </span>
+            Treinou
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-4 rounded-full ring-2 ring-[var(--app-gold)] ring-inset" />
+            Hoje
+          </span>
+        </p>
+      </Card>
 
-      <div className="mt-6 border-t border-[var(--app-line)] px-5 pt-5">
+      <div className="px-5 pt-5">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[17px] font-semibold first-letter:uppercase">
-            {selected === today.getDate()
+            {isTodaySelected
               ? 'Hoje'
-              : new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric' }).format(
-                  selectedDate,
-                )}
+              : new Intl.DateTimeFormat('pt-BR', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                }).format(selectedDate)}
           </p>
-          {selected === today.getDate() && !lastFinished && (
+          {isTodaySelected && !lastFinished && (
             <GhostButton onClick={() => setTab('treino')}>+ Registrar treino</GhostButton>
           )}
         </div>
@@ -1182,14 +1312,14 @@ export function CalendarScreen() {
               <span className="block font-semibold">{workoutOf(code).title}</span>
               <span className="block text-xs text-white/55">
                 {history
-                  ? `${history.nth}ª vez · ${Math.round(history.seconds / 60)} min · ${workLabel(history)}`
+                  ? `${Math.round(history.seconds / 60)} min · ${workLabel(history)}`
                   : 'Treino registrado'}
               </span>
             </span>
             {history && <Icon name="chevronRight" className="size-4 text-white/35" />}
           </button>
         ) : (
-          <p className="mt-6 text-center text-sm text-white/50">
+          <p className="mt-5 rounded-2xl bg-white/[0.03] py-5 text-center text-sm text-white/45">
             Nenhum treino registrado nesta data
           </p>
         )}

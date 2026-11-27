@@ -5,7 +5,6 @@ import { dietPlan } from '@/lib/demo-student-app'
 import {
   categoryLabels,
   findFood,
-  goalOptions,
   lookupBarcode,
   macrosFor,
   searchFoods,
@@ -95,10 +94,7 @@ export function SmartSwaps() {
           <div className="min-w-0">
             <p className="text-[15px] font-semibold">Trocas inteligentes</p>
             <p className="mt-0.5 text-[13px] leading-5 text-white/60">
-              Troque um alimento por outro com as mesmas calorias e veja os macros de cada opção.
-            </p>
-            <p className="mt-2 inline-flex rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-white/60">
-              Base TACO e TBCA 7.2
+              Troque um alimento por outro com macros parecidos e as mesmas calorias.
             </p>
           </div>
         </div>
@@ -360,7 +356,8 @@ function SwapCalculator() {
   const [target, setTarget] = useState<SwapFood | null>(null)
   const [quantity, setQuantity] = useState('100')
   const [unit, setUnit] = useState<SwapUnit>('g')
-  const [goal, setGoal] = useState<SwapGoal>('equivalente')
+  // Only "macros parecidos": same calories, closest protein, carbs and fat.
+  const goal: SwapGoal = 'equivalente'
   const [calculated, setCalculated] = useState(false)
   const resultsRef = useRef<HTMLDivElement>(null)
 
@@ -384,7 +381,6 @@ function SwapCalculator() {
     setTarget(null)
     setQuantity('100')
     setUnit('g')
-    setGoal('equivalente')
     setCalculated(false)
   }
 
@@ -457,31 +453,6 @@ function SwapCalculator() {
             ≈ {fmt(grams, 0)} g (medida caseira aproximada)
           </p>
         )}
-
-        <p className="mt-4 mb-2 text-xs text-white/55">Objetivo da troca</p>
-        <div
-          role="radiogroup"
-          aria-label="Objetivo da troca"
-          className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]"
-        >
-          {goalOptions.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="radio"
-              aria-checked={goal === item.id}
-              onClick={() => setGoal(item.id)}
-              className={cx(
-                'h-8 shrink-0 rounded-full px-3 text-[13px] font-medium whitespace-nowrap transition-colors',
-                goal === item.id
-                  ? 'bg-white text-[#0d0a21]'
-                  : 'bg-white/[0.06] text-white/70 ring-1 ring-white/[0.06] ring-inset',
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
       </Card>
 
       <Card className="p-4">
@@ -804,7 +775,7 @@ function ProductCard({ product }: { product: ScannedProduct }) {
           />
         ) : (
           <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-white/40">
-            <Icon name="nutrition" className="size-6" />
+            <Icon name="meal" className="size-6" />
           </span>
         )}
         <div className="min-w-0">

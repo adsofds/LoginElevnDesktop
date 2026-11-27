@@ -46,6 +46,7 @@ export function ScreenHeader({
         </button>
       )}
       <div className="min-w-0 flex-1">
+        {!onBack && <ElevnMark className="mb-1.5 w-6 text-[var(--app-gold)]" />}
         <h1
           className={cx(
             'truncate font-semibold tracking-[-0.02em] text-white',

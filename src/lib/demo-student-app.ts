@@ -26,8 +26,15 @@ export type Exercise = {
   /** Length of Breno's own video for the exercise. */
   videoLength: string
   trainerNote?: string
+  /**
+   * Substitutes registered by the coach, for emergencies only (machine taken, crowded gym,
+   * no time). The student can swap during the workout.
+   */
+  alternatives?: ExerciseAlternative[]
   sets: PlannedSet[]
 }
+
+export type ExerciseAlternative = { id: string; name: string; equipment: string; note?: string }
 
 export type Workout = {
   code: 'A' | 'B' | 'C' | 'D'
@@ -64,6 +71,15 @@ export const workouts: Workout[] = [
         restSec: 120,
         videoLength: '0:48',
         trainerNote: 'Desce controlando em 3 segundos. Escápulas presas no banco.',
+        alternatives: [
+          { id: 'supino-halteres', name: 'Supino reto com halteres', equipment: 'Halteres' },
+          {
+            id: 'supino-maquina',
+            name: 'Supino na máquina',
+            equipment: 'Máquina',
+            note: 'Mesma faixa de repetições.',
+          },
+        ],
         sets: [
           s('aquecimento', 20, 15, [20, 15]),
           s('normal', 50, 10, [50, 9]),
@@ -78,6 +94,13 @@ export const workouts: Workout[] = [
         equipment: 'Halteres',
         restSec: 90,
         videoLength: '0:41',
+        alternatives: [
+          {
+            id: 'supino-inclinado-maquina',
+            name: 'Supino inclinado na máquina',
+            equipment: 'Máquina',
+          },
+        ],
         sets: [
           s('normal', 22, 12, [20, 12]),
           s('normal', 22, 10, [20, 12]),
@@ -151,6 +174,10 @@ export const workouts: Workout[] = [
         restSec: 90,
         videoLength: '0:44',
         trainerNote: 'Peito alto, puxe com os cotovelos e não balance o tronco.',
+        alternatives: [
+          { id: 'puxada-triangulo', name: 'Puxada com triângulo', equipment: 'Polia' },
+          { id: 'barra-fixa-assistida', name: 'Barra fixa assistida', equipment: 'Gravitron' },
+        ],
         sets: [
           s('aquecimento', 30, 15, [30, 15]),
           s('normal', 55, 10, [55, 10]),
@@ -165,6 +192,9 @@ export const workouts: Workout[] = [
         equipment: 'Barra',
         restSec: 120,
         videoLength: '0:52',
+        alternatives: [
+          { id: 'remada-maquina', name: 'Remada sentada na máquina', equipment: 'Máquina' },
+        ],
         sets: [
           s('normal', 40, 10, [40, 10]),
           s('normal', 40, 10, [40, 9]),
@@ -224,6 +254,15 @@ export const workouts: Workout[] = [
         restSec: 150,
         videoLength: '0:58',
         trainerNote: 'Profundidade até a coxa paralela. Joelhos acompanham a ponta dos pés.',
+        alternatives: [
+          {
+            id: 'agachamento-smith',
+            name: 'Agachamento no Smith',
+            equipment: 'Smith',
+            note: 'Mantenha a mesma profundidade.',
+          },
+          { id: 'hack', name: 'Hack machine', equipment: 'Máquina' },
+        ],
         sets: [
           s('aquecimento', 20, 12, [20, 12]),
           s('normal', 60, 10, [60, 10]),
@@ -238,6 +277,14 @@ export const workouts: Workout[] = [
         equipment: 'Máquina',
         restSec: 120,
         videoLength: '0:40',
+        alternatives: [
+          {
+            id: 'agachamento-goblet',
+            name: 'Agachamento goblet',
+            equipment: 'Halter',
+            note: 'Para dia sem tempo: 4 séries com descanso de 60s.',
+          },
+        ],
         sets: [
           s('normal', 160, 12, [150, 12]),
           s('normal', 160, 12, [150, 12]),
@@ -297,6 +344,10 @@ export const workouts: Workout[] = [
         restSec: 0,
         videoLength: '0:35',
         trainerNote: '1 minuto forte, 2 minutos leve. O "kg" aqui é a velocidade (km/h).',
+        alternatives: [
+          { id: 'bike', name: 'Bicicleta ergométrica (min)', equipment: 'Bike' },
+          { id: 'escada', name: 'Escada (min)', equipment: 'Escada' },
+        ],
         sets: [
           s('normal', 12, 1, [11, 1]),
           s('normal', 6, 2, [6, 2]),
@@ -365,7 +416,21 @@ export const workoutHistory: HistoryEntry[] = [
   { daysAgo: 8, code: 'A', minutes: 55, prs: 0 },
 ]
 
-export type Food = { name: string; amount: string; kcal: number; p: number; c: number; g: number }
+export type Food = {
+  name: string
+  /** Household measure ("2 fatias", "1 concha"); empty when the weight says it all. */
+  amount: string
+  /** Weight in grams (or ml) of the portion. */
+  grams?: number
+  kcal: number
+  p: number
+  c: number
+  g: number
+}
+
+/** "2 fatias (50 g)", "150 g", "à vontade". */
+export const portionLabel = (food: Food) =>
+  food.grams ? (food.amount ? `${food.amount} (${food.grams} g)` : `${food.grams} g`) : food.amount
 
 export type Meal = {
   id: string
@@ -378,17 +443,27 @@ export type Meal = {
 
 export const dietPlan = {
   strategy: 'Déficit calórico estruturado',
-  targets: { kcal: 1850, p: 150, c: 170, g: 55 },
+  targets: { kcal: 1785, p: 150, c: 170, g: 55 },
   note: 'Nos dias de perna, some 1 banana no pré-treino (+100 kcal).',
+  /** General guidelines from the nutritionist (long text, shown collapsed). */
+  guidelines: [
+    'Nos dias de treino de perna, some 1 banana no pré-treino (+100 kcal).',
+    'Beba pelo menos 3 litros de água por dia; leve a garrafa para o treino.',
+    'Pese os alimentos já prontos (cozidos ou grelhados), como está no plano.',
+    'Tempere à vontade com ervas, limão, alho e cebola. Evite molhos prontos.',
+    'Café e chá sem açúcar estão liberados. Use adoçante se precisar.',
+    'Se pular uma refeição, não compense dobrando a próxima: siga o plano normalmente.',
+    'Refeição livre: 1 por semana, de preferência no fim de semana, sem exageros.',
+  ],
   meals: [
     {
       id: 'cafe',
       name: 'Café da manhã',
       time: '07:00',
       foods: [
-        { name: 'Ovos mexidos', amount: '3 unidades', kcal: 215, p: 19, c: 2, g: 15 },
-        { name: 'Pão integral', amount: '2 fatias', kcal: 140, p: 6, c: 24, g: 2 },
-        { name: 'Mamão', amount: '1 fatia média', kcal: 55, p: 1, c: 13, g: 0 },
+        { name: 'Ovos mexidos', amount: '3 unidades', grams: 150, kcal: 215, p: 19, c: 2, g: 15 },
+        { name: 'Pão integral', amount: '2 fatias', grams: 50, kcal: 140, p: 6, c: 24, g: 2 },
+        { name: 'Mamão', amount: '1 fatia média', grams: 160, kcal: 55, p: 1, c: 13, g: 0 },
       ],
       swaps: ['Pão integral ↔ 4 col. de tapioca', 'Mamão ↔ 1 banana pequena'],
     },
@@ -397,8 +472,16 @@ export const dietPlan = {
       name: 'Lanche da manhã',
       time: '10:00',
       foods: [
-        { name: 'Iogurte natural desnatado', amount: '170 g', kcal: 90, p: 9, c: 12, g: 0 },
-        { name: 'Whey protein', amount: '1 scoop (30 g)', kcal: 120, p: 24, c: 3, g: 2 },
+        {
+          name: 'Iogurte natural desnatado',
+          amount: '1 pote',
+          grams: 170,
+          kcal: 90,
+          p: 9,
+          c: 12,
+          g: 0,
+        },
+        { name: 'Whey protein', amount: '1 scoop', grams: 30, kcal: 120, p: 24, c: 3, g: 2 },
       ],
     },
     {
@@ -406,17 +489,11 @@ export const dietPlan = {
       name: 'Almoço',
       time: '12:30',
       foods: [
-        { name: 'Frango grelhado', amount: '150 g', kcal: 240, p: 45, c: 0, g: 6 },
-        { name: 'Arroz integral', amount: '120 g', kcal: 150, p: 3, c: 31, g: 1 },
-        { name: 'Feijão', amount: '1 concha (80 g)', kcal: 75, p: 5, c: 13, g: 0 },
-        {
-          name: 'Salada verde + azeite',
-          amount: 'à vontade + 1 col. chá',
-          kcal: 60,
-          p: 1,
-          c: 4,
-          g: 5,
-        },
+        { name: 'Frango grelhado', amount: '', grams: 150, kcal: 240, p: 45, c: 0, g: 6 },
+        { name: 'Arroz integral', amount: '4 col. sopa', grams: 120, kcal: 150, p: 3, c: 31, g: 1 },
+        { name: 'Feijão', amount: '1 concha', grams: 80, kcal: 75, p: 5, c: 13, g: 0 },
+        { name: 'Salada verde', amount: 'à vontade', kcal: 25, p: 1, c: 4, g: 0 },
+        { name: 'Azeite de oliva', amount: '1 col. chá', grams: 4, kcal: 35, p: 0, c: 0, g: 4 },
       ],
       swaps: ['Frango ↔ 150 g de patinho moído', 'Arroz ↔ 150 g de batata-doce'],
     },
@@ -425,8 +502,8 @@ export const dietPlan = {
       name: 'Pré-treino',
       time: '16:30',
       foods: [
-        { name: 'Batata-doce', amount: '150 g', kcal: 130, p: 2, c: 30, g: 0 },
-        { name: 'Peito de peru', amount: '60 g', kcal: 60, p: 10, c: 1, g: 2 },
+        { name: 'Batata-doce', amount: '', grams: 150, kcal: 130, p: 2, c: 30, g: 0 },
+        { name: 'Peito de peru', amount: '4 fatias', grams: 60, kcal: 60, p: 10, c: 1, g: 2 },
       ],
     },
     {
@@ -434,9 +511,17 @@ export const dietPlan = {
       name: 'Jantar',
       time: '20:00',
       foods: [
-        { name: 'Tilápia assada', amount: '180 g', kcal: 200, p: 40, c: 0, g: 4 },
-        { name: 'Legumes no vapor', amount: '200 g', kcal: 70, p: 3, c: 13, g: 1 },
-        { name: 'Azeite de oliva', amount: '1 col. sopa', kcal: 90, p: 0, c: 0, g: 10 },
+        {
+          name: 'Tilápia assada',
+          amount: '1 filé grande',
+          grams: 180,
+          kcal: 200,
+          p: 40,
+          c: 0,
+          g: 4,
+        },
+        { name: 'Legumes no vapor', amount: '', grams: 200, kcal: 70, p: 3, c: 13, g: 1 },
+        { name: 'Azeite de oliva', amount: '1 col. sopa', grams: 13, kcal: 90, p: 0, c: 0, g: 10 },
       ],
       swaps: ['Tilápia ↔ 150 g de frango'],
     },
@@ -445,7 +530,7 @@ export const dietPlan = {
       name: 'Ceia',
       time: '22:30',
       foods: [
-        { name: 'Pasta de amendoim', amount: '1 col. sopa (15 g)', kcal: 90, p: 4, c: 3, g: 8 },
+        { name: 'Pasta de amendoim', amount: '1 col. sopa', grams: 15, kcal: 90, p: 4, c: 3, g: 8 },
       ],
     },
   ] satisfies Meal[],
@@ -478,13 +563,45 @@ export type ProgressPhoto = {
   /** Day the photo was taken (yyyy-mm-dd), chosen by whoever uploads it. */
   dateIso: string
   pose: 'Frente' | 'Lado' | 'Costas'
+  /** Weight on the day of the photo (kg), registered with the upload. */
+  weightKg?: number
 }
 
 /** Same photos the panel shows in the student's file. */
 export const progressPhotos: ProgressPhoto[] = [
-  { id: 'p1', url: img('1583454110551-21f2fa2afe61', 500), dateIso: '2026-01-08', pose: 'Frente' },
-  { id: 'p2', url: img('1605296867304-46d5465a13f1', 500), dateIso: '2026-01-08', pose: 'Costas' },
-  { id: 'p3', url: img('1571019614242-c5c5dee9f50b', 500), dateIso: '2026-02-20', pose: 'Lado' },
-  { id: 'p4', url: img('1637430308606-86576d8fef3c', 500), dateIso: '2026-04-12', pose: 'Frente' },
-  { id: 'p5', url: img('1672344048213-76b6e77304bd', 500), dateIso: '2026-04-12', pose: 'Costas' },
+  {
+    id: 'p1',
+    url: img('1583454110551-21f2fa2afe61', 500),
+    dateIso: '2026-01-08',
+    pose: 'Frente',
+    weightKg: 88.6,
+  },
+  {
+    id: 'p2',
+    url: img('1605296867304-46d5465a13f1', 500),
+    dateIso: '2026-01-08',
+    pose: 'Costas',
+    weightKg: 88.6,
+  },
+  {
+    id: 'p3',
+    url: img('1571019614242-c5c5dee9f50b', 500),
+    dateIso: '2026-02-20',
+    pose: 'Lado',
+    weightKg: 86.1,
+  },
+  {
+    id: 'p4',
+    url: img('1637430308606-86576d8fef3c', 500),
+    dateIso: '2026-04-12',
+    pose: 'Frente',
+    weightKg: 83.0,
+  },
+  {
+    id: 'p5',
+    url: img('1672344048213-76b6e77304bd', 500),
+    dateIso: '2026-04-12',
+    pose: 'Costas',
+    weightKg: 83.0,
+  },
 ]

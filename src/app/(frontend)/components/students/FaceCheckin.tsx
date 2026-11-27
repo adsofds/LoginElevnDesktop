@@ -96,7 +96,11 @@ export function FaceCheckin({
   return (
     <div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3">
-        <span>Enviado {answers.submittedAt}</span>
+        <span>
+          {answers.submittedAt.startsWith('Pendente')
+            ? `Check-in ${answers.submittedAt.toLowerCase()}`
+            : `Enviado ${answers.submittedAt.charAt(0).toLowerCase()}${answers.submittedAt.slice(1)}`}
+        </span>
         <span>
           Peso em jejum:{' '}
           <strong className="font-semibold text-ink">{formatKg(answers.weightKg)}</strong>

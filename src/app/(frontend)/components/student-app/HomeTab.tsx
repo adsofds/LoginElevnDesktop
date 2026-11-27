@@ -1,11 +1,19 @@
 'use client'
 
 import { studentAdherence } from '@/lib/demo-adherence'
-import { nextWorkoutCode, studentProfile, workoutHistory, workouts } from '@/lib/demo-student-app'
+import {
+  dietPlan,
+  nextWorkoutCode,
+  studentProfile,
+  workoutHistory,
+  workouts,
+} from '@/lib/demo-student-app'
 import { Face, type FaceScore } from '../students/FaceCheckin'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
-import { currentMeal } from './DietTab'
+import { teamMember } from '@/lib/demo-team'
+import { SenderAvatar } from '../team/SenderAvatar'
+import { currentMeal, dayKcal } from './DietTab'
 import { useStudentApp } from './StudentApp'
 import {
   Avatar,
@@ -97,6 +105,14 @@ const moodCopy: Record<
   },
 }
 
+/** Elevn catchphrases for the greeting, one per day. */
+const homeSlogans = [
+  'Not just better, beyond.',
+  'Não apenas melhor, além.',
+  'Hoje é dia de tirar 11.',
+  'Constância é o que te leva além.',
+]
+
 export function HomeTab() {
   const { push, setTab, session, lastFinished, notifications, startSession, eatenMeals, avatar } =
     useStudentApp()
@@ -126,14 +142,34 @@ export function HomeTab() {
   const adherence = weeklyAdherence(weekDone, today)
   const copy = moodCopy[adherence.mood as 1 | 3 | 5]
 
-  const minutesNow = today.getHours() * 60 + today.getMinutes()
   const nextMeal = currentMeal(eatenMeals, today)
   const nextFoods = nextMeal?.foods ?? []
   const nextKcal = nextFoods.reduce((sum, food) => sum + food.kcal, 0)
+  const eatenKcal = dietPlan.meals
+    .filter((meal) => eatenMeals.includes(meal.id))
+    .reduce((sum, meal) => sum + meal.foods.reduce((total, food) => total + food.kcal, 0), 0)
+  const dietPercent = Math.min(100, Math.round((eatenKcal / dayKcal) * 100))
+  const slogan = homeSlogans[today.getDate() % homeSlogans.length]
 
   return (
     <div className="pb-4">
       <header className="flex items-center gap-3 px-5 pt-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/wordmark-beige.png" alt="Elevn" className="h-[18px] w-auto" />
+        <span className="flex-1" />
+        <button
+          type="button"
+          onClick={() => push({ name: 'notifications' })}
+          aria-label={unread ? `Avisos, ${unread} novos` : 'Avisos'}
+          className="relative grid size-10 shrink-0 place-items-center rounded-full bg-white/[0.06] text-white ring-1 ring-white/10 ring-inset"
+        >
+          <Icon name="bell" className="size-5" />
+          {unread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[var(--app-gold)] px-1 text-[10px] font-bold text-[#0d0a21]">
+              {unread}
+            </span>
+          )}
+        </button>
         <button
           type="button"
           onClick={() => setTab('conta')}
@@ -143,86 +179,138 @@ export function HomeTab() {
           <Avatar
             src={avatar}
             name={studentProfile.name}
-            className="size-11 text-sm ring-2 ring-[var(--app-gold)]/40"
+            className="size-10 text-sm ring-2 ring-[var(--app-gold)]/40"
           />
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] text-white/50 first-letter:uppercase">
-            {new Intl.DateTimeFormat('pt-BR', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-            }).format(today)}
-          </p>
-          <h1 className="truncate text-[22px] leading-7 font-semibold tracking-[-0.02em]">
-            Olá, {studentProfile.firstName}
-          </h1>
-        </div>
-        <button
-          type="button"
-          onClick={() => push({ name: 'notifications' })}
-          aria-label={unread ? `Avisos, ${unread} novos` : 'Avisos'}
-          className="relative grid size-11 shrink-0 place-items-center rounded-full bg-white/[0.06] text-white ring-1 ring-white/10 ring-inset"
-        >
-          <Icon name="bell" className="size-5" />
-          {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[var(--app-gold)] px-1 text-[10px] font-bold text-[#0d0a21]">
-              {unread}
-            </span>
-          )}
         </button>
       </header>
 
+      <div className="px-5 pt-5">
+        <p className="text-[13px] text-white/50 first-letter:uppercase">
+          {new Intl.DateTimeFormat('pt-BR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+          }).format(today)}
+        </p>
+        <h1 className="text-[28px] leading-8 font-semibold tracking-[-0.02em]">
+          Olá, {studentProfile.firstName}
+        </h1>
+        <p className="mt-1 flex items-center gap-2 text-[13px] font-medium text-[var(--app-gold)]">
+          <ElevnMark className="w-4" />
+          {slogan}
+        </p>
+      </div>
+
       {/* Week: tap to open the calendar */}
-      <button
-        type="button"
-        onClick={() => push({ name: 'calendar' })}
-        aria-label={`Sua semana: ${weekDone} treinos. Abrir calendário`}
-        className="mx-5 mt-5 block w-[calc(100%-40px)] text-left"
-      >
-        <Card className="px-4 pt-3.5 pb-4 transition-colors active:bg-[var(--app-card-2)]">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">Sua semana</p>
-            <span className="flex items-center gap-2">
+      <section className="mt-6">
+        <SectionTitle
+          action={<LinkButton onClick={() => push({ name: 'calendar' })}>Calendário</LinkButton>}
+        >
+          Sua semana
+        </SectionTitle>
+        <button
+          type="button"
+          onClick={() => push({ name: 'calendar' })}
+          aria-label={`Sua semana: ${weekDone} treinos. Abrir calendário`}
+          className="mx-5 block w-[calc(100%-40px)] text-left"
+        >
+          <Card className="px-4 pt-3.5 pb-4 transition-colors active:bg-[var(--app-card-2)]">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-white/60">
+                <strong className="font-semibold text-white">{weekDone}</strong> treinos nesta
+                semana
+              </p>
               <Chip tone={streak ? 'gold' : 'muted'}>
                 🔥 {streak} {streak === 1 ? 'semana' : 'semanas'}
               </Chip>
-              <Icon name="calendar" className="size-4 text-white/45" />
-            </span>
+            </div>
+            <ol className="mt-3 grid grid-cols-7 gap-1">
+              {week.map((day, index) => (
+                <li key={index} className="flex flex-col items-center gap-1.5">
+                  <span
+                    className={cx(
+                      'text-[11px] font-medium',
+                      day.isToday ? 'text-[var(--app-gold)]' : 'text-white/40',
+                    )}
+                  >
+                    {weekdays[index]}
+                  </span>
+                  <span
+                    className={cx(
+                      'grid aspect-square w-full max-w-9 place-items-center rounded-full text-[13px] font-semibold tabular-nums',
+                      day.done
+                        ? 'bg-[var(--app-gold)] text-[#0d0a21]'
+                        : day.isToday
+                          ? 'text-white ring-2 ring-[var(--app-gold)] ring-inset'
+                          : day.future
+                            ? 'text-white/25'
+                            : 'bg-white/[0.05] text-white/55',
+                    )}
+                  >
+                    {day.done ? <ElevnMark className="w-[60%]" /> : day.date.getDate()}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </Card>
+        </button>
+      </section>
+
+      {/* Focus of the day: diet first, then the workout */}
+      <section className="mt-6" aria-label="Dieta de hoje">
+        <button
+          type="button"
+          onClick={() => setTab('dieta')}
+          aria-label={`Dieta de hoje: ${eatenKcal} de ${dayKcal} kcal. Abrir dieta`}
+          className="mx-5 block w-[calc(100%-40px)] text-left"
+        >
+          <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(160deg,#211d2b_0%,#16141e_60%)] p-4 ring-1 ring-[var(--app-gold)]/25 ring-inset transition-transform active:scale-[0.99]">
+            <div className="flex items-center gap-3">
+              <SenderAvatar sender={teamMember('athison')} shape="rounded" className="size-11" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold">Dieta de hoje</span>
+                <span className="block text-xs text-white/55 tabular-nums">
+                  {eatenKcal.toLocaleString('pt-BR')} de {dayKcal.toLocaleString('pt-BR')} kcal ·{' '}
+                  {eatenMeals.length}/{dietPlan.meals.length} refeições
+                </span>
+              </span>
+              <span className="text-sm font-semibold text-[var(--app-gold)] tabular-nums">
+                {dietPercent}%
+              </span>
+              <Icon name="chevronRight" className="size-4 text-white/40" />
+            </div>
+            <ol className="mt-3 flex gap-1" aria-hidden>
+              {dietPlan.meals.map((meal) => (
+                <li
+                  key={meal.id}
+                  className={cx(
+                    'h-1.5 flex-1 rounded-full',
+                    eatenMeals.includes(meal.id) ? 'bg-[var(--app-gold)]' : 'bg-white/[0.1]',
+                  )}
+                />
+              ))}
+            </ol>
+            <p className="mt-3 flex items-center gap-2 text-[13px]">
+              {nextMeal ? (
+                <>
+                  <span className="text-white/50">Próxima:</span>
+                  <span className="min-w-0 flex-1 truncate font-semibold">
+                    {nextMeal.name} · {nextMeal.time}
+                  </span>
+                  <span className="shrink-0 text-white/60 tabular-nums">{nextKcal} kcal</span>
+                </>
+              ) : (
+                <span className="font-semibold text-[var(--app-green)]">
+                  Dieta do dia completa. Tirou 11! 🎉
+                </span>
+              )}
+            </p>
           </div>
-          <ol className="mt-3 grid grid-cols-7 gap-1">
-            {week.map((day, index) => (
-              <li key={index} className="flex flex-col items-center gap-1.5">
-                <span
-                  className={cx(
-                    'text-[11px] font-medium',
-                    day.isToday ? 'text-[var(--app-gold)]' : 'text-white/40',
-                  )}
-                >
-                  {weekdays[index]}
-                </span>
-                <span
-                  className={cx(
-                    'grid aspect-square w-full max-w-9 place-items-center rounded-full text-[13px] font-semibold tabular-nums',
-                    day.done
-                      ? 'bg-[var(--app-gold)]/14 text-[var(--app-gold)] ring-1 ring-[var(--app-gold)]/45 ring-inset'
-                      : day.isToday
-                        ? 'text-white ring-2 ring-[var(--app-gold)] ring-inset'
-                        : day.future
-                          ? 'text-white/25'
-                          : 'bg-white/[0.05] text-white/55',
-                  )}
-                >
-                  {day.done ? <ElevnMark className="w-[58%]" /> : day.date.getDate()}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </Card>
-      </button>
+        </button>
+      </section>
 
       {/* Today's workout */}
-      <section className="mt-7">
+      <section className="mt-6">
         <SectionTitle action={<LinkButton onClick={() => setTab('treino')}>Ver todos</LinkButton>}>
           Treino de hoje
         </SectionTitle>
@@ -237,13 +325,14 @@ export function HomeTab() {
             onClick={() => push({ name: 'workout', code: workout.code })}
             className="relative flex w-full items-start gap-4 text-left"
           >
-            <LetterBadge code={workout.code} size="xl" />
+            <SenderAvatar sender={teamMember('breno')} shape="rounded" className="size-16" />
             <span className="min-w-0 flex-1 pt-0.5">
               <span className="block text-[20px] leading-6 font-semibold tracking-[-0.01em]">
                 {workout.title}
               </span>
               <span className="mt-1 block text-[13px] text-white/55">
-                {workout.minutes} min · {workout.exercises.length} exercícios
+                Treino {workout.code} · {workout.minutes} min · {workout.exercises.length}{' '}
+                exercícios
               </span>
               <span className="mt-2.5 flex flex-wrap gap-1.5">
                 <Chip tone="gold">{doneToday ? 'Concluído hoje' : 'Próximo treino'}</Chip>
@@ -315,44 +404,6 @@ export function HomeTab() {
             <p className="mt-3 text-xs text-white/45">
               Meta semanal: {adherence.target} treinos · renova todo domingo
             </p>
-          </Card>
-        </button>
-      </section>
-
-      {/* Next meal */}
-      <section className="mt-7">
-        <SectionTitle action={<LinkButton onClick={() => setTab('dieta')}>Dieta</LinkButton>}>
-          Próxima refeição
-        </SectionTitle>
-        <button
-          type="button"
-          onClick={() => setTab('dieta')}
-          className="mx-5 block w-[calc(100%-40px)] text-left"
-        >
-          <Card className="flex items-center gap-4 p-4">
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--app-gold)]/12 text-[var(--app-gold)]">
-              <Icon name="nutrition" className="size-6" />
-            </span>
-            {nextMeal ? (
-              <>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">{nextMeal.name}</span>
-                  <span className="block truncate text-[13px] text-white/50">
-                    {nextMeal.time} · {nextFoods.map((food) => food.name).join(', ')}
-                  </span>
-                </span>
-                <span className="text-sm font-semibold text-white/80 tabular-nums">
-                  {nextKcal} kcal
-                </span>
-              </>
-            ) : (
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold">Dieta do dia completa</span>
-                <span className="block text-[13px] text-white/50">
-                  Todas as refeições de hoje foram marcadas.
-                </span>
-              </span>
-            )}
           </Card>
         </button>
       </section>

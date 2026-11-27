@@ -16,6 +16,7 @@ import {
   type SiteFormSubmission,
 } from '@/lib/demo-internal'
 import { demoNotificationHistory, type StudentNotification } from '@/lib/student-notifications'
+import { demoSchedules, type NotificationSchedule } from '@/lib/notification-schedules'
 import { presetThemes, type ThemeConfig } from '../SettingsWorkspace'
 
 /* Demo session. Real authentication (Payload `users`) is a later phase; until then the
@@ -53,6 +54,10 @@ type PanelState = {
   notifications: StudentNotification[]
   addNotification: (notification: StudentNotification) => void
   cancelNotification: (id: string) => void
+  /** Recurring notification schedules. */
+  schedules: NotificationSchedule[]
+  saveSchedule: (schedule: NotificationSchedule) => void
+  removeSchedule: (id: string) => void
   siteForms: SiteFormSubmission[]
   updateSiteFormTemperature: (id: string, temperature: LeadTemperature) => void
   createSiteFormSubmission: (submission: SiteFormSubmission) => void
@@ -104,6 +109,7 @@ export function PanelProvider({ children }: { children: ReactNode }) {
   const [trail, setTrailState] = useState<string[]>([])
   const [seenAlerts, setSeenAlerts] = useState<string[]>([])
   const [notifications, setNotifications] = useState<StudentNotification[]>([])
+  const [schedules, setSchedules] = useState<NotificationSchedule[]>([])
   const [siteForms, setSiteForms] = useState<SiteFormSubmission[]>(initialSiteFormSubmissions)
   const [activeTheme, setActiveThemeState] = useState<ThemeConfig>(presetThemes[0])
 
@@ -121,6 +127,7 @@ export function PanelProvider({ children }: { children: ReactNode }) {
     }
     setCurrentDate(formatToday())
     setNotifications(demoNotificationHistory(new Date()))
+    setSchedules(demoSchedules(new Date()))
     setReady(true)
   }, [router])
 
@@ -164,6 +171,18 @@ export function PanelProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const saveSchedule = useCallback((schedule: NotificationSchedule) => {
+    setSchedules((current) =>
+      current.some((item) => item.id === schedule.id)
+        ? current.map((item) => (item.id === schedule.id ? schedule : item))
+        : [schedule, ...current],
+    )
+  }, [])
+
+  const removeSchedule = useCallback((id: string) => {
+    setSchedules((current) => current.filter((item) => item.id !== id))
+  }, [])
+
   const value = useMemo<PanelState>(
     () => ({
       ready,
@@ -176,6 +195,9 @@ export function PanelProvider({ children }: { children: ReactNode }) {
       notifications,
       addNotification,
       cancelNotification,
+      schedules,
+      saveSchedule,
+      removeSchedule,
       siteForms,
       updateSiteFormTemperature,
       createSiteFormSubmission,
@@ -193,6 +215,9 @@ export function PanelProvider({ children }: { children: ReactNode }) {
       notifications,
       addNotification,
       cancelNotification,
+      schedules,
+      saveSchedule,
+      removeSchedule,
       siteForms,
       updateSiteFormTemperature,
       createSiteFormSubmission,

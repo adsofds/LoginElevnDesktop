@@ -13,14 +13,22 @@ export default function AlunosView() {
   const fichaId = query.get('ficha')
   const tab = fichaTabs.find((item) => item.id === query.get('aba')) ?? fichaTabs[0]
   const student = studentDirectory.find((item) => item.id === fichaId)
-  // Without an open student file, ?aba=notificacoes selects the notifications center.
-  const section = !fichaId && query.get('aba') === 'notificacoes' ? 'notificacoes' : 'carteira'
+  // Without an open student file, ?aba=checkins / ?aba=notificacoes select those tabs.
+  const aba = query.get('aba')
+  const section =
+    !fichaId && aba === 'notificacoes'
+      ? 'notificacoes'
+      : !fichaId && aba === 'checkins'
+        ? 'checkins'
+        : 'carteira'
   useTrail(
     fichaId
       ? [student?.name ?? 'Ficha do aluno', tab.label]
       : section === 'notificacoes'
         ? ['Notificações']
-        : [],
+        : section === 'checkins'
+          ? ['Check-ins']
+          : [],
   )
 
   const [composer, setComposer] = useState<{ open: boolean; studentIds?: string[] }>({
@@ -38,8 +46,11 @@ export default function AlunosView() {
       <StudentsWorkspace
         section={section}
         onSectionChange={(next) =>
-          query.set({ aba: next === 'notificacoes' ? 'notificacoes' : null, ficha: null })
+          query.set({ aba: next === 'carteira' ? null : next, ficha: null, checkin: null })
         }
+        checkinStudentId={section === 'checkins' ? query.get('checkin') : null}
+        onCheckinSelect={(id) => query.set({ checkin: id })}
+        onOpenCheckin={(id) => query.set({ ficha: null, aba: 'checkins', checkin: id })}
         notificationsContent={<NotificationsCenter onCompose={() => setComposer({ open: true })} />}
         onNotifyStudent={(studentId) => setComposer({ open: true, studentIds: [studentId] })}
         ficha={fichaId ? { studentId: fichaId, tab: tab.id as FichaTab } : null}
