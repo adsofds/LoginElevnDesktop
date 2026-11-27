@@ -216,7 +216,7 @@ export function DietTab() {
           <details className="group mx-5 mt-4 overflow-hidden rounded-[22px] bg-[var(--app-card)] ring-1 ring-white/[0.06] ring-inset">
             <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
               <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[var(--app-gold)]/15 text-[var(--app-gold)]">
-                <Icon name="nutrition" className="size-5" />
+                <Icon name="meal" className="size-5" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-semibold">Orientações gerais</span>

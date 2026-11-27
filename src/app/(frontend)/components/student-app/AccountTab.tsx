@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ChangeEvent } from 'react'
 import { progressPhotos, studentProfile, type ProgressPhoto } from '@/lib/demo-student-app'
+import { senderOf } from '@/lib/demo-team'
 import { fillPlaceholders } from '@/lib/student-notifications'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
@@ -624,9 +625,12 @@ export function NotificationsScreen() {
           {items.map((item) => (
             <li key={item.id}>
               <Card className="flex gap-3 p-4">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--app-gold)]/15 text-[var(--app-gold)]">
-                  <Icon name="bell" className="size-5" />
-                </span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={senderOf(item).avatar}
+                  alt=""
+                  className="size-11 shrink-0 rounded-full object-cover ring-1 ring-white/10 [image-rendering:pixelated]"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
                     <p className="min-w-0 flex-1 truncate font-semibold">
@@ -637,7 +641,9 @@ export function NotificationsScreen() {
                   <p className="mt-0.5 text-sm leading-5 text-white/70">
                     {fill(item.message, item.atIso)}
                   </p>
-                  <p className="mt-1 text-[11px] text-white/40">{item.sentBy}</p>
+                  <p className="mt-1 text-[11px] text-white/45">
+                    {senderOf(item).firstName} · {senderOf(item).role}
+                  </p>
                 </div>
               </Card>
             </li>

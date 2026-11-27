@@ -11,6 +11,7 @@ import {
 import { Face, type FaceScore } from '../students/FaceCheckin'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
+import { teamMember } from '@/lib/demo-team'
 import { currentMeal, dayKcal } from './DietTab'
 import { useStudentApp } from './StudentApp'
 import {
@@ -264,9 +265,12 @@ export function HomeTab() {
         >
           <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(160deg,#211d2b_0%,#16141e_60%)] p-4 ring-1 ring-[var(--app-gold)]/25 ring-inset transition-transform active:scale-[0.99]">
             <div className="flex items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--app-gold)] text-[#0d0a21]">
-                <Icon name="nutrition" className="size-5" />
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={teamMember('athison').avatar}
+                alt="Athison, nutricionista"
+                className="size-11 shrink-0 rounded-xl object-cover ring-1 ring-[var(--app-gold)]/40 [image-rendering:pixelated]"
+              />
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-semibold">Dieta de hoje</span>
                 <span className="block text-xs text-white/55 tabular-nums">
@@ -325,13 +329,19 @@ export function HomeTab() {
             onClick={() => push({ name: 'workout', code: workout.code })}
             className="relative flex w-full items-start gap-4 text-left"
           >
-            <LetterBadge code={workout.code} size="xl" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={teamMember('breno').avatar}
+              alt="Breno, treinador"
+              className="size-16 shrink-0 rounded-[20px] object-cover ring-1 ring-[var(--app-gold)]/40 [image-rendering:pixelated]"
+            />
             <span className="min-w-0 flex-1 pt-0.5">
               <span className="block text-[20px] leading-6 font-semibold tracking-[-0.01em]">
                 {workout.title}
               </span>
               <span className="mt-1 block text-[13px] text-white/55">
-                {workout.minutes} min · {workout.exercises.length} exercícios
+                Treino {workout.code} · {workout.minutes} min · {workout.exercises.length}{' '}
+                exercícios
               </span>
               <span className="mt-2.5 flex flex-wrap gap-1.5">
                 <Chip tone="gold">{doneToday ? 'Concluído hoje' : 'Próximo treino'}</Chip>

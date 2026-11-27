@@ -17,6 +17,8 @@ import { Icon } from '../ui/icons'
 import { Segmented } from '../ui/Segmented'
 import { Sheet } from '../ui/Sheet'
 import { NotificationSchedules } from './NotificationSchedules'
+import { defaultSender, SenderPicker } from './SenderPicker'
+import { senderOf, teamMember, type TeamMemberId } from '@/lib/demo-team'
 
 type Student = (typeof studentDirectory)[number]
 
@@ -90,6 +92,7 @@ export function NotificationComposer({
   const [when, setWhen] = useState<'agora' | 'agendar'>('agora')
   const [scheduleAt, setScheduleAt] = useState('')
   const [error, setError] = useState('')
+  const [senderId, setSenderId] = useState<TeamMemberId>(defaultSender.treino)
 
   // Each opening starts clean; from a student file it comes addressed to that student.
   useEffect(() => {
@@ -111,6 +114,7 @@ export function NotificationComposer({
   const pickTemplate = (id: NotificationTemplateId) => {
     const template = notificationTemplates.find((item) => item.id === id)!
     setTemplateId(id)
+    setSenderId(defaultSender[id])
     setTitle(template.title)
     setMessage(template.message)
   }
@@ -167,7 +171,8 @@ export function NotificationComposer({
       title: title.trim(),
       message: message.trim(),
       audience,
-      sentBy: user.name,
+      sentBy: teamMember(senderId).name,
+      senderId,
       atIso: sendDate.toISOString(),
       status: when === 'agendar' ? 'agendada' : 'enviada',
     }
@@ -333,6 +338,14 @@ export function NotificationComposer({
                   </p>
                 </div>
               )}
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-sm font-semibold text-ink">Quem envia</legend>
+              <SenderPicker value={senderId} onChange={setSenderId} />
+              <p className="mt-1.5 text-xs text-ink-3">
+                O aluno vê a foto e o nome dessa pessoa ao lado do aviso.
+              </p>
             </fieldset>
 
             <fieldset>
@@ -603,7 +616,15 @@ export function NotificationsCenter({ onCompose }: { onCompose: () => void }) {
                       </span>
                     </td>
                     <td className="px-4 py-3 align-top whitespace-nowrap text-ink-2">
-                      {item.sentBy}
+                      <span className="inline-flex items-center gap-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={senderOf(item).avatar}
+                          alt=""
+                          className="size-6 rounded-full [image-rendering:pixelated]"
+                        />
+                        {senderOf(item).firstName}
+                      </span>
                     </td>
                     <td className="px-4 py-3 align-top">
                       <Badge tone={statusTone[item.status]} dot>

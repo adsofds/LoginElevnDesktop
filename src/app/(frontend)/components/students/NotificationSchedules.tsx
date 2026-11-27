@@ -22,6 +22,8 @@ import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { audienceFilters } from './Notifications'
+import { defaultSender, SenderPicker } from './SenderPicker'
+import { senderOf, teamMember, type TeamMemberId } from '@/lib/demo-team'
 
 const field =
   'mt-1 h-10 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-3 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20 focus-visible:outline-none'
@@ -115,7 +117,12 @@ export function NotificationSchedules() {
                       {describeRepeat(schedule)}
                     </p>
                     <p className="mt-0.5 text-xs text-ink-3">
-                      Para: {audienceLabel(schedule)}
+                      Enviado por{' '}
+                      {
+                        senderOf({ senderId: schedule.senderId, sentBy: schedule.createdBy })
+                          .firstName
+                      }{' '}
+                      · Para: {audienceLabel(schedule)}
                       {schedule.endDate &&
                         ` · até ${schedule.endDate.split('-').reverse().slice(0, 2).join('/')}`}
                     </p>
@@ -217,6 +224,7 @@ function ScheduleComposer({
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [error, setError] = useState('')
+  const [senderId, setSenderId] = useState<TeamMemberId>('breno')
 
   useEffect(() => {
     if (!open) return
@@ -239,6 +247,7 @@ function ScheduleComposer({
     setTime(base?.time ?? '08:00')
     setStartDate(base?.startDate ?? today)
     setEndDate(base?.endDate ?? '')
+    setSenderId(base?.senderId ?? defaultSender[base?.templateId ?? 'checkin'])
     setError('')
   }, [open, schedule])
 
@@ -273,6 +282,7 @@ function ScheduleComposer({
     endDate: repeatKind === 'once' ? '' : endDate,
     active: schedule?.active ?? true,
     createdBy: schedule?.createdBy ?? user.name,
+    senderId,
   }
 
   const preview = useMemo(
@@ -346,6 +356,7 @@ function ScheduleComposer({
                     aria-checked={templateId === template.id}
                     onClick={() => {
                       setTemplateId(template.id)
+                      setSenderId(defaultSender[template.id])
                       if (template.id !== 'livre') {
                         setTitle(template.title)
                         setMessage(template.message)
@@ -384,6 +395,11 @@ function ScheduleComposer({
                   Use {'{nome}'} para o primeiro nome do aluno e {'{data}'} para a data do envio.
                 </span>
               </label>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-sm font-semibold text-ink">Quem envia</legend>
+              <SenderPicker value={senderId} onChange={setSenderId} />
             </fieldset>
 
             <fieldset>
@@ -600,7 +616,15 @@ function ScheduleComposer({
               <p className="mt-1.5 text-sm text-danger">Nenhum envio futuro com essas opções.</p>
             )}
             <div className="mt-5 rounded-card border border-line bg-surface p-3">
-              <p className="text-xs text-ink-3">Como chega no app</p>
+              <p className="flex items-center gap-2 text-xs text-ink-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={teamMember(senderId).avatar}
+                  alt=""
+                  className="size-6 rounded-full [image-rendering:pixelated]"
+                />
+                Como chega no app · {teamMember(senderId).firstName}
+              </p>
               <p className="mt-1 text-sm font-semibold text-ink">
                 {fillPlaceholders(title || 'Título', {
                   name: 'Lucas Andrade',

@@ -4,6 +4,7 @@
  * moment. Delivery is simulated, like the rest of the notifications.
  */
 
+import type { TeamMemberId } from './demo-team'
 import type { NotificationTemplateId } from './student-notifications'
 
 export type ScheduleRepeat =
@@ -33,6 +34,8 @@ export type NotificationSchedule = {
   endDate: string
   active: boolean
   createdBy: string
+  /** Who appears as the sender in the app. */
+  senderId?: TeamMemberId
 }
 
 export const weekdayShort = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -117,6 +120,7 @@ export function demoSchedules(now: Date): NotificationSchedule[] {
       endDate: '',
       active: true,
       createdBy: 'Breno Monteiro',
+      senderId: 'yasmin',
     },
     {
       id: 'schedule-hidratacao',
@@ -131,6 +135,7 @@ export function demoSchedules(now: Date): NotificationSchedule[] {
       endDate: '',
       active: false,
       createdBy: 'Breno Monteiro',
+      senderId: 'athison',
     },
   ]
 }

@@ -775,7 +775,7 @@ function ProductCard({ product }: { product: ScannedProduct }) {
           />
         ) : (
           <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-white/40">
-            <Icon name="nutrition" className="size-6" />
+            <Icon name="meal" className="size-6" />
           </span>
         )}
         <div className="min-w-0">

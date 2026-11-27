@@ -1,3 +1,5 @@
+import type { TeamMemberId } from './demo-team'
+
 /**
  * One-way notifications from the coach to students (app push). Conversations stay on
  * WhatsApp; this is for alerts like "treino atualizado" or "lembrete de check-in".
@@ -53,6 +55,8 @@ export type StudentNotification = {
   message: string
   audience: NotificationAudience
   sentBy: string
+  /** Team member shown next to the notice in the app (face + name). */
+  senderId?: TeamMemberId
   /** When it was sent, or when it will be sent (scheduled). */
   atIso: string
   status: 'enviada' | 'agendada' | 'cancelada'
@@ -92,7 +96,8 @@ export function demoNotificationHistory(now: Date): StudentNotification[] {
         label: 'Check-in pendente',
         studentIds: ['student-lucas', 'student-pedro', 'student-thiago'],
       },
-      sentBy: 'Breno Monteiro',
+      sentBy: 'Yasmin',
+      senderId: 'yasmin',
       atIso: at(-1, 9),
       status: 'enviada',
     },
@@ -103,6 +108,7 @@ export function demoNotificationHistory(now: Date): StudentNotification[] {
       message: 'Seu treino foi atualizado. Abra o app para ver os exercícios e as cargas.',
       audience: { kind: 'alunos', studentIds: ['student-camila'] },
       sentBy: 'Breno Monteiro',
+      senderId: 'breno',
       atIso: at(-3, 18),
       status: 'enviada',
     },
@@ -112,7 +118,8 @@ export function demoNotificationHistory(now: Date): StudentNotification[] {
       title: 'Seu plano está acabando',
       message: 'Seu plano vence em breve. Fale com a gente para renovar sem pausa.',
       audience: { kind: 'alunos', studentIds: ['student-rafael', 'student-aline'] },
-      sentBy: 'Breno Monteiro',
+      sentBy: 'Yasmin',
+      senderId: 'yasmin',
       atIso: at(1, 10),
       status: 'agendada',
     },

@@ -27,6 +27,15 @@ const paths: Record<string, ReactNode> = {
       <path d="M12 5c.2-2 1.2-3.2 3-3M12 9v12" />
     </>
   ),
+  /** Plate with fork and knife: the student's diet. */
+  meal: (
+    <>
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="2.4" />
+      <path d="M3.5 3v5a1.5 1.5 0 0 0 3 0V3M5 9.5V21" />
+      <path d="M20.5 3c-1.6.4-2.5 2.4-2.5 5.5V13h2.5M20.5 3v18" />
+    </>
+  ),
   training: (
     <>
       <path d="M6 9v6M3.5 10.5v3M18 9v6M20.5 10.5v3M6 12h12" />

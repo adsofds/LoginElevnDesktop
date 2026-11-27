@@ -115,7 +115,7 @@ export function useStudentApp() {
 const tabs: { id: AppTab; label: string; icon: string }[] = [
   { id: 'inicio', label: 'Início', icon: 'dashboard' },
   { id: 'treino', label: 'Treino', icon: 'training' },
-  { id: 'dieta', label: 'Dieta', icon: 'nutrition' },
+  { id: 'dieta', label: 'Dieta', icon: 'meal' },
   { id: 'conta', label: 'Conta', icon: 'settings' },
 ]
 
