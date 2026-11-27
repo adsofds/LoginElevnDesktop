@@ -9,6 +9,8 @@ import { Icon } from '../ui/icons'
 import { KpiStrip } from '../ui/KpiStrip'
 import { Segmented } from '../ui/Segmented'
 import { Sheet } from '../ui/Sheet'
+import { Tabs } from '../ui/Tabs'
+import { CheckinHistory } from './CheckinHistory'
 import { Face, FaceCheckin, faceLabels } from './FaceCheckin'
 import { LiveClinAnswersView } from './LiveClinAnswersView'
 import {
@@ -66,6 +68,7 @@ export function CheckinsBoard({
   onOpenFicha: (id: string) => void
 }) {
   const [filter, setFilter] = useState<Filter>('todos')
+  const [sheetTab, setSheetTab] = useState<'checkin' | 'historico' | 'respostas'>('checkin')
   const [search, setSearch] = useState('')
 
   const rows = useMemo(
@@ -195,7 +198,10 @@ export function CheckinsBoard({
             {visible.map(({ student, answers, faces, alerts, overall }) => (
               <tr
                 key={student.id}
-                onClick={() => onSelect(student.id)}
+                onClick={() => {
+                  setSheetTab('checkin')
+                  onSelect(student.id)
+                }}
                 className="cursor-pointer border-b border-line-subtle last:border-0 hover:bg-subtle/50"
               >
                 <td className="py-3 pr-3 pl-4">
@@ -307,18 +313,42 @@ export function CheckinsBoard({
               </Button>
             </header>
 
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
-              <FaceCheckin
-                studentId={selected.student.id}
-                studentName={selected.student.name}
-                answers={selected.answers}
-              />
-              <section aria-label="Respostas do LiveClin">
-                <h3 className="mb-2 text-sm font-semibold text-ink">
-                  Respostas do aluno (14 perguntas)
-                </h3>
-                <LiveClinAnswersView answers={selected.answers} />
-              </section>
+            <Tabs
+              label="Partes do check-in"
+              className="shrink-0 px-6"
+              value={sheetTab}
+              onChange={setSheetTab}
+              items={[
+                { id: 'checkin', label: 'Este check-in' },
+                { id: 'historico', label: 'Histórico' },
+                { id: 'respostas', label: 'Respostas', count: 14 },
+              ]}
+            />
+
+            <div
+              key={`${selected.student.id}-${sheetTab}`}
+              className="min-h-0 flex-1 overflow-y-auto px-6 py-5"
+            >
+              {sheetTab === 'checkin' ? (
+                <FaceCheckin
+                  studentId={selected.student.id}
+                  studentName={selected.student.name}
+                  answers={selected.answers}
+                />
+              ) : sheetTab === 'historico' ? (
+                <CheckinHistory
+                  studentId={selected.student.id}
+                  studentName={selected.student.name}
+                  answers={selected.answers}
+                />
+              ) : (
+                <section aria-label="Respostas do LiveClin">
+                  <h3 className="mb-2 text-sm font-semibold text-ink">
+                    Respostas do aluno (14 perguntas)
+                  </h3>
+                  <LiveClinAnswersView answers={selected.answers} />
+                </section>
+              )}
             </div>
 
             <footer

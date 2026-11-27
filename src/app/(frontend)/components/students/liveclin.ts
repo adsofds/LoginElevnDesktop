@@ -430,10 +430,10 @@ export function faceForQuestion(questionId: string, answers: LiveClinAnswers) {
 }
 
 /**
- * Last 5 weeks per theme (oldest first). This week comes from the real answers; the
- * earlier weeks are demo history, deterministic per student.
+ * Faces per theme for the last `weeks` check-ins (oldest first). The latest comes from
+ * the real answers; earlier weeks are demo history, deterministic per student.
  */
-export function faceHistory(studentId: string, answers: LiveClinAnswers) {
+export function faceHistory(studentId: string, answers: LiveClinAnswers, weeks = 8) {
   let seed = Array.from(studentId).reduce((sum, char) => sum + char.charCodeAt(0), 0)
   const next = () => {
     seed = (seed * 9301 + 49297) % 233280
@@ -442,7 +442,7 @@ export function faceHistory(studentId: string, answers: LiveClinAnswers) {
   return Object.fromEntries(
     faceThemes.map((theme) => {
       const current = theme.score(answers)
-      const earlier = Array.from({ length: 4 }, () =>
+      const earlier = Array.from({ length: weeks - 1 }, () =>
         clampFace(Math.round(current + (next() - 0.5) * 2.4)),
       )
       return [theme.id, [...earlier, current]]
@@ -479,6 +479,100 @@ export function faceTally(scores: FaceScore[]) {
     regular: scores.filter((score) => score === 3).length,
     low: scores.filter((score) => score <= 2).length,
   }
+}
+
+/** One past check-in, as the admin compares them. */
+export type CheckinHistoryEntry = {
+  /** 0 = latest check-in, 1 = the one before… */
+  weeksAgo: number
+  /** Days between that check-in and today. */
+  daysAgo: number
+  weightKg: number
+  faces: Record<FaceThemeId, FaceScore>
+  overall: FaceScore
+  feedback: string
+}
+
+const pastFeedback = [
+  'Semana tranquila, consegui seguir quase tudo.',
+  'Tive dois jantares fora, mas voltei ao plano no dia seguinte.',
+  'Senti mais fome à noite; o lanche da tarde ajudou.',
+  'Dormi pouco por causa do trabalho e o treino rendeu menos.',
+  'Aumentei carga no agachamento e no supino.',
+  'Intestino mais regulado depois de aumentar a água.',
+  'Fim de semana difícil, exagerei no sábado.',
+  'Me senti com mais energia nos treinos da manhã.',
+  '',
+]
+
+/** "Hoje, 08:42", "Ontem…", "Há 3 dias…", "Pendente há 11 dias" → days ago. */
+export function daysAgoFromLabel(label: string) {
+  if (/hoje/i.test(label)) return 0
+  if (/ontem/i.test(label)) return 1
+  const match = label.match(/h[áa]\s+(\d+)\s+dias?/i)
+  return match ? Number(match[1]) : 0
+}
+
+/** "-1,1 kg na quinzena" → kg per week (negative = losing). */
+function weeklyWeightChange(trend?: string) {
+  const match = trend?.match(/([+-−]?)\s*(\d+(?:,\d+)?)\s*kg/)
+  if (!match) return 0
+  const value = Number(match[2].replace(',', '.')) * (match[1] === '+' ? 1 : -1)
+  const weeks = /quinzena/.test(trend!)
+    ? 2
+    : /m[êe]s/.test(trend!)
+      ? 4
+      : /trimestre/.test(trend!)
+        ? 12
+        : /(\d+)\s*dias/.test(trend!)
+          ? Number(trend!.match(/(\d+)\s*dias/)![1]) / 7
+          : 1
+  return value / weeks
+}
+
+/**
+ * Check-in history for the admin (newest first): the latest from the real answers,
+ * the rest demo data that follows the student's weight trend. With the LiveClin
+ * integration this is the list of submitted check-ins.
+ */
+export function checkinHistory(
+  studentId: string,
+  answers: LiveClinAnswers,
+  weeks = 8,
+): CheckinHistoryEntry[] {
+  const faces = faceHistory(studentId, answers, weeks)
+  const perWeek = weeklyWeightChange(answers.weightTrend)
+  const lastDays = daysAgoFromLabel(answers.submittedAt)
+  let seed = Array.from(studentId).reduce((sum, char) => sum + char.charCodeAt(0) * 7, 0)
+  const next = () => {
+    seed = (seed * 9301 + 49297) % 233280
+    return seed / 233280
+  }
+  let lastFeedback = answers.feedback
+  // Never the same text two weeks in a row.
+  const pickFeedback = () => {
+    let pick = pastFeedback[Math.floor(next() * pastFeedback.length)]
+    if (pick && pick === lastFeedback) {
+      pick = pastFeedback[(pastFeedback.indexOf(pick) + 1) % pastFeedback.length]
+    }
+    lastFeedback = pick
+    return pick
+  }
+  return Array.from({ length: weeks }, (_, weeksAgo) => {
+    const index = weeks - 1 - weeksAgo
+    const weekFaces = Object.fromEntries(
+      faceThemes.map((theme) => [theme.id, faces[theme.id][index]]),
+    ) as Record<FaceThemeId, FaceScore>
+    const noise = weeksAgo === 0 ? 0 : (next() - 0.5) * 0.4
+    return {
+      weeksAgo,
+      daysAgo: lastDays + weeksAgo * 7,
+      weightKg: Math.round((answers.weightKg - perWeek * weeksAgo + noise) * 10) / 10,
+      faces: weekFaces,
+      overall: overallFace(Object.values(weekFaces)),
+      feedback: weeksAgo === 0 ? answers.feedback : pickFeedback(),
+    }
+  })
 }
 
 export const formatKg = (kg: number) =>

@@ -3235,7 +3235,6 @@ export default function StudentsWorkspace({
                 .filter((student) => student.checkinState === 'Realizado')
                 .slice(0, 3)
                 .map((student) => {
-                  const firstComment = getStudentWorkoutComments(student)[0]
                   return (
                     <PriorityRow
                       key={student.id}
@@ -3245,11 +3244,8 @@ export default function StudentsWorkspace({
                           {student.lastWorkoutActivity} · {student.weeklyWorkoutsCompleted}
                         </span>
                       }
-                      context={
-                        firstComment
-                          ? `${firstComment.workoutCode}: ${firstComment.comment}`
-                          : student.lastWorkoutTitle
-                      }
+                      // Students no longer message coaches in the app: show the workout only.
+                      context={student.lastWorkoutTitle}
                       action={
                         <Button
                           size="sm"
