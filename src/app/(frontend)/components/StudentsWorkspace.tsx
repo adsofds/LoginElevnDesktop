@@ -530,7 +530,7 @@ const initialStudents: StudentRecord[] = [
     status: 'Em risco',
     weightChange: '+0,4 kg',
     liveClinCheckin: {
-      submittedAt: 'Pendente no LiveClin (último há 11 dias)',
+      submittedAt: 'Pendente há 11 dias',
       protocolName: 'Hipertrofia Intermediário · Fase 2',
       weightKg: 79.0,
       weightTrend: '+0,4 kg',

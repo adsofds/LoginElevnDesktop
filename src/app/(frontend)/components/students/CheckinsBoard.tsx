@@ -13,6 +13,9 @@ import { Face, FaceCheckin, faceLabels } from './FaceCheckin'
 import { LiveClinAnswersView } from './LiveClinAnswersView'
 import { faceThemes, formatKg, type FaceScore, type LiveClinAnswers } from './liveclin'
 
+/** Na tabela o "via LiveClin" é redundante: a aba inteira é do LiveClin. */
+const shortSent = (value: string) => value.replace(/\s+via LiveClin$/, '')
+
 export type CheckinStudent = {
   id: string
   name: string
@@ -149,13 +152,17 @@ export function CheckinsBoard({
       </div>
 
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full min-w-[880px] border-collapse text-left text-sm text-ink">
+        <table className="w-full min-w-[960px] border-collapse text-left text-sm text-ink">
           <caption className="sr-only">Check-ins da semana</caption>
           <thead>
             <tr className="border-b border-line bg-subtle/60 text-xs text-ink-3">
               {['Aluno', 'Enviado', 'Peso', 'Carinhas da semana', 'Alertas', 'Situação', ''].map(
                 (label, index) => (
-                  <th key={index} scope="col" className="h-10 px-4 font-semibold whitespace-nowrap">
+                  <th
+                    key={index}
+                    scope="col"
+                    className="h-10 px-3 font-semibold whitespace-nowrap first:pl-4 last:pr-4"
+                  >
                     {label}
                   </th>
                 ),
@@ -176,7 +183,7 @@ export function CheckinsBoard({
                 onClick={() => onSelect(student.id)}
                 className="cursor-pointer border-b border-line-subtle last:border-0 hover:bg-subtle/50"
               >
-                <td className="px-4 py-3">
+                <td className="py-3 pr-3 pl-4">
                   <span className="flex items-center gap-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -185,15 +192,17 @@ export function CheckinsBoard({
                       className="size-9 shrink-0 rounded-full object-cover"
                     />
                     <span className="min-w-0">
-                      <span className="block font-semibold">{student.name}</span>
+                      <span className="block font-semibold whitespace-nowrap">{student.name}</span>
                       <span className="block text-xs text-ink-3">
                         {student.goal} · {student.phase}
                       </span>
                     </span>
                   </span>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-ink-2">{answers.submittedAt}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-3 py-3 whitespace-nowrap text-ink-2">
+                  {shortSent(answers.submittedAt)}
+                </td>
+                <td className="px-3 py-3 whitespace-nowrap">
                   <span className="block font-medium tabular-nums">
                     {formatKg(answers.weightKg)}
                   </span>
@@ -201,7 +210,7 @@ export function CheckinsBoard({
                     <span className="block text-xs text-ink-3">{answers.weightTrend}</span>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-3">
                   <span className="flex gap-0.5" aria-label="Carinhas por tema">
                     {faces.map((face) => (
                       <span
@@ -213,7 +222,7 @@ export function CheckinsBoard({
                     ))}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-3">
                   {alerts > 0 ? (
                     <Badge tone="danger" dot>
                       {alerts}
@@ -222,13 +231,13 @@ export function CheckinsBoard({
                     <span className="text-xs text-ink-3">Nenhum</span>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-3 whitespace-nowrap">
                   <Badge tone={stateTone[student.checkinState]} dot>
                     {stateLabel[student.checkinState]}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand">
+                <td className="py-3 pr-4 pl-3 text-right whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold whitespace-nowrap text-brand">
                     Ver detalhes <Icon name="chevronRight" className="size-3.5" />
                   </span>
                 </td>
