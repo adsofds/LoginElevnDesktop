@@ -23,6 +23,7 @@ import { Table, TD, TH, THead, TR } from './ui/Table'
 import { Tabs } from './ui/Tabs'
 import { FaceCheckin } from './students/FaceCheckin'
 import { CheckinsBoard } from './students/CheckinsBoard'
+import { RevokeAccessDialog } from './students/RevokeAccessDialog'
 import { faceThemes, formatKg, weightLabel, type LiveClinAnswers } from './students/liveclin'
 import { FichaSection } from './students/FichaSection'
 import { WhatsAppGlyph, whatsappUrl } from './dashboard/AttentionActions'
@@ -133,6 +134,8 @@ type StudentRecord = {
   loginEmail?: string
   accessKey?: string
   accessKeyGeneratedAt?: string
+  /** App login removed when the non-renewal was registered. */
+  accessRevoked?: boolean
   workoutComments?: WorkoutAppComment[]
   appPhotos?: StudentAppPhoto[]
   liveClinCheckin: LiveClinCheckinData
@@ -2207,6 +2210,19 @@ export default function StudentsWorkspace({
 }: StudentsWorkspaceProps = {}) {
   const [students, setStudents] = useState<StudentRecord[]>(initialStudents)
   const [statusFilters, setStatusFilters] = useState<StatusKey[]>([])
+  /** Ativos: plan running. Inativos: registered as not renewed (no app access). */
+  const [activity, setActivity] = useState<'ativos' | 'inativos' | 'todos'>('ativos')
+  // Asking for "Não renovaram" only makes sense with the inactive students in view.
+  useEffect(() => {
+    if (statusFilters.includes('nao-renovaram')) {
+      setActivity((current) => (current === 'ativos' ? 'todos' : current))
+    }
+  }, [statusFilters])
+  /** Non-renewal waiting for confirmation because the student still has a login. */
+  const [pendingRevoke, setPendingRevoke] = useState<{ studentId: string; reason: string } | null>(
+    null,
+  )
+  const [revokeNotice, setRevokeNotice] = useState<string | null>(null)
   const [goalFilter, setGoalFilter] = useState<string>('Todos')
   const [customViews, setCustomViews] = useState<StudentView[]>([])
   const [activeViewId, setActiveViewId] = useState('todos')
@@ -2458,8 +2474,13 @@ export default function StudentsWorkspace({
     )
   }
 
-  const filteredStudents = students.filter((student) =>
-    passesFilters(student, statusFilters, goalFilter, search),
+  const isInactive = (student: StudentRecord) => student.renewalState === 'Não renovou'
+  const activeCount = students.filter((student) => !isInactive(student)).length
+  const inactiveCount = students.length - activeCount
+  const filteredStudents = students.filter(
+    (student) =>
+      (activity === 'todos' || (activity === 'inativos') === isInactive(student)) &&
+      passesFilters(student, statusFilters, goalFilter, search),
   )
 
   /* Saved views: built-ins + the user's own (this browser) */
@@ -2709,6 +2730,12 @@ export default function StudentsWorkspace({
   }
 
   const recoverStudentPlan = (studentId: string, months: number) => {
+    const returning = students.find((item) => item.id === studentId)
+    if (returning?.accessRevoked) {
+      setRevokeNotice(
+        `${returning.name} voltou para Ativos. O acesso ao app foi removido na não renovação: gere uma nova chave na ficha para ${returning.name.split(' ')[0]} entrar de novo.`,
+      )
+    }
     const until = new Date()
     until.setMonth(until.getMonth() + months)
     const option = RENEWAL_OPTIONS.find((item) => item.months === months)
@@ -2719,6 +2746,7 @@ export default function StudentsWorkspace({
               ...student,
               renewalState: 'Recuperado',
               nonRenewalReason: undefined,
+              accessRevoked: false,
               renewedMonths: months,
               plan: option?.plan ?? student.plan,
               status: 'Em dia',
@@ -2750,14 +2778,43 @@ export default function StudentsWorkspace({
               renewalState: 'Não renovou',
               nonRenewalReason: cleanReason,
               status: 'Atenção',
+              // Not renewing ends app access: the login and its key go away.
+              hasLogin: false,
+              loginEmail: undefined,
+              accessKey: undefined,
+              accessKeyGeneratedAt: undefined,
+              accessRevoked:
+                student.accessRevoked ||
+                getStudentAccessInfo(student, generatedKeysByStudent).hasLogin,
             }
           : student,
       ),
     )
+    setGeneratedKeysByStudent((current) => {
+      if (!current[studentId]) return current
+      const { [studentId]: _removed, ...rest } = current
+      return rest
+    })
+    setGeneratedKeyBanner((current) => (current?.studentId === studentId ? null : current))
     setNonRenewalOpenForId(null)
     setNonRenewalDraft('')
     setPriorityNonRenewalId(null)
     setPriorityNonRenewalDraft('')
+  }
+
+  /**
+   * Registering a non-renewal: when the student still has an active login, ask first
+   * (popup), because the login is removed and the student loses access to the app.
+   */
+  const requestNonRenewal = (studentId: string, reasonText: string) => {
+    const student = students.find((item) => item.id === studentId)
+    if (!student) return
+    const hasLogin = getStudentAccessInfo(student, generatedKeysByStudent).hasLogin
+    if (hasLogin && student.renewalState !== 'Não renovou') {
+      setPendingRevoke({ studentId, reason: reasonText.trim() })
+      return
+    }
+    markNonRenewed(studentId, reasonText)
   }
 
   const handleSearchExternalPlatforms = () => {
@@ -3333,7 +3390,7 @@ export default function StudentsWorkspace({
                             <Button
                               size="sm"
                               variant="danger"
-                              onClick={() => markNonRenewed(student.id, priorityNonRenewalDraft)}
+                              onClick={() => requestNonRenewal(student.id, priorityNonRenewalDraft)}
                             >
                               Confirmar
                             </Button>
@@ -3385,6 +3442,21 @@ export default function StudentsWorkspace({
             className="min-w-0 scroll-mt-20"
             aria-label="Carteira de alunos"
           >
+            {revokeNotice && (
+              <div
+                role="status"
+                className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-subtle px-4 py-3"
+              >
+                <p className="flex items-start gap-2 text-sm text-ink">
+                  <Icon name="key" className="mt-0.5 size-4 shrink-0 text-ink-3" />
+                  {revokeNotice}
+                </p>
+                <Button size="sm" variant="ghost" onClick={() => setRevokeNotice(null)}>
+                  Fechar
+                </Button>
+              </div>
+            )}
+
             {generatedKeyBanner && (
               <div
                 role="status"
@@ -3452,6 +3524,52 @@ export default function StudentsWorkspace({
             </div>
 
             <div className="mt-4 mb-3 flex flex-wrap items-center gap-2">
+              <div
+                role="radiogroup"
+                aria-label="Situação do plano"
+                className="inline-flex h-9 rounded-control border border-line bg-surface p-0.5"
+              >
+                {(
+                  [
+                    { id: 'ativos', label: 'Ativos', count: activeCount, hint: 'Plano ativo' },
+                    {
+                      id: 'inativos',
+                      label: 'Inativos',
+                      count: inactiveCount,
+                      hint: 'Não renovaram · sem acesso ao app',
+                    },
+                    {
+                      id: 'todos',
+                      label: 'Todos',
+                      count: students.length,
+                      hint: 'Ativos e inativos',
+                    },
+                  ] as const
+                ).map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={activity === option.id}
+                    title={option.hint}
+                    onClick={() => setActivity(option.id)}
+                    className={cx(
+                      'inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-[8px] px-3 text-xs font-semibold transition-colors',
+                      activity === option.id ? 'bg-night text-white' : 'text-ink-2 hover:text-ink',
+                    )}
+                  >
+                    {option.label}
+                    <span
+                      className={cx(
+                        'tabular-nums',
+                        activity === option.id ? 'text-white/70' : 'text-ink-3',
+                      )}
+                    >
+                      {option.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
               <label className="relative min-w-[220px] flex-1 md:max-w-xs">
                 <span className="sr-only">Buscar aluno</span>
                 <Icon
@@ -3558,9 +3676,11 @@ export default function StudentsWorkspace({
                                 title={
                                   accessInfo.hasLogin
                                     ? `Login ativo: ${accessInfo.loginEmail}`
-                                    : accessInfo.accessKey
-                                      ? `Sem login · chave ${accessInfo.accessKey}`
-                                      : 'Sem login no app'
+                                    : student.accessRevoked
+                                      ? 'Acesso removido na não renovação'
+                                      : accessInfo.accessKey
+                                        ? `Sem login · chave ${accessInfo.accessKey}`
+                                        : 'Sem login no app'
                                 }
                                 className={accessInfo.hasLogin ? 'text-success' : 'text-ink-3'}
                               >
@@ -3569,6 +3689,11 @@ export default function StudentsWorkspace({
                                   {accessInfo.hasLogin ? 'Login ativo' : 'Sem login'}
                                 </span>
                               </span>
+                              {isInactive(student) && (
+                                <Badge tone="neutral" className="ml-0.5">
+                                  Inativo
+                                </Badge>
+                              )}
                             </p>
                             <p className="truncate text-xs text-ink-3">
                               Plano {student.plan} · R$ {student.monthlyRevenue}/mês
@@ -3683,6 +3808,27 @@ export default function StudentsWorkspace({
           </section>
         </>
       )}
+
+      {pendingRevoke &&
+        (() => {
+          const target = students.find((item) => item.id === pendingRevoke.studentId)
+          if (!target) return null
+          return (
+            <RevokeAccessDialog
+              studentName={target.name}
+              loginEmail={getStudentAccessInfo(target, generatedKeysByStudent).loginEmail}
+              reason={pendingRevoke.reason}
+              onCancel={() => setPendingRevoke(null)}
+              onConfirm={() => {
+                markNonRenewed(target.id, pendingRevoke.reason)
+                setPendingRevoke(null)
+                setRevokeNotice(
+                  `Não renovação registrada. O login de ${target.name} foi removido e ${target.name.split(' ')[0]} não acessa mais o app. Está em Inativos.`,
+                )
+              }}
+            />
+          )
+        })()}
 
       {viewDialogOpen && (
         <NameDialog
@@ -3855,7 +4001,7 @@ export default function StudentsWorkspace({
                   <div>
                     <button
                       type="button"
-                      onClick={() => markNonRenewed(modalStudent.id, nonRenewalDraft)}
+                      onClick={() => requestNonRenewal(modalStudent.id, nonRenewalDraft)}
                     >
                       Salvar motivo da não renovação
                     </button>
@@ -4616,7 +4762,7 @@ export default function StudentsWorkspace({
                       title="Acesso e plano"
                       open={open.includes('acesso')}
                       onToggle={() => toggle('acesso')}
-                      summary={`${modalAccessInfo.hasLogin ? 'Login ativo' : 'Sem login'} · vence ${modalStudent.expirationDate}`}
+                      summary={`${modalAccessInfo.hasLogin ? 'Login ativo' : modalStudent.accessRevoked ? 'Acesso removido' : 'Sem login'} · vence ${modalStudent.expirationDate}`}
                     >
                       <section
                         className={`student-access-panel ${modalAccessInfo.hasLogin ? 'has-login' : 'no-login'}`}
@@ -4630,12 +4776,18 @@ export default function StudentsWorkspace({
                                 modalAccessInfo.hasLogin ? 'login-active' : 'login-missing'
                               }
                             >
-                              {modalAccessInfo.hasLogin ? 'Possui login ativo' : 'Não possui login'}
+                              {modalAccessInfo.hasLogin
+                                ? 'Possui login ativo'
+                                : modalStudent.accessRevoked
+                                  ? 'Acesso removido'
+                                  : 'Não possui login'}
                             </em>
                             <strong>
                               {modalAccessInfo.hasLogin
                                 ? `E-mail cadastrado: ${modalAccessInfo.loginEmail}`
-                                : 'Aluno ainda não possui login com e-mail cadastrado'}
+                                : modalStudent.accessRevoked
+                                  ? 'Login removido ao registrar a não renovação. O aluno não acessa mais o app.'
+                                  : 'Aluno ainda não possui login com e-mail cadastrado'}
                             </strong>
                           </div>
                           <small>
