@@ -251,8 +251,8 @@ export default function AppAlunoView() {
                 <dd className="text-ink-2">
                   Plano A–D com quantas vezes cada treino foi feito. Cada exercício tem o vídeo
                   gravado pelo Breno. No treino em andamento o aluno vê a carga da última vez, marca
-                  cada série e o descanso começa sozinho. No fim, pode deixar um comentário que
-                  aparece na ficha.
+                  cada série e o descanso começa sozinho. Dúvidas e observações vão pelo WhatsApp: o
+                  app não tem mensagens diretas para o treinador.
                 </dd>
               </div>
               <div>

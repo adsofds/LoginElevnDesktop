@@ -27,7 +27,7 @@ export const faceLabels: Record<FaceScore, string> = {
   5: 'Ótimo',
 }
 
-const faceTone: Record<FaceScore, string> = {
+export const faceTone: Record<FaceScore, string> = {
   1: 'text-danger',
   2: 'text-[#c2611f]',
   3: 'text-ink-3',
@@ -89,9 +89,10 @@ export function FaceCheckin({
   studentName: string
   answers: LiveClinAnswers
 }) {
-  const history = faceHistory(studentId, answers)
+  // Same history as the Histórico tab (8 check-ins); this table shows the last 5.
+  const history = faceHistory(studentId, answers, 8)
   const rows = faceThemes.map((theme) => {
-    const weeks = history[theme.id]
+    const weeks = history[theme.id].slice(-5)
     return { ...theme, weeks, current: weeks[weeks.length - 1], previous: weeks[weeks.length - 2] }
   })
   const flagged = rows.filter((row) => row.current <= 2)

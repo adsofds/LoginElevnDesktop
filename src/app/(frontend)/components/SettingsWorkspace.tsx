@@ -143,7 +143,7 @@ export const permissionDefinitions: {
     title: 'Prescrever Treinos (MFIT) e Responder Dúvidas',
     area: 'Treino',
     description:
-      'Pode criar e alterar Treino A, B e C dos alunos e responder comentários de execução enviados pelo celular.',
+      'Pode criar e alterar Treino A, B e C dos alunos e tirar dúvidas de execução pelo WhatsApp.',
   },
   {
     key: 'editNutrition',
