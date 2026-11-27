@@ -12,6 +12,7 @@ import { Face, type FaceScore } from '../students/FaceCheckin'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
 import { teamMember } from '@/lib/demo-team'
+import { SenderAvatar } from '../team/SenderAvatar'
 import { currentMeal, dayKcal } from './DietTab'
 import { useStudentApp } from './StudentApp'
 import {
@@ -265,12 +266,7 @@ export function HomeTab() {
         >
           <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(160deg,#211d2b_0%,#16141e_60%)] p-4 ring-1 ring-[var(--app-gold)]/25 ring-inset transition-transform active:scale-[0.99]">
             <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={teamMember('athison').avatar}
-                alt="Athison, nutricionista"
-                className="size-11 shrink-0 rounded-xl object-cover ring-1 ring-[var(--app-gold)]/40 [image-rendering:pixelated]"
-              />
+              <SenderAvatar sender={teamMember('athison')} shape="rounded" className="size-11" />
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-semibold">Dieta de hoje</span>
                 <span className="block text-xs text-white/55 tabular-nums">
@@ -329,12 +325,7 @@ export function HomeTab() {
             onClick={() => push({ name: 'workout', code: workout.code })}
             className="relative flex w-full items-start gap-4 text-left"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={teamMember('breno').avatar}
-              alt="Breno, treinador"
-              className="size-16 shrink-0 rounded-[20px] object-cover ring-1 ring-[var(--app-gold)]/40 [image-rendering:pixelated]"
-            />
+            <SenderAvatar sender={teamMember('breno')} shape="rounded" className="size-16" />
             <span className="min-w-0 flex-1 pt-0.5">
               <span className="block text-[20px] leading-6 font-semibold tracking-[-0.01em]">
                 {workout.title}

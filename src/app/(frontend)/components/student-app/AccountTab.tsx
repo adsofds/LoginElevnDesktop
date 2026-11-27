@@ -3,6 +3,7 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { progressPhotos, studentProfile, type ProgressPhoto } from '@/lib/demo-student-app'
 import { senderOf } from '@/lib/demo-team'
+import { SenderAvatar } from '../team/SenderAvatar'
 import { fillPlaceholders } from '@/lib/student-notifications'
 import { cx } from '../ui/cx'
 import { Icon } from '../ui/icons'
@@ -625,12 +626,7 @@ export function NotificationsScreen() {
           {items.map((item) => (
             <li key={item.id}>
               <Card className="flex gap-3 p-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={senderOf(item).avatar}
-                  alt=""
-                  className="size-11 shrink-0 rounded-full object-cover ring-1 ring-white/10 [image-rendering:pixelated]"
-                />
+                <SenderAvatar sender={senderOf(item)} className="size-11" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
                     <p className="min-w-0 flex-1 truncate font-semibold">

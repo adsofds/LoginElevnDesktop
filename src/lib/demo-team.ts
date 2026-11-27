@@ -39,9 +39,33 @@ export const team: TeamMember[] = [
 
 export const teamMember = (id: TeamMemberId) => team.find((member) => member.id === id) ?? team[0]
 
-/** Who sent a notification: the saved sender, or a match by name for older records. */
-export function senderOf(notification: { senderId?: TeamMemberId; sentBy: string }) {
+/** Icon of a notification on the phone: one of the team faces or the plain Elevn logo. */
+export type NotificationSenderId = TeamMemberId | 'elevn'
+
+export type NotificationSender = {
+  id: NotificationSenderId
+  firstName: string
+  role: string
+  /** null = the Elevn logo. */
+  avatar: string | null
+}
+
+export const elevnSender: NotificationSender = {
+  id: 'elevn',
+  firstName: 'Elevn',
+  role: 'Logo da Elevn',
+  avatar: null,
+}
+
+export const notificationSenders: NotificationSender[] = [elevnSender, ...team]
+
+/** Who sent a notification: the saved icon, or a match by name for older records. */
+export function senderOf(notification: {
+  senderId?: NotificationSenderId
+  sentBy: string
+}): NotificationSender {
+  if (notification.senderId === 'elevn') return elevnSender
   if (notification.senderId) return teamMember(notification.senderId)
   const first = notification.sentBy.split(' ')[0]?.toLowerCase()
-  return team.find((member) => member.firstName.toLowerCase() === first) ?? team[0]
+  return team.find((member) => member.firstName.toLowerCase() === first) ?? elevnSender
 }

@@ -1,4 +1,4 @@
-import type { TeamMemberId } from './demo-team'
+import type { NotificationSenderId } from './demo-team'
 
 /**
  * One-way notifications from the coach to students (app push). Conversations stay on
@@ -56,7 +56,7 @@ export type StudentNotification = {
   audience: NotificationAudience
   sentBy: string
   /** Team member shown next to the notice in the app (face + name). */
-  senderId?: TeamMemberId
+  senderId?: NotificationSenderId
   /** When it was sent, or when it will be sent (scheduled). */
   atIso: string
   status: 'enviada' | 'agendada' | 'cancelada'

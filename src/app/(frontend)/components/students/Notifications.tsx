@@ -18,7 +18,8 @@ import { Segmented } from '../ui/Segmented'
 import { Sheet } from '../ui/Sheet'
 import { NotificationSchedules } from './NotificationSchedules'
 import { defaultSender, SenderPicker } from './SenderPicker'
-import { senderOf, teamMember, type TeamMemberId } from '@/lib/demo-team'
+import { senderOf, type NotificationSenderId } from '@/lib/demo-team'
+import { SenderAvatar } from '../team/SenderAvatar'
 
 type Student = (typeof studentDirectory)[number]
 
@@ -92,7 +93,7 @@ export function NotificationComposer({
   const [when, setWhen] = useState<'agora' | 'agendar'>('agora')
   const [scheduleAt, setScheduleAt] = useState('')
   const [error, setError] = useState('')
-  const [senderId, setSenderId] = useState<TeamMemberId>(defaultSender.treino)
+  const [senderId, setSenderId] = useState<NotificationSenderId>(defaultSender.treino)
 
   // Each opening starts clean; from a student file it comes addressed to that student.
   useEffect(() => {
@@ -171,7 +172,7 @@ export function NotificationComposer({
       title: title.trim(),
       message: message.trim(),
       audience,
-      sentBy: teamMember(senderId).name,
+      sentBy: senderOf({ senderId, sentBy: '' }).firstName,
       senderId,
       atIso: sendDate.toISOString(),
       status: when === 'agendar' ? 'agendada' : 'enviada',
@@ -341,10 +342,10 @@ export function NotificationComposer({
             </fieldset>
 
             <fieldset>
-              <legend className="text-sm font-semibold text-ink">Quem envia</legend>
+              <legend className="text-sm font-semibold text-ink">Ícone da notificação</legend>
               <SenderPicker value={senderId} onChange={setSenderId} />
               <p className="mt-1.5 text-xs text-ink-3">
-                O aluno vê a foto e o nome dessa pessoa ao lado do aviso.
+                Aparece na notificação do celular e ao lado do aviso no app.
               </p>
             </fieldset>
 
@@ -447,10 +448,16 @@ export function NotificationComposer({
               </p>
               <div className="mt-8 rounded-2xl bg-white/85 p-3 backdrop-blur">
                 <div className="flex items-center gap-2">
-                  <span className="grid size-5 place-items-center rounded-md bg-night text-[10px] font-bold text-on-dark">
-                    e
+                  <SenderAvatar
+                    sender={senderOf({ senderId, sentBy: '' })}
+                    shape="rounded"
+                    className="size-6"
+                  />
+                  <span className="text-[10px] font-semibold tracking-wide text-ink-2">
+                    ELEVN
+                    {senderId !== 'elevn' &&
+                      ` · ${senderOf({ senderId, sentBy: '' }).firstName.toUpperCase()}`}
                   </span>
-                  <span className="text-[10px] font-semibold tracking-wide text-ink-2">ELEVN</span>
                   <span className="ml-auto text-[10px] text-ink-3">
                     {when === 'agendar' ? 'agendada' : 'agora'}
                   </span>
@@ -617,12 +624,7 @@ export function NotificationsCenter({ onCompose }: { onCompose: () => void }) {
                     </td>
                     <td className="px-4 py-3 align-top whitespace-nowrap text-ink-2">
                       <span className="inline-flex items-center gap-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={senderOf(item).avatar}
-                          alt=""
-                          className="size-6 rounded-full [image-rendering:pixelated]"
-                        />
+                        <SenderAvatar sender={senderOf(item)} className="size-6" />
                         {senderOf(item).firstName}
                       </span>
                     </td>

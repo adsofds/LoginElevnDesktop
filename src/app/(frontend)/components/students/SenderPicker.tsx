@@ -1,29 +1,30 @@
 'use client'
 
-import { team, type TeamMemberId } from '@/lib/demo-team'
+import { notificationSenders, type NotificationSenderId } from '@/lib/demo-team'
+import { SenderAvatar } from '../team/SenderAvatar'
 import type { NotificationTemplateId } from '@/lib/student-notifications'
 import { cx } from '../ui/cx'
 
 /** Suggested sender for each template (the student sees this face next to the notice). */
-export const defaultSender: Record<NotificationTemplateId, TeamMemberId> = {
+export const defaultSender: Record<NotificationTemplateId, NotificationSenderId> = {
   treino: 'breno',
   dieta: 'athison',
   checkin: 'yasmin',
   plano: 'yasmin',
-  livre: 'breno',
+  livre: 'elevn',
 }
 
-/** "Quem envia": the three team faces; the chosen one appears next to the notice. */
+/** Icon of the notification: the Elevn logo or one of the three team faces. */
 export function SenderPicker({
   value,
   onChange,
 }: {
-  value: TeamMemberId
-  onChange: (id: TeamMemberId) => void
+  value: NotificationSenderId
+  onChange: (id: NotificationSenderId) => void
 }) {
   return (
-    <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Quem envia">
-      {team.map((member) => (
+    <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Ícone da notificação">
+      {notificationSenders.map((member) => (
         <button
           key={member.id}
           type="button"
@@ -37,12 +38,7 @@ export function SenderPicker({
               : 'border-line bg-surface text-ink-2 hover:border-ink-3',
           )}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={member.avatar}
-            alt=""
-            className="size-8 rounded-full object-cover [image-rendering:pixelated]"
-          />
+          <SenderAvatar sender={member} className="size-8" />
           <span>
             <span className="block text-xs leading-4 font-semibold">{member.firstName}</span>
             <span

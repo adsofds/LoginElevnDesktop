@@ -4,7 +4,7 @@
  * moment. Delivery is simulated, like the rest of the notifications.
  */
 
-import type { TeamMemberId } from './demo-team'
+import type { NotificationSenderId } from './demo-team'
 import type { NotificationTemplateId } from './student-notifications'
 
 export type ScheduleRepeat =
@@ -35,7 +35,7 @@ export type NotificationSchedule = {
   active: boolean
   createdBy: string
   /** Who appears as the sender in the app. */
-  senderId?: TeamMemberId
+  senderId?: NotificationSenderId
 }
 
 export const weekdayShort = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']

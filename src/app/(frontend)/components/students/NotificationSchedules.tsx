@@ -23,7 +23,8 @@ import { Icon } from '../ui/icons'
 import { Sheet } from '../ui/Sheet'
 import { audienceFilters } from './Notifications'
 import { defaultSender, SenderPicker } from './SenderPicker'
-import { senderOf, teamMember, type TeamMemberId } from '@/lib/demo-team'
+import { senderOf, type NotificationSenderId } from '@/lib/demo-team'
+import { SenderAvatar } from '../team/SenderAvatar'
 
 const field =
   'mt-1 h-10 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-3 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20 focus-visible:outline-none'
@@ -117,12 +118,9 @@ export function NotificationSchedules() {
                       {describeRepeat(schedule)}
                     </p>
                     <p className="mt-0.5 text-xs text-ink-3">
-                      Enviado por{' '}
-                      {
-                        senderOf({ senderId: schedule.senderId, sentBy: schedule.createdBy })
-                          .firstName
-                      }{' '}
-                      · Para: {audienceLabel(schedule)}
+                      Ícone:{' '}
+                      {senderOf({ senderId: schedule.senderId ?? 'elevn', sentBy: '' }).firstName} ·
+                      Para: {audienceLabel(schedule)}
                       {schedule.endDate &&
                         ` · até ${schedule.endDate.split('-').reverse().slice(0, 2).join('/')}`}
                     </p>
@@ -224,7 +222,7 @@ function ScheduleComposer({
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [error, setError] = useState('')
-  const [senderId, setSenderId] = useState<TeamMemberId>('breno')
+  const [senderId, setSenderId] = useState<NotificationSenderId>('elevn')
 
   useEffect(() => {
     if (!open) return
@@ -398,7 +396,7 @@ function ScheduleComposer({
             </fieldset>
 
             <fieldset>
-              <legend className="text-sm font-semibold text-ink">Quem envia</legend>
+              <legend className="text-sm font-semibold text-ink">Ícone da notificação</legend>
               <SenderPicker value={senderId} onChange={setSenderId} />
             </fieldset>
 
@@ -617,13 +615,8 @@ function ScheduleComposer({
             )}
             <div className="mt-5 rounded-card border border-line bg-surface p-3">
               <p className="flex items-center gap-2 text-xs text-ink-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={teamMember(senderId).avatar}
-                  alt=""
-                  className="size-6 rounded-full [image-rendering:pixelated]"
-                />
-                Como chega no app · {teamMember(senderId).firstName}
+                <SenderAvatar sender={senderOf({ senderId, sentBy: '' })} className="size-6" />
+                Como chega no app · {senderOf({ senderId, sentBy: '' }).firstName}
               </p>
               <p className="mt-1 text-sm font-semibold text-ink">
                 {fillPlaceholders(title || 'Título', {
