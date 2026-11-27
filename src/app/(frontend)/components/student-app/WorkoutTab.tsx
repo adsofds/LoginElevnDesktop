@@ -24,7 +24,7 @@ import {
   type DoneWorkout,
 } from './history'
 import { trainedDaysThisMonth, weekStreak } from './HomeTab'
-import { useStudentApp } from './StudentApp'
+import { useStudentApp, type SetLog } from './StudentApp'
 import {
   Card,
   Chip,
@@ -34,7 +34,6 @@ import {
   ElevnMark,
   LetterBadge,
   PhoneSheet,
-  RecordMedal,
   ScreenHeader,
   VideoTile,
 } from './ui'
@@ -592,6 +591,14 @@ const setTag: Record<SetType, { label: string; className: string; title: string 
   falha: { label: 'F', className: 'text-[var(--app-red)]', title: 'Até a falha' },
 }
 
+/** A checked set that beats the last time (more kg × reps than "Anterior"). */
+function isRecord(set: SetLog) {
+  if (!set.done || !set.previous) return false
+  const kg = Number(set.kgInput.replace(',', '.')) || 0
+  const reps = Number(set.repsInput) || 0
+  return kg > 0 && kg * reps > set.previous.kg * set.previous.reps
+}
+
 export function SessionScreen() {
   const {
     session,
@@ -608,12 +615,6 @@ export function SessionScreen() {
   } = useStudentApp()
   const [video, setVideo] = useState<Exercise | null>(null)
   const [confirm, setConfirm] = useState<'finalizar' | 'descartar' | null>(null)
-  const [record, setRecord] = useState<{
-    exercise: string
-    kg: number
-    reps: number
-    previous: { kg: number; reps: number }
-  } | null>(null)
   const [swapFor, setSwapFor] = useState<Exercise | null>(null)
 
   if (!session) {
@@ -786,9 +787,15 @@ export function SessionScreen() {
                           <span className="sr-only"> ({tag.title})</span>
                         </td>
                         <td className="py-1.5 text-[13px] text-white/45 tabular-nums">
-                          {set.previous
-                            ? `${formatKg(set.previous.kg)} × ${set.previous.reps}`
-                            : '—'}
+                          {isRecord(set) ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--app-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--app-gold)]">
+                              🏅 Recorde
+                            </span>
+                          ) : set.previous ? (
+                            `${formatKg(set.previous.kg)} × ${set.previous.reps}`
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="py-1.5">
                           <input
@@ -821,21 +828,7 @@ export function SessionScreen() {
                         <td className="rounded-r-lg py-1.5">
                           <button
                             type="button"
-                            onClick={() => {
-                              if (!set.done && set.previous) {
-                                const kg =
-                                  Number((set.kgInput || String(set.kg)).replace(',', '.')) || 0
-                                const reps = Number(set.repsInput || set.reps) || 0
-                                if (kg > 0 && kg * reps > set.previous.kg * set.previous.reps)
-                                  setRecord({
-                                    exercise: shownName,
-                                    kg,
-                                    reps,
-                                    previous: set.previous,
-                                  })
-                              }
-                              toggleSetDone(exercise.id, index)
-                            }}
+                            onClick={() => toggleSetDone(exercise.id, index)}
                             aria-pressed={set.done}
                             aria-label={`${set.done ? 'Desmarcar' : 'Concluir'} série ${label} de ${shownName}`}
                             className={cx(
@@ -1046,8 +1039,6 @@ export function SessionScreen() {
           </>
         )}
       </PhoneSheet>
-
-      <RecordMedal record={record} onClose={() => setRecord(null)} />
     </div>
   )
 }
