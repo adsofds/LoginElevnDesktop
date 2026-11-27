@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Button } from '../ui/Button'
 import { cx } from '../ui/cx'
+import { Icon } from '../ui/icons'
 import { Face, faceLabels, faceTone } from './FaceCheckin'
 import {
   checkinHistory,
@@ -50,6 +51,8 @@ export function CheckinHistory({
   const [today] = useState(() => Date.now())
   const [first, setFirst] = useState(1)
   const [second, setSecond] = useState(0)
+  // The full list is a dropdown, closed until the coach opens it.
+  const [listOpen, setListOpen] = useState(false)
 
   const dateOf = (entry: CheckinHistoryEntry) =>
     dayMonth.format(new Date(today - entry.daysAgo * 86_400_000)).replaceAll('.', '')
@@ -223,29 +226,52 @@ export function CheckinHistory({
         )}
       </section>
 
-      <section aria-labelledby="historico-checkins">
-        <h3 id="historico-checkins" className="text-sm font-semibold text-ink">
-          Histórico de check-ins ({history.length})
-        </h3>
-        <p className="text-xs text-ink-3">Do mais recente ao mais antigo.</p>
-        <div className="mt-2 overflow-x-auto">
+      <section aria-labelledby="historico-checkins" className="rounded-card border border-line">
+        <button
+          type="button"
+          onClick={() => setListOpen((open) => !open)}
+          aria-expanded={listOpen}
+          aria-controls="historico-checkins-lista"
+          className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-card px-4 py-3 text-left hover:bg-subtle/60"
+        >
+          <span>
+            <span id="historico-checkins" className="block text-sm font-semibold text-ink">
+              Histórico de check-ins ({history.length})
+            </span>
+            <span className="block text-xs text-ink-3">
+              {listOpen ? 'Do mais recente ao mais antigo.' : 'Clique para ver todos os check-ins.'}
+            </span>
+          </span>
+          <Icon
+            name="chevronRight"
+            className={cx(
+              'size-4 shrink-0 text-ink-3 transition-transform',
+              listOpen && 'rotate-90',
+            )}
+          />
+        </button>
+        <div
+          id="historico-checkins-lista"
+          hidden={!listOpen}
+          className="overflow-x-auto border-t border-line-subtle px-4 pt-3 pb-2"
+        >
           <table className="w-full min-w-[620px] border-collapse text-sm">
             <caption className="sr-only">Todos os check-ins de {studentName}</caption>
             <thead>
               <tr className="text-left text-xs text-ink-3">
-                <th scope="col" className="pb-2 font-medium">
+                <th scope="col" className="pr-3 pb-2 font-medium">
                   Data
                 </th>
-                <th scope="col" className="pb-2 font-medium">
+                <th scope="col" className="pr-3 pb-2 font-medium">
                   Geral
                 </th>
-                <th scope="col" className="pb-2 font-medium">
+                <th scope="col" className="pr-3 pb-2 font-medium">
                   Peso
                 </th>
-                <th scope="col" className="pb-2 font-medium">
+                <th scope="col" className="pr-3 pb-2 font-medium">
                   Temas baixos
                 </th>
-                <th scope="col" className="pb-2 font-medium">
+                <th scope="col" className="pr-3 pb-2 font-medium">
                   Feedback
                 </th>
                 <th scope="col" className="pb-2">
