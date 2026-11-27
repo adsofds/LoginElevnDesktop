@@ -45,7 +45,7 @@ export function SenderAvatar({
       <img
         src={sender.avatar}
         alt=""
-        className="absolute inset-0 size-full object-cover [image-rendering:pixelated]"
+        className="absolute inset-0 size-full object-cover"
       />
     </span>
   )
