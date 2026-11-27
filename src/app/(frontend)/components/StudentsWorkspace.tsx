@@ -2131,35 +2131,61 @@ function PriorityRow({
   context,
   action,
   extra,
+  footer,
 }: {
   student: { name: string; avatar: string; whatsapp: string }
   meta: ReactNode
-  context: string
+  /** Clamped to two lines. */
+  context?: string
   action?: ReactNode
   extra?: ReactNode
+  /** Full-width block under the row (aligned with the name), e.g. the student's feedback. */
+  footer?: ReactNode
 }) {
   return (
-    <div className="flex gap-3 px-5 py-3.5">
-      <img src={student.avatar} alt="" className="size-8 shrink-0 rounded-full object-cover" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-ink">{student.name}</p>
-        <p className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-ink-3">{meta}</p>
-        <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink-2">{context}</p>
-        {extra}
+    <div className="px-5 py-3.5">
+      <div className="flex gap-3">
+        <img src={student.avatar} alt="" className="size-8 shrink-0 rounded-full object-cover" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-ink">{student.name}</p>
+          <p className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-ink-3">{meta}</p>
+          {context && <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink-2">{context}</p>}
+          {extra}
+        </div>
+        <div className="flex shrink-0 items-start gap-1">
+          {action}
+          <a
+            href={buildWhatsAppUrl(student.whatsapp, student.name)}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Conversar com ${student.name} no WhatsApp`}
+            className="grid size-8 place-items-center rounded-control text-success hover:bg-success-soft [&_svg]:size-4"
+          >
+            <WhatsAppIcon />
+          </a>
+        </div>
       </div>
-      <div className="flex shrink-0 items-start gap-1">
-        {action}
-        <a
-          href={buildWhatsAppUrl(student.whatsapp, student.name)}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Conversar com ${student.name} no WhatsApp`}
-          className="grid size-8 place-items-center rounded-control text-success hover:bg-success-soft [&_svg]:size-4"
-        >
-          <WhatsAppIcon />
-        </a>
-      </div>
+      {footer && <div className="mt-2 ml-11">{footer}</div>}
     </div>
+  )
+}
+
+/** The open feedback the student wrote in the LiveClin check-in, shown whole. */
+function CheckinFeedback({ student }: { student: StudentRecord }) {
+  const feedback = getLiveClinAnswers(student).feedback?.trim()
+  return (
+    <figure className="rounded-control border border-line-subtle bg-subtle/70 px-3 py-2">
+      <figcaption className="text-[11px] font-semibold text-ink-3">
+        {student.checkinState === 'Atrasado'
+          ? 'Último feedback no LiveClin'
+          : 'Feedback no LiveClin'}
+      </figcaption>
+      {feedback ? (
+        <blockquote className="mt-0.5 text-xs leading-5 text-ink-2">“{feedback}”</blockquote>
+      ) : (
+        <p className="mt-0.5 text-xs leading-5 text-ink-3">O aluno não escreveu feedback.</p>
+      )}
+    </figure>
   )
 }
 
@@ -3188,7 +3214,7 @@ export default function StudentsWorkspace({
                         <span className="truncate">{student.lastCheckin} via LiveClin</span>
                       </>
                     }
-                    context={student.checkinNote}
+                    footer={<CheckinFeedback student={student} />}
                     action={
                       <Button size="sm" onClick={() => openStudentModal(student.id)}>
                         Avaliar
