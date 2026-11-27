@@ -69,7 +69,7 @@ function ExerciseVideoSheet({
         <>
           <div className="relative mx-auto grid aspect-[4/5] w-full max-w-[300px] place-items-center overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.10),transparent_60%),linear-gradient(160deg,#2a2536,#121019)] ring-1 ring-white/10 ring-inset">
             <div className="text-center">
-              <span className="mx-auto grid size-16 place-items-center rounded-full bg-[var(--app-gold)] text-[#0d0a21] shadow-[0_8px_30px_-8px_var(--app-gold)]">
+              <span className="mx-auto grid size-16 place-items-center rounded-full bg-[var(--app-gold)] text-[var(--app-on-gold)] shadow-[0_8px_30px_-8px_var(--app-gold)]">
                 <svg
                   viewBox="0 0 24 24"
                   className="ml-1 size-7"
@@ -320,7 +320,7 @@ function RecapCard({ done, children }: { done: DoneWorkout; children?: ReactNode
   return (
     <section
       aria-label={`Resumo do treino ${done.code}`}
-      className="relative overflow-hidden rounded-[28px] bg-[radial-gradient(110%_70%_at_100%_0%,color-mix(in_srgb,var(--app-gold-deep)_75%,transparent),transparent_65%),linear-gradient(165deg,#231f2f,#121019)] p-5 ring-1 ring-white/10 ring-inset"
+      className="relative overflow-hidden rounded-[28px] bg-[radial-gradient(110%_70%_at_100%_0%,color-mix(in_srgb,var(--app-glow)_75%,transparent),transparent_65%),linear-gradient(165deg,var(--app-card-2),var(--app-card))] p-5 ring-1 ring-white/10 ring-inset"
     >
       <div className="flex items-center justify-between gap-3">
         <span className="text-[11px] font-bold tracking-[0.25em] text-[var(--app-gold)]">
@@ -834,7 +834,7 @@ export function SessionScreen() {
                             className={cx(
                               'mx-auto grid size-9 place-items-center rounded-lg transition-all active:scale-90',
                               set.done
-                                ? 'bg-[var(--app-green)] text-[#06210f]'
+                                ? 'bg-[var(--app-green)] text-[var(--app-on-green)]'
                                 : 'bg-white/[0.07] text-white/50',
                             )}
                           >
@@ -913,7 +913,7 @@ export function SessionScreen() {
               <button
                 type="button"
                 onClick={skipRest}
-                className="h-9 rounded-lg bg-[var(--app-gold)] text-sm font-semibold text-[#0d0a21]"
+                className="h-9 rounded-lg bg-[var(--app-gold)] text-sm font-semibold text-[var(--app-on-gold)]"
               >
                 Pular
               </button>
@@ -932,7 +932,7 @@ export function SessionScreen() {
           <button
             type="button"
             onClick={() => setConfirm('finalizar')}
-            className="h-11 rounded-full bg-[var(--app-gold)] px-5 text-sm font-semibold text-[#0d0a21] active:scale-[0.98]"
+            className="h-11 rounded-full bg-[var(--app-gold)] px-5 text-sm font-semibold text-[var(--app-on-gold)] active:scale-[0.98]"
           >
             Finalizar treino
           </button>
@@ -1257,7 +1257,7 @@ export function CalendarScreen() {
                   className={cx(
                     'relative grid size-10 place-items-center rounded-full text-[14px] font-semibold tabular-nums transition-colors',
                     done
-                      ? 'bg-[var(--app-gold)] text-[#0d0a21]'
+                      ? 'bg-[var(--app-gold)] text-[var(--app-on-gold)]'
                       : future
                         ? 'text-white/20'
                         : 'text-white/80',
@@ -1273,7 +1273,7 @@ export function CalendarScreen() {
         </div>
         <p className="mt-3 flex items-center justify-center gap-4 text-[11px] text-white/50">
           <span className="flex items-center gap-1.5">
-            <span className="grid size-4 place-items-center rounded-full bg-[var(--app-gold)] text-[#0d0a21]">
+            <span className="grid size-4 place-items-center rounded-full bg-[var(--app-gold)] text-[var(--app-on-gold)]">
               <ElevnMark className="w-[62%]" />
             </span>
             Treinou

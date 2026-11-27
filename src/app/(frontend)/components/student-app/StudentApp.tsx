@@ -524,7 +524,7 @@ export default function StudentApp({
             aria-hidden="true"
             className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[140%] -translate-x-1/2 rounded-[50%] opacity-40 blur-3xl"
             style={{
-              background: 'radial-gradient(closest-side, var(--app-gold-deep), transparent)',
+              background: 'radial-gradient(closest-side, var(--app-glow), transparent)',
             }}
           />
           {topInset > 0 && (
@@ -548,11 +548,11 @@ export default function StudentApp({
             <button
               type="button"
               onClick={() => value.push({ name: 'session' })}
-              className="absolute inset-x-3 bottom-[84px] z-20 flex items-center gap-3 rounded-2xl bg-[var(--app-gold)] px-4 py-3 text-left text-[#0d0a21] shadow-lg"
+              className="absolute inset-x-3 bottom-[84px] z-20 flex items-center gap-3 rounded-2xl bg-[var(--app-gold)] px-4 py-3 text-left text-[var(--app-on-gold)] shadow-lg"
             >
               <span className="relative flex size-2.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#0d0a21]/50 motion-reduce:animate-none" />
-                <span className="relative inline-flex size-2.5 rounded-full bg-[#0d0a21]" />
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--app-on-gold)]/50 motion-reduce:animate-none" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-[var(--app-on-gold)]" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[11px] font-semibold tracking-wide uppercase opacity-70">

@@ -85,7 +85,7 @@ export function SmartSwaps() {
         <div
           aria-hidden
           className="pointer-events-none absolute -top-16 -right-10 size-40 rounded-full opacity-30 blur-2xl"
-          style={{ background: 'var(--app-gold-deep)' }}
+          style={{ background: 'var(--app-glow)' }}
         />
         <div className="relative flex gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--app-gold)]/15 text-[var(--app-gold)]">
@@ -114,7 +114,7 @@ export function SmartSwaps() {
             onClick={() => setTool(item.id)}
             className={cx(
               'h-9 rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors',
-              tool === item.id ? 'bg-[var(--app-gold)] text-[#0d0a21]' : 'text-white/60',
+              tool === item.id ? 'bg-[var(--app-gold)] text-[var(--app-on-gold)]' : 'text-white/60',
             )}
           >
             {item.label}
@@ -708,7 +708,7 @@ function BarcodeLookup() {
           <button
             type="submit"
             disabled={!valid || state.kind === 'loading'}
-            className="h-12 shrink-0 rounded-2xl bg-[var(--app-gold)] px-5 text-sm font-semibold text-[#0d0a21] disabled:opacity-40"
+            className="h-12 shrink-0 rounded-2xl bg-[var(--app-gold)] px-5 text-sm font-semibold text-[var(--app-on-gold)] disabled:opacity-40"
           >
             Buscar
           </button>

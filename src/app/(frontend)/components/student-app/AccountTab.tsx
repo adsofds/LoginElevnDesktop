@@ -110,7 +110,7 @@ export function AccountTab() {
             name={studentProfile.name}
             className="size-24 text-[28px] ring-4 ring-[var(--app-gold)]/25"
           />
-          <span className="absolute right-0 bottom-0 grid size-8 place-items-center rounded-full bg-[var(--app-gold)] text-[#0d0a21] ring-4 ring-[var(--app-bg)]">
+          <span className="absolute right-0 bottom-0 grid size-8 place-items-center rounded-full bg-[var(--app-gold)] text-[var(--app-on-gold)] ring-4 ring-[var(--app-bg)]">
             <Icon name="photo" className="size-4" />
           </span>
         </button>
@@ -138,7 +138,7 @@ export function AccountTab() {
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -top-20 -right-10 size-52 rounded-full opacity-40 blur-2xl"
-            style={{ background: 'var(--app-gold-deep)' }}
+            style={{ background: 'var(--app-glow)' }}
           />
           <p className="relative text-[15px] leading-6">
             Seu plano vence em{' '}
