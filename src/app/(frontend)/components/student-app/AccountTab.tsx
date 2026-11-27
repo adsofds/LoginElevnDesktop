@@ -39,7 +39,7 @@ function openCoachWhatsApp(text: string) {
 
 export function AccountTab() {
   const { push, avatar, setAvatar } = useStudentApp()
-  const [sheet, setSheet] = useState<'renovar' | 'whatsapp' | 'config' | 'foto' | null>(null)
+  const [sheet, setSheet] = useState<'renovar' | 'config' | 'foto' | null>(null)
   const [photoError, setPhotoError] = useState('')
   const cameraInput = useRef<HTMLInputElement>(null)
   const galleryInput = useRef<HTMLInputElement>(null)
@@ -77,13 +77,6 @@ export function AccountTab() {
       hint: 'Treino, dieta e lembretes',
       icon: 'bell',
       onClick: () => push({ name: 'notifications' }),
-    },
-    {
-      id: 'whatsapp',
-      label: `Falar com o ${studentProfile.coachFirstName}`,
-      hint: 'Pelo WhatsApp',
-      icon: 'mail',
-      onClick: () => setSheet('whatsapp'),
     },
     {
       id: 'config',
@@ -286,26 +279,6 @@ export function AccountTab() {
         <p className="mt-2 text-center text-xs text-white/45">
           A equipe confirma o valor e envia o pagamento por lá.
         </p>
-      </PhoneSheet>
-
-      <PhoneSheet
-        open={sheet === 'whatsapp'}
-        onClose={() => setSheet(null)}
-        title={`Falar com o ${studentProfile.coachFirstName}`}
-      >
-        <p className="text-sm leading-5 text-white/70">
-          Dúvidas, ajustes e conversas acontecem no WhatsApp. Por aqui você recebe só os avisos da
-          equipe.
-        </p>
-        <GoldButton
-          className="mt-5"
-          onClick={() => {
-            openCoachWhatsApp(`Oi ${studentProfile.coachFirstName}, tudo bem?`)
-            setSheet(null)
-          }}
-        >
-          Abrir WhatsApp
-        </GoldButton>
       </PhoneSheet>
 
       <PhoneSheet open={sheet === 'config'} onClose={() => setSheet(null)} title="Configurações">

@@ -1,6 +1,8 @@
+import { athisonAvatar, brenoAvatar, yasminAvatar } from './team-avatars'
+
 /**
  * Elevn team members who talk to students in the app (notifications, workout, diet).
- * Avatars are the pixel-art portraits in /public/team.
+ * Avatars are the pixel-art portraits embedded in team-avatars.ts (no image files).
  */
 
 export type TeamMemberId = 'breno' | 'athison' | 'yasmin'
@@ -19,21 +21,21 @@ export const team: TeamMember[] = [
     name: 'Breno Monteiro',
     firstName: 'Breno',
     role: 'Treinador',
-    avatar: '/team/breno.png',
+    avatar: brenoAvatar,
   },
   {
     id: 'athison',
     name: 'Athison',
     firstName: 'Athison',
     role: 'Nutricionista',
-    avatar: '/team/athison.png',
+    avatar: athisonAvatar,
   },
   {
     id: 'yasmin',
     name: 'Yasmin',
     firstName: 'Yasmin',
     role: 'Equipe Elevn',
-    avatar: '/team/yasmin.png',
+    avatar: yasminAvatar,
   },
 ]
 
