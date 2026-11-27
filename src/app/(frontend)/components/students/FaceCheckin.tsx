@@ -1,7 +1,16 @@
 'use client'
 
 import { cx } from '../ui/cx'
-import { faceHistory, faceThemes, formatKg, type FaceScore, type LiveClinAnswers } from './liveclin'
+import {
+  faceHistory,
+  faceTally,
+  faceThemes,
+  formatKg,
+  overallFace,
+  overallLabels,
+  type FaceScore,
+  type LiveClinAnswers,
+} from './liveclin'
 
 /**
  * Weekly check-in read as faces: each theme's face is computed from the student's own
@@ -24,14 +33,6 @@ const faceTone: Record<FaceScore, string> = {
   3: 'text-ink-3',
   4: 'text-[#4f8a5b]',
   5: 'text-success',
-}
-
-const faceDot: Record<FaceScore, string> = {
-  1: 'bg-danger',
-  2: 'bg-[#c2611f]',
-  3: 'bg-ink-3',
-  4: 'bg-[#4f8a5b]',
-  5: 'bg-success',
 }
 
 const mouths: Record<FaceScore, string> = {
@@ -77,6 +78,8 @@ function Trend({ current, previous }: { current: FaceScore; previous: FaceScore 
   )
 }
 
+const weekLabels = ['há 4 sem.', 'há 3 sem.', 'há 2 sem.', 'Anterior', 'Atual']
+
 export function FaceCheckin({
   studentId,
   studentName,
@@ -92,6 +95,14 @@ export function FaceCheckin({
     return { ...theme, weeks, current: weeks[weeks.length - 1], previous: weeks[weeks.length - 2] }
   })
   const flagged = rows.filter((row) => row.current <= 2)
+  const weekCount = rows[0]?.weeks.length ?? 0
+  /** Overall face of each check-in, oldest first. */
+  const overallByWeek = Array.from({ length: weekCount }, (_, week) =>
+    overallFace(rows.map((row) => row.weeks[week])),
+  )
+  const overall = overallByWeek[weekCount - 1] ?? 3
+  const overallBefore = overallByWeek[weekCount - 2] ?? overall
+  const tally = faceTally(rows.map((row) => row.current))
 
   return (
     <div>
@@ -106,8 +117,43 @@ export function FaceCheckin({
           <strong className="font-semibold text-ink">{formatKg(answers.weightKg)}</strong>
           {answers.weightTrend && ` (${answers.weightTrend})`}
         </span>
-        <span className="ml-auto">Carinhas calculadas a partir das respostas</span>
+        <span className="ml-auto">Notas calculadas a partir das respostas</span>
       </div>
+
+      <section
+        aria-label="Resumo geral do check-in"
+        className="mt-3 flex flex-wrap items-center gap-4 rounded-card border border-line bg-subtle/60 px-4 py-3"
+      >
+        <Face score={overall} className="size-14 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-ink-3">Resumo geral</p>
+          <p className={cx('text-lg leading-6 font-semibold', faceTone[overall])}>
+            {overallLabels[overall]}
+          </p>
+          <p className="text-[13px] text-ink-2">
+            {tally.good} {tally.good === 1 ? 'tema bom' : 'temas bons'} · {tally.regular}{' '}
+            {tally.regular === 1 ? 'regular' : 'regulares'} · {tally.low}{' '}
+            {tally.low === 1 ? 'baixo' : 'baixos'}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-medium text-ink-3">Desde o último check-in</p>
+          <p className="mt-0.5">
+            {overall === overallBefore ? (
+              <span className="text-sm text-ink-2">= Igual</span>
+            ) : (
+              <span
+                className={cx(
+                  'text-sm font-semibold',
+                  overall > overallBefore ? 'text-success' : 'text-danger',
+                )}
+              >
+                {overall > overallBefore ? '↑ Melhorou' : '↓ Piorou'}
+              </span>
+            )}
+          </p>
+        </div>
+      </section>
 
       <p
         role="status"
@@ -118,84 +164,97 @@ export function FaceCheckin({
       >
         {flagged.length
           ? `${flagged.length} ${flagged.length === 1 ? 'tema pede' : 'temas pedem'} atenção: ${flagged.map((row) => row.label).join(', ')}.`
-          : 'Nenhum tema com nota baixa nesta semana.'}
+          : 'Nenhum tema com nota baixa neste check-in.'}
       </p>
 
-      <table className="mt-3 w-full border-collapse text-sm">
-        <caption className="sr-only">
-          Check-in semanal de {studentName} em escala de carinhas
-        </caption>
-        <thead>
-          <tr className="text-left text-xs text-ink-3">
-            <th scope="col" className="pb-2 font-medium">
-              Tema
-            </th>
-            <th scope="col" className="pb-2 font-medium">
-              Esta semana
-            </th>
-            <th scope="col" className="hidden pb-2 font-medium sm:table-cell">
-              vs. anterior
-            </th>
-            <th scope="col" className="pb-2 text-right font-medium">
-              Últimas 4 semanas
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const low = row.current <= 2
-            return (
-              <tr
-                key={row.id}
-                className={cx('border-t border-line-subtle', low && 'bg-danger-soft/60')}
-              >
+      <h3 className="mt-5 text-sm font-semibold text-ink">Comparar com os últimos check-ins</h3>
+      <p className="text-xs text-ink-3">
+        Cada coluna é um check-in. A linha Geral resume a semana inteira.
+      </p>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full min-w-[560px] border-collapse text-sm">
+          <caption className="sr-only">
+            Check-ins de {studentName} comparados por tema, do mais antigo ao atual
+          </caption>
+          <thead>
+            <tr className="text-xs text-ink-3">
+              <th scope="col" className="pb-2 text-left font-medium">
+                Tema
+              </th>
+              {weekLabels.slice(-weekCount).map((label, index) => (
                 <th
-                  scope="row"
+                  key={label}
+                  scope="col"
                   className={cx(
-                    'py-2.5 pl-2 text-left font-medium',
-                    low ? 'text-danger' : 'text-ink',
+                    'pb-2 text-center font-medium',
+                    index === weekCount - 1 && 'font-semibold text-ink',
                   )}
                 >
-                  {row.label}
+                  {label}
                 </th>
-                <td className="py-2.5">
-                  <span className="inline-flex items-center gap-2">
-                    <Face score={row.current} className="size-7" />
-                    <span
+              ))}
+              <th scope="col" className="pb-2 text-right font-medium">
+                vs. anterior
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-t border-line bg-subtle/60">
+              <th scope="row" className="py-2.5 pl-2 text-left font-semibold text-ink">
+                Geral
+              </th>
+              {overallByWeek.map((score, index) => (
+                <td
+                  key={index}
+                  className={cx('py-2.5 text-center', index === weekCount - 1 && 'bg-subtle')}
+                  title={`${weekLabels.slice(-weekCount)[index]}: ${overallLabels[score]}`}
+                >
+                  <Face score={score} className="mx-auto size-7" />
+                  <span className="sr-only">{overallLabels[score]}</span>
+                </td>
+              ))}
+              <td className="py-2.5 pr-2 text-right">
+                <Trend current={overall} previous={overallBefore} />
+              </td>
+            </tr>
+            {rows.map((row) => {
+              const low = row.current <= 2
+              return (
+                <tr
+                  key={row.id}
+                  className={cx('border-t border-line-subtle', low && 'bg-danger-soft/60')}
+                >
+                  <th
+                    scope="row"
+                    className={cx(
+                      'py-2 pl-2 text-left font-medium',
+                      low ? 'text-danger' : 'text-ink',
+                    )}
+                  >
+                    {row.label}
+                  </th>
+                  {row.weeks.map((score, index) => (
+                    <td
+                      key={index}
                       className={cx(
-                        'text-[13px]',
-                        low ? 'font-semibold text-danger' : 'text-ink-2',
+                        'py-2 text-center',
+                        index === weekCount - 1 ? 'bg-subtle/70' : 'opacity-75',
                       )}
+                      title={`${weekLabels.slice(-weekCount)[index]}: ${faceLabels[score]}`}
                     >
-                      {faceLabels[row.current]}
-                    </span>
-                  </span>
-                </td>
-                <td className="hidden py-2.5 sm:table-cell">
-                  <Trend current={row.current} previous={row.previous} />
-                </td>
-                <td className="py-2.5 pr-2">
-                  <ol className="flex justify-end gap-1.5" aria-label={`Histórico de ${row.label}`}>
-                    {row.weeks.slice(-4).map((score, index, list) => (
-                      <li
-                        key={index}
-                        title={`${index === list.length - 1 ? 'Esta semana' : `${list.length - 1 - index} sem. atrás`}: ${faceLabels[score]}`}
-                        className={cx(
-                          'size-2.5 rounded-full',
-                          faceDot[score],
-                          index < list.length - 1 && 'opacity-60',
-                        )}
-                      >
-                        <span className="sr-only">{faceLabels[score]}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+                      <Face score={score} className="mx-auto size-6" />
+                      <span className="sr-only">{faceLabels[score]}</span>
+                    </td>
+                  ))}
+                  <td className="py-2 pr-2 text-right">
+                    <Trend current={row.current} previous={row.previous} />
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {answers.feedback && (
         <blockquote className="mt-3 rounded-lg border border-line bg-subtle px-3 py-2 text-[13px] leading-5 text-ink-2">
