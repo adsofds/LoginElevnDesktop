@@ -2042,9 +2042,12 @@ export function RenewalChooser({
   )
 }
 
-const PRIORITY_COLLAPSED_KEY = 'elevn-prioridades-recolhidas'
+const PRIORITY_OPEN_KEY = 'elevn-prioridades-abertas'
 
-/** Priority card with a dropdown header: collapsing is remembered per card. */
+/**
+ * Priority card with a dropdown header. Starts collapsed; the cards the coach opens
+ * stay open on the next visit (remembered per card on this device).
+ */
 function PriorityPanel({
   id,
   title,
@@ -2060,11 +2063,11 @@ function PriorityPanel({
   onSeeAll: () => void
   children: ReactNode
 }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   useEffect(() => {
     try {
-      const stored = JSON.parse(window.localStorage.getItem(PRIORITY_COLLAPSED_KEY) ?? '[]')
-      if (Array.isArray(stored) && stored.includes(id)) setOpen(false)
+      const stored = JSON.parse(window.localStorage.getItem(PRIORITY_OPEN_KEY) ?? '[]')
+      if (Array.isArray(stored) && stored.includes(id)) setOpen(true)
     } catch {
       /* ignore */
     }
@@ -2073,11 +2076,11 @@ function PriorityPanel({
     const next = !open
     setOpen(next)
     try {
-      const stored = JSON.parse(window.localStorage.getItem(PRIORITY_COLLAPSED_KEY) ?? '[]')
+      const stored = JSON.parse(window.localStorage.getItem(PRIORITY_OPEN_KEY) ?? '[]')
       const list: string[] = Array.isArray(stored) ? stored : []
       window.localStorage.setItem(
-        PRIORITY_COLLAPSED_KEY,
-        JSON.stringify(next ? list.filter((item) => item !== id) : [...new Set([...list, id])]),
+        PRIORITY_OPEN_KEY,
+        JSON.stringify(next ? [...new Set([...list, id])] : list.filter((item) => item !== id)),
       )
     } catch {
       /* preference not saved */
