@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '../ui/Button'
 import { Icon } from '../ui/icons'
 
@@ -31,8 +32,10 @@ export function RevokeAccessDialog({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [onCancel])
 
-  return (
-    <div className="fixed inset-0 z-[60] grid place-items-center px-4">
+  // Portaled to <body> and above the student file modal (.elevn-modal-backdrop, z 130),
+  // so the popup is never hidden behind the ficha it was opened from.
+  return createPortal(
+    <div className="fixed inset-0 z-[200] grid place-items-center px-4">
       <button
         type="button"
         tabIndex={-1}
@@ -85,6 +88,7 @@ export function RevokeAccessDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
