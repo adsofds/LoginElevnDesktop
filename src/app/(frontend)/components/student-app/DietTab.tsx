@@ -73,7 +73,7 @@ export function DietTab() {
             onClick={() => setView(id)}
             className={cx(
               'h-9 rounded-full text-sm font-semibold transition-colors',
-              view === id ? 'bg-white text-[#0d0a21]' : 'text-white/55',
+              view === id ? 'bg-white text-[var(--app-on-fg)]' : 'text-white/55',
             )}
           >
             {label}

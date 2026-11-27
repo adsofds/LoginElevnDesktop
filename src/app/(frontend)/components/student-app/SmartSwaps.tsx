@@ -436,7 +436,7 @@ function SwapCalculator() {
                 className={cx(inputClass, 'appearance-none pr-9')}
               >
                 {unitOptions.map((item) => (
-                  <option key={item.id} value={item.id} className="bg-[#16141e]">
+                  <option key={item.id} value={item.id} className="bg-[var(--app-card)]">
                     {item.label}
                   </option>
                 ))}
@@ -667,7 +667,7 @@ function BarcodeLookup() {
                 <button
                   type="button"
                   onClick={() => setScanning(false)}
-                  className="absolute top-2 right-2 h-8 rounded-full bg-black/60 px-3 text-xs font-medium"
+                  className="absolute top-2 right-2 h-8 rounded-full bg-black/60 px-3 text-xs font-medium text-[#fff]"
                 >
                   Fechar câmera
                 </button>
@@ -771,7 +771,7 @@ function ProductCard({ product }: { product: ScannedProduct }) {
           <img
             src={product.image}
             alt=""
-            className="size-14 shrink-0 rounded-xl bg-white object-contain"
+            className="size-14 shrink-0 rounded-xl bg-[#fff] object-contain"
           />
         ) : (
           <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-white/40">

@@ -11,16 +11,53 @@ import { Icon } from '../ui/icons'
  * Everything is sized for a 390 px wide phone.
  */
 
-export const appTheme = {
-  '--app-bg': '#0b0a12',
-  '--app-card': '#16141e',
-  '--app-card-2': '#1f1c2a',
-  '--app-line': 'rgba(255,255,255,0.07)',
-  '--app-gold': 'var(--elevn-accent-light)',
-  '--app-gold-deep': 'var(--elevn-accent)',
-  '--app-green': '#4cc38a',
-  '--app-red': '#ff6b6b',
-} as React.CSSProperties
+export type AppThemeMode = 'dark' | 'light'
+/** What the student picked: a fixed theme or follow the phone. */
+export type AppThemePref = AppThemeMode | 'system'
+
+/**
+ * Dark (default) and light themes. The screens are written for the dark theme with
+ * `text-white`, `bg-white/10`…; the light theme swaps Tailwind's `--color-white` for
+ * the dark ink, so those classes flip on their own. Things that must stay white in
+ * both themes (text over photos, switch knobs) use `#fff` directly.
+ */
+export const appThemes: Record<AppThemeMode, React.CSSProperties> = {
+  dark: {
+    colorScheme: 'dark',
+    '--app-bg': '#0b0a12',
+    '--app-card': '#16141e',
+    '--app-card-2': '#1f1c2a',
+    '--app-card-shadow': '0 0 #0000',
+    '--app-logo-filter': 'none',
+    '--app-line': 'rgba(255,255,255,0.07)',
+    '--app-gold': 'var(--elevn-accent-light)',
+    '--app-gold-deep': 'var(--elevn-accent)',
+    '--app-green': '#4cc38a',
+    '--app-red': '#ff6b6b',
+    /** Text on a "white" pill (selected segment): dark in the dark theme. */
+    '--app-on-fg': '#0d0a21',
+  } as React.CSSProperties,
+  light: {
+    colorScheme: 'light',
+    '--color-white': '#17141f',
+    '--app-bg': '#f4f1ea',
+    '--app-card': '#ffffff',
+    '--app-card-2': '#ece8de',
+    '--app-card-shadow': '0 1px 2px rgba(23,20,31,0.04), 0 10px 28px -18px rgba(23,20,31,0.22)',
+    // The beige wordmark, darkened to the Elevn gold so it reads on the light background.
+    '--app-logo-filter': 'brightness(0.6) saturate(1.4)',
+    '--app-line': 'rgba(23,20,31,0.09)',
+    // Darker gold so gold text reads on the light background.
+    '--app-gold': '#857943',
+    '--app-gold-deep': 'var(--elevn-accent-light)',
+    '--app-green': '#1f8a5a',
+    '--app-red': '#d64545',
+    '--app-on-fg': '#ffffff',
+  } as React.CSSProperties,
+}
+
+/** Dark theme, for screens that always stay dark (share studio, loading). */
+export const appTheme = appThemes.dark
 
 export function ScreenHeader({
   title,
@@ -66,7 +103,7 @@ export function Card({ children, className }: { children: ReactNode; className?:
   return (
     <div
       className={cx(
-        'rounded-[24px] bg-[var(--app-card)] ring-1 ring-white/[0.06] ring-inset',
+        'rounded-[24px] bg-[var(--app-card)] shadow-[var(--app-card-shadow)] ring-1 ring-white/[0.06] ring-inset',
         className,
       )}
     >

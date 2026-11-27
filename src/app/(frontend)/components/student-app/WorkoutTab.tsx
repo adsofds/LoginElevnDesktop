@@ -152,7 +152,7 @@ export function WorkoutTab() {
             onClick={() => setView(id)}
             className={cx(
               'h-9 rounded-full text-sm font-semibold transition-colors',
-              view === id ? 'bg-white text-[#0d0a21]' : 'text-white/55',
+              view === id ? 'bg-white text-[var(--app-on-fg)]' : 'text-white/55',
             )}
           >
             {label}
@@ -377,7 +377,7 @@ function ShareButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-semibold text-[#0d0a21] active:scale-[0.98]"
+      className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-semibold text-[var(--app-on-fg)] active:scale-[0.98]"
     >
       <svg
         viewBox="0 0 24 24"
@@ -950,7 +950,7 @@ export function SessionScreen() {
             <button
               type="button"
               onClick={discardSession}
-              className="mt-5 h-12 w-full rounded-full bg-[var(--app-red)] font-semibold text-white"
+              className="mt-5 h-12 w-full rounded-full bg-[var(--app-red)] font-semibold text-[#fff]"
             >
               Descartar
             </button>

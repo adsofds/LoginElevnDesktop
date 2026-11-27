@@ -19,7 +19,7 @@ import {
   type DoneWorkout,
 } from './history'
 import { trainedDaysThisMonth, weekStreak } from './HomeTab'
-import { ElevnMark } from './ui'
+import { appTheme, ElevnMark } from './ui'
 import { paintSvg } from './paintSvg'
 import { useStudentApp } from './StudentApp'
 
@@ -863,7 +863,8 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
   }
 
   return (
-    <div className="flex min-h-full flex-col">
+    // The studio edits photos and stickers: it stays dark in both themes.
+    <div style={appTheme} className="flex min-h-full flex-col bg-[var(--app-bg)] text-white">
       <header className="flex items-center gap-3 px-4 pt-2 pb-3">
         <button
           type="button"

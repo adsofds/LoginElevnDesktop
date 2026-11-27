@@ -37,8 +37,14 @@ function openCoachWhatsApp(text: string) {
   )
 }
 
+const themeOptions = [
+  { id: 'dark', label: 'Escuro', icon: 'moon' },
+  { id: 'light', label: 'Claro', icon: 'sun' },
+  { id: 'system', label: 'Automático', icon: 'phone' },
+] as const
+
 export function AccountTab() {
-  const { push, avatar, setAvatar } = useStudentApp()
+  const { push, avatar, setAvatar, themePref, setThemePref } = useStudentApp()
   const [sheet, setSheet] = useState<'renovar' | 'config' | 'foto' | null>(null)
   const [photoError, setPhotoError] = useState('')
   const cameraInput = useRef<HTMLInputElement>(null)
@@ -156,6 +162,35 @@ export function AccountTab() {
             <span className="text-right text-[15px] font-medium">{value}</span>
           </div>
         ))}
+      </Card>
+
+      <Card className="mx-5 mt-3 p-4">
+        <p id="aparencia-titulo" className="text-[15px] font-medium">
+          Aparência
+        </p>
+        <p className="text-xs text-white/45">Modo escuro, claro ou igual ao do celular</p>
+        <div
+          role="radiogroup"
+          aria-labelledby="aparencia-titulo"
+          className="mt-3 grid grid-cols-3 gap-1 rounded-full bg-white/[0.06] p-1"
+        >
+          {themeOptions.map(({ id, label, icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={themePref === id}
+              onClick={() => setThemePref(id)}
+              className={cx(
+                'flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition-colors',
+                themePref === id ? 'bg-white text-[var(--app-on-fg)]' : 'text-white/60',
+              )}
+            >
+              <Icon name={icon} className="size-4" />
+              {label}
+            </button>
+          ))}
+        </div>
       </Card>
 
       <Card className="mx-5 mt-3 overflow-hidden">
@@ -307,7 +342,7 @@ export function AccountTab() {
               >
                 <span
                   className={cx(
-                    'absolute top-1 size-5 rounded-full bg-white transition-all',
+                    'absolute top-1 size-5 rounded-full bg-[#fff] shadow-sm transition-all',
                     prefs[id] ? 'left-6' : 'left-1',
                   )}
                 />
@@ -409,14 +444,14 @@ export function PhotosScreen() {
               />
             </div>
             <span
-              className="absolute inset-y-0 w-0.5 bg-white shadow"
+              className="absolute inset-y-0 w-0.5 bg-[#fff] shadow"
               style={{ left: `${compare}%` }}
               aria-hidden="true"
             />
-            <span className="absolute top-3 left-3 rounded-full bg-black/65 px-2.5 py-1 text-xs font-semibold backdrop-blur">
+            <span className="absolute top-3 left-3 rounded-full bg-black/65 px-2.5 py-1 text-xs font-semibold text-[#fff] backdrop-blur">
               Antes
             </span>
-            <span className="absolute top-3 right-3 rounded-full bg-black/65 px-2.5 py-1 text-xs font-semibold backdrop-blur">
+            <span className="absolute top-3 right-3 rounded-full bg-black/65 px-2.5 py-1 text-xs font-semibold text-[#fff] backdrop-blur">
               Depois
             </span>
           </div>
@@ -463,7 +498,7 @@ export function PhotosScreen() {
                   className="h-11 min-w-0 flex-1 rounded-2xl bg-white/[0.06] px-3 text-sm text-white ring-1 ring-white/10 ring-inset focus:ring-[var(--app-gold)] focus:outline-none"
                 >
                   {sorted.map((photo) => (
-                    <option key={photo.id} value={photo.id} className="bg-[#16141e]">
+                    <option key={photo.id} value={photo.id} className="bg-[var(--app-card)]">
                       {optionLabel(photo)}
                     </option>
                   ))}
@@ -490,7 +525,9 @@ export function PhotosScreen() {
                 onClick={() => setPose(item)}
                 className={cx(
                   'h-9 flex-1 rounded-full text-sm font-medium',
-                  pose === item ? 'bg-white text-[#0d0a21]' : 'bg-white/[0.07] text-white/70',
+                  pose === item
+                    ? 'bg-white text-[var(--app-on-fg)]'
+                    : 'bg-white/[0.07] text-white/70',
                 )}
               >
                 {item}
@@ -504,7 +541,7 @@ export function PhotosScreen() {
               value={date}
               max={todayIso()}
               onChange={(event) => setDate(event.target.value || todayIso())}
-              className="mt-1 h-11 w-full rounded-2xl bg-white/[0.06] px-3 text-sm text-white ring-1 ring-white/10 ring-inset [color-scheme:dark] focus:ring-[var(--app-gold)] focus:outline-none"
+              className="mt-1 h-11 w-full rounded-2xl bg-white/[0.06] px-3 text-sm text-white ring-1 ring-white/10 ring-inset focus:ring-[var(--app-gold)] focus:outline-none"
             />
           </label>
           <label className="mt-3 block">
@@ -550,7 +587,7 @@ export function PhotosScreen() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photo.url} alt={optionLabel(photo)} className="size-full object-cover" />
-            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pt-5 pb-1.5 text-[10px] leading-3">
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pt-5 pb-1.5 text-[10px] text-[#fff] leading-3">
               <span className="block font-semibold">{photo.pose}</span>
               {photoDate(photo.dateIso)}
               {photo.weightKg && <span className="block">{kgLabel(photo.weightKg)}</span>}
