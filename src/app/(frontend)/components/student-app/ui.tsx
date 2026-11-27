@@ -11,16 +11,77 @@ import { Icon } from '../ui/icons'
  * Everything is sized for a 390 px wide phone.
  */
 
-export const appTheme = {
-  '--app-bg': '#0b0a12',
-  '--app-card': '#16141e',
-  '--app-card-2': '#1f1c2a',
-  '--app-line': 'rgba(255,255,255,0.07)',
-  '--app-gold': 'var(--elevn-accent-light)',
-  '--app-gold-deep': 'var(--elevn-accent)',
-  '--app-green': '#4cc38a',
-  '--app-red': '#ff6b6b',
-} as React.CSSProperties
+export type AppThemeMode = 'dark' | 'light'
+/** What the student picked: a fixed theme or follow the phone. */
+export type AppThemePref = AppThemeMode | 'system'
+
+/**
+ * Dark (default) and light themes. The screens are written for the dark theme with
+ * `text-white`, `bg-white/10`…; the light theme swaps Tailwind's `--color-white` for
+ * the dark ink, so those classes flip on their own. Things that must stay white in
+ * both themes (text over photos, switch knobs) use `#fff` directly.
+ */
+export const appThemes: Record<AppThemeMode, React.CSSProperties> = {
+  dark: {
+    colorScheme: 'dark',
+    '--app-bg': '#0b0a12',
+    '--app-card': '#16141e',
+    '--app-card-2': '#1f1c2a',
+    '--app-card-ring': 'rgba(255,255,255,0.06)',
+    '--app-line': 'rgba(255,255,255,0.07)',
+    '--app-gold': 'var(--elevn-accent-light)',
+    '--app-gold-deep': 'var(--elevn-accent)',
+    '--app-glow': 'var(--elevn-accent)',
+    '--app-green': '#4cc38a',
+    '--app-red': '#ff6b6b',
+    /** Text on a "white" pill (selected segment): dark in the dark theme. */
+    '--app-on-fg': '#0d0a21',
+    /** Text and marks on gold fills. */
+    '--app-on-gold': '#0d0a21',
+    /** Main button (GoldButton): gold gradient with dark text. */
+    '--app-cta-bg':
+      'linear-gradient(180deg, color-mix(in srgb, var(--app-gold) 80%, white), var(--app-gold))',
+    '--app-cta-fg': '#0d0a21',
+    '--app-cta-shadow': '0 8px 24px -12px var(--app-gold)',
+    '--app-on-green': '#06210f',
+    '--app-tile-bg':
+      'radial-gradient(120% 90% at 50% 0%, rgba(197,187,131,0.24), rgba(197,187,131,0.03) 65%), linear-gradient(180deg, #1d1a26, #121019)',
+    '--app-tile-shadow':
+      'inset 0 0 0 1px rgba(197,187,131,0.38), inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 20px -10px rgba(197,187,131,0.55)',
+    '--app-tile-letter': 'linear-gradient(180deg, #f4ecc2 0%, var(--app-gold) 55%, #a39759 100%)',
+    '--app-logo-filter': 'none',
+  } as React.CSSProperties,
+  // Same palette as the admin panel (tokens.css): cream canvas, white surfaces with
+  // sand borders, ink text, olive accent, ink primary buttons and no glows.
+  light: {
+    colorScheme: 'light',
+    '--color-white': 'var(--text-primary)',
+    '--app-bg': 'var(--elevn-canvas-bg)',
+    '--app-card': 'var(--bg-surface)',
+    '--app-card-2': 'var(--bg-subtle)',
+    '--app-card-ring': 'var(--border-default)',
+    '--app-line': 'var(--border-subtle)',
+    '--app-gold': 'var(--elevn-accent)',
+    '--app-gold-deep': 'var(--elevn-accent-light)',
+    '--app-glow': 'transparent',
+    '--app-green': 'var(--success-fg)',
+    '--app-red': 'var(--danger-fg)',
+    '--app-on-fg': '#ffffff',
+    '--app-on-gold': '#ffffff',
+    '--app-cta-bg': 'var(--text-primary)',
+    '--app-cta-fg': '#ffffff',
+    '--app-cta-shadow': '0 0 #0000',
+    '--app-on-green': '#ffffff',
+    '--app-tile-bg': 'var(--accent-soft)',
+    '--app-tile-shadow': 'inset 0 0 0 1px var(--border-default)',
+    '--app-tile-letter': 'linear-gradient(var(--elevn-accent), var(--elevn-accent))',
+    // The beige wordmark, darkened to the olive accent.
+    '--app-logo-filter': 'brightness(0.55) saturate(1.3)',
+  } as React.CSSProperties,
+}
+
+/** Dark theme, for screens that always stay dark (share studio, loading). */
+export const appTheme = appThemes.dark
 
 export function ScreenHeader({
   title,
@@ -66,7 +127,7 @@ export function Card({ children, className }: { children: ReactNode; className?:
   return (
     <div
       className={cx(
-        'rounded-[24px] bg-[var(--app-card)] ring-1 ring-white/[0.06] ring-inset',
+        'rounded-[24px] bg-[var(--app-card)] ring-1 ring-[var(--app-card-ring)] ring-inset',
         className,
       )}
     >
@@ -94,7 +155,7 @@ export function GoldButton({
       onClick={onClick}
       disabled={disabled}
       className={cx(
-        'flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(180deg,color-mix(in_srgb,var(--app-gold)_80%,white),var(--app-gold))] text-[15px] font-semibold text-[#0d0a21] shadow-[0_8px_24px_-12px_var(--app-gold)] transition-transform active:scale-[0.98] disabled:opacity-40 disabled:shadow-none',
+        'flex h-[52px] w-full items-center justify-center gap-2 rounded-full [background:var(--app-cta-bg)] text-[15px] font-semibold text-[var(--app-cta-fg)] shadow-[var(--app-cta-shadow)] transition-transform active:scale-[0.98] disabled:opacity-40 disabled:shadow-none',
         className,
       )}
     >
@@ -191,12 +252,15 @@ export function ElevnMark({
   )
 }
 
-/** Workout letter (A, B, C…): dark tile with a fine gold rim and a gold gradient letter. */
+/**
+ * Workout letter (A, B, C…). Dark theme: dark tile, fine gold rim, gold gradient letter.
+ * Light theme: soft olive tile with an olive letter, like the admin panel.
+ */
 export function LetterBadge({ code, size = 'md' }: { code: string; size?: 'md' | 'lg' | 'xl' }) {
   return (
     <span
       className={cx(
-        'relative grid shrink-0 place-items-center overflow-hidden bg-[radial-gradient(120%_90%_at_50%_0%,rgba(197,187,131,0.24),rgba(197,187,131,0.03)_65%),linear-gradient(180deg,#1d1a26,#121019)] shadow-[inset_0_0_0_1px_rgba(197,187,131,0.38),inset_0_1px_0_rgba(255,255,255,0.08),0_8px_20px_-10px_rgba(197,187,131,0.55)]',
+        'relative grid shrink-0 place-items-center overflow-hidden [background:var(--app-tile-bg)] shadow-[var(--app-tile-shadow)]',
         size === 'xl'
           ? 'size-16 rounded-[20px]'
           : size === 'lg'
@@ -206,7 +270,7 @@ export function LetterBadge({ code, size = 'md' }: { code: string; size?: 'md' |
     >
       <span
         className={cx(
-          'bg-[linear-gradient(180deg,#f4ecc2_0%,var(--app-gold)_55%,#a39759_100%)] bg-clip-text font-extrabold leading-none tracking-tight text-transparent',
+          '[background-image:var(--app-tile-letter)] bg-clip-text font-extrabold leading-none tracking-tight text-transparent',
           size === 'xl' ? 'text-[30px]' : size === 'lg' ? 'text-[22px]' : 'text-[15px]',
         )}
       >
@@ -268,7 +332,7 @@ export function VideoTile({
         size === 'md' ? 'h-16 w-14 rounded-2xl' : 'h-12 w-11 rounded-xl',
       )}
     >
-      <span className="grid size-7 place-items-center rounded-full bg-[var(--app-gold)] text-[#0d0a21]">
+      <span className="grid size-7 place-items-center rounded-full bg-[var(--app-gold)] text-[var(--app-on-gold)]">
         <svg viewBox="0 0 24 24" className="ml-0.5 size-3.5" fill="currentColor" aria-hidden="true">
           <path d="M7 4.5v15l13-7.5z" />
         </svg>

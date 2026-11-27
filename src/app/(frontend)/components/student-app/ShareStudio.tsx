@@ -19,7 +19,7 @@ import {
   type DoneWorkout,
 } from './history'
 import { trainedDaysThisMonth, weekStreak } from './HomeTab'
-import { ElevnMark } from './ui'
+import { appTheme, ElevnMark } from './ui'
 import { paintSvg } from './paintSvg'
 import { useStudentApp } from './StudentApp'
 
@@ -863,7 +863,8 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
   }
 
   return (
-    <div className="flex min-h-full flex-col">
+    // The studio edits photos and stickers: it stays dark in both themes.
+    <div style={appTheme} className="flex min-h-full flex-col bg-[var(--app-bg)] text-white">
       <header className="flex items-center gap-3 px-4 pt-2 pb-3">
         <button
           type="button"
@@ -1003,7 +1004,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
             className={cx(
               'h-9 shrink-0 rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap transition-colors',
               phrase === ''
-                ? 'bg-white text-[#0d0a21]'
+                ? 'bg-white text-[var(--app-on-gold)]'
                 : 'bg-white/[0.06] text-white/70 ring-1 ring-white/15 ring-inset',
             )}
           >
@@ -1020,7 +1021,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
               className={cx(
                 'h-9 shrink-0 rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap transition-colors',
                 phrase === item
-                  ? 'bg-[var(--app-gold)] text-[#0d0a21]'
+                  ? 'bg-[var(--app-gold)] text-[var(--app-on-gold)]'
                   : 'bg-white/[0.06] text-white/70',
               )}
             >
@@ -1049,7 +1050,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
             onClick={() => setBare(value)}
             className={cx(
               'h-9 rounded-full text-[13px] font-semibold transition-colors',
-              bare === value ? 'bg-white text-[#0d0a21]' : 'text-white/60',
+              bare === value ? 'bg-white text-[var(--app-on-gold)]' : 'text-white/60',
             )}
           >
             {label}
@@ -1077,7 +1078,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
             onClick={() => chooseBackground(id)}
             className={cx(
               'h-9 rounded-full text-[13px] font-semibold transition-colors',
-              background === id ? 'bg-white text-[#0d0a21]' : 'text-white/60',
+              background === id ? 'bg-white text-[var(--app-on-gold)]' : 'text-white/60',
             )}
           >
             {label}
@@ -1159,7 +1160,7 @@ export function ShareStudio({ doneKey }: { doneKey: string }) {
       {toast && (
         <p
           role="status"
-          className="absolute inset-x-6 bottom-28 z-30 rounded-2xl bg-white px-4 py-3 text-center text-[13px] font-medium text-[#0d0a21] shadow-xl"
+          className="absolute inset-x-6 bottom-28 z-30 rounded-2xl bg-white px-4 py-3 text-center text-[13px] font-medium text-[var(--app-on-gold)] shadow-xl"
         >
           {toast}
         </p>

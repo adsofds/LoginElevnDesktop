@@ -155,7 +155,11 @@ export function HomeTab() {
     <div className="pb-4">
       <header className="flex items-center gap-3 px-5 pt-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/wordmark-beige.png" alt="Elevn" className="h-[18px] w-auto" />
+        <img
+          src="/brand/wordmark-beige.png"
+          alt="Elevn"
+          className="h-[18px] w-auto [filter:var(--app-logo-filter)]"
+        />
         <span className="flex-1" />
         <button
           type="button"
@@ -165,7 +169,7 @@ export function HomeTab() {
         >
           <Icon name="bell" className="size-5" />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[var(--app-gold)] px-1 text-[10px] font-bold text-[#0d0a21]">
+            <span className="absolute -top-0.5 -right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[var(--app-gold)] px-1 text-[10px] font-bold text-[var(--app-on-gold)]">
               {unread}
             </span>
           )}
@@ -239,7 +243,7 @@ export function HomeTab() {
                     className={cx(
                       'grid aspect-square w-full max-w-9 place-items-center rounded-full text-[13px] font-semibold tabular-nums',
                       day.done
-                        ? 'bg-[var(--app-gold)] text-[#0d0a21]'
+                        ? 'bg-[var(--app-gold)] text-[var(--app-on-gold)]'
                         : day.isToday
                           ? 'text-white ring-2 ring-[var(--app-gold)] ring-inset'
                           : day.future
@@ -264,7 +268,7 @@ export function HomeTab() {
           aria-label={`Dieta de hoje: ${eatenKcal} de ${dayKcal} kcal. Abrir dieta`}
           className="mx-5 block w-[calc(100%-40px)] text-left"
         >
-          <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(160deg,#211d2b_0%,#16141e_60%)] p-4 ring-1 ring-[var(--app-gold)]/25 ring-inset transition-transform active:scale-[0.99]">
+          <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(160deg,var(--app-card-2)_0%,var(--app-card)_60%)] p-4 ring-1 ring-[var(--app-gold)]/25 ring-inset transition-transform active:scale-[0.99]">
             <div className="flex items-center gap-3">
               <SenderAvatar sender={teamMember('athison')} shape="rounded" className="size-11" />
               <span className="min-w-0 flex-1">
@@ -318,7 +322,7 @@ export function HomeTab() {
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -top-16 -right-16 size-48 rounded-full opacity-30 blur-2xl"
-            style={{ background: 'var(--app-gold-deep)' }}
+            style={{ background: 'var(--app-glow)' }}
           />
           <button
             type="button"

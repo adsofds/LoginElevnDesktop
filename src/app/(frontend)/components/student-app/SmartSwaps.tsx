@@ -85,7 +85,7 @@ export function SmartSwaps() {
         <div
           aria-hidden
           className="pointer-events-none absolute -top-16 -right-10 size-40 rounded-full opacity-30 blur-2xl"
-          style={{ background: 'var(--app-gold-deep)' }}
+          style={{ background: 'var(--app-glow)' }}
         />
         <div className="relative flex gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--app-gold)]/15 text-[var(--app-gold)]">
@@ -114,7 +114,7 @@ export function SmartSwaps() {
             onClick={() => setTool(item.id)}
             className={cx(
               'h-9 rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors',
-              tool === item.id ? 'bg-[var(--app-gold)] text-[#0d0a21]' : 'text-white/60',
+              tool === item.id ? 'bg-[var(--app-gold)] text-[var(--app-on-gold)]' : 'text-white/60',
             )}
           >
             {item.label}
@@ -436,7 +436,7 @@ function SwapCalculator() {
                 className={cx(inputClass, 'appearance-none pr-9')}
               >
                 {unitOptions.map((item) => (
-                  <option key={item.id} value={item.id} className="bg-[#16141e]">
+                  <option key={item.id} value={item.id} className="bg-[var(--app-card)]">
                     {item.label}
                   </option>
                 ))}
@@ -667,7 +667,7 @@ function BarcodeLookup() {
                 <button
                   type="button"
                   onClick={() => setScanning(false)}
-                  className="absolute top-2 right-2 h-8 rounded-full bg-black/60 px-3 text-xs font-medium"
+                  className="absolute top-2 right-2 h-8 rounded-full bg-black/60 px-3 text-xs font-medium text-[#fff]"
                 >
                   Fechar câmera
                 </button>
@@ -708,7 +708,7 @@ function BarcodeLookup() {
           <button
             type="submit"
             disabled={!valid || state.kind === 'loading'}
-            className="h-12 shrink-0 rounded-2xl bg-[var(--app-gold)] px-5 text-sm font-semibold text-[#0d0a21] disabled:opacity-40"
+            className="h-12 shrink-0 rounded-2xl bg-[var(--app-gold)] px-5 text-sm font-semibold text-[var(--app-on-gold)] disabled:opacity-40"
           >
             Buscar
           </button>
@@ -771,7 +771,7 @@ function ProductCard({ product }: { product: ScannedProduct }) {
           <img
             src={product.image}
             alt=""
-            className="size-14 shrink-0 rounded-xl bg-white object-contain"
+            className="size-14 shrink-0 rounded-xl bg-[#fff] object-contain"
           />
         ) : (
           <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-white/40">

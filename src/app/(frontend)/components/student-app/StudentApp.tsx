@@ -24,7 +24,14 @@ import { DietTab } from './DietTab'
 import type { DoneExercise } from './history'
 import { HomeTab } from './HomeTab'
 import { ShareStudio } from './ShareStudio'
-import { appTheme, formatClock, SheetHostContext } from './ui'
+import {
+  appTheme,
+  appThemes,
+  formatClock,
+  SheetHostContext,
+  type AppThemeMode,
+  type AppThemePref,
+} from './ui'
 import {
   CalendarScreen,
   DoneWorkoutScreen,
@@ -100,9 +107,14 @@ type AppContextValue = {
   avatar: string | null
   setAvatar: (avatar: string | null) => void
   notifications: StudentNotification[]
+  /** Theme the student picked (Conta → Aparência) and the one in use right now. */
+  themePref: AppThemePref
+  setThemePref: (pref: AppThemePref) => void
+  themeMode: AppThemeMode
 }
 
 const AVATAR_KEY = 'elevn-student-avatar'
+const THEME_KEY = 'elevn-app-tema'
 
 const AppContext = createContext<AppContextValue | null>(null)
 
@@ -162,7 +174,38 @@ export default function StudentApp({
   // Client-only: the app shows "today", streaks and timers, which differ from build time.
   const [mounted, setMounted] = useState(false)
   const [sheetHost, setSheetHost] = useState<HTMLDivElement | null>(null)
-  useEffect(() => setMounted(true), [])
+  const [themePref, setThemePrefState] = useState<AppThemePref>('dark')
+  const [systemLight, setSystemLight] = useState(false)
+  useEffect(() => {
+    // Read the saved theme before the first real paint, so a light-theme student
+    // doesn't see the dark app flash in.
+    try {
+      const saved = window.localStorage.getItem(THEME_KEY)
+      if (saved === 'dark' || saved === 'light' || saved === 'system') setThemePrefState(saved)
+    } catch {
+      /* storage unavailable: dark theme */
+    }
+    setMounted(true)
+  }, [])
+  // "Automático" follows the phone's light/dark setting, live.
+  useEffect(() => {
+    const query = window.matchMedia?.('(prefers-color-scheme: light)')
+    if (!query) return
+    const sync = () => setSystemLight(query.matches)
+    sync()
+    query.addEventListener('change', sync)
+    return () => query.removeEventListener('change', sync)
+  }, [])
+  const setThemePref = useCallback((pref: AppThemePref) => {
+    setThemePrefState(pref)
+    try {
+      window.localStorage.setItem(THEME_KEY, pref)
+    } catch {
+      /* blocked storage: the theme still changes for this session */
+    }
+  }, [])
+  const themeMode: AppThemeMode =
+    themePref === 'system' ? (systemLight ? 'light' : 'dark') : themePref
 
   // Demo: the photo the student picks stays on this device. With app login it goes to the
   // student's record (Payload Media) and shows in the panel too.
@@ -395,8 +438,23 @@ export default function StudentApp({
       avatar,
       setAvatar,
       notifications,
+      themePref,
+      setThemePref,
+      themeMode,
     }
-  }, [tab, session, now, lastFinished, eatenMeals, avatar, setAvatar, notifications])
+  }, [
+    tab,
+    session,
+    now,
+    lastFinished,
+    eatenMeals,
+    avatar,
+    setAvatar,
+    notifications,
+    themePref,
+    setThemePref,
+    themeMode,
+  ])
 
   const route = stack[stack.length - 1]
   const fullScreen =
@@ -458,7 +516,7 @@ export default function StudentApp({
       <SheetHostContext.Provider value={sheetHost}>
         <div
           ref={setSheetHost}
-          style={appTheme}
+          style={appThemes[themeMode]}
           className="relative flex h-full w-full flex-col overflow-clip bg-[var(--app-bg)] font-sans text-white antialiased [-webkit-tap-highlight-color:transparent]"
         >
           {/* Gold glow at the top, like the Smart Fit app */}
@@ -466,7 +524,7 @@ export default function StudentApp({
             aria-hidden="true"
             className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[140%] -translate-x-1/2 rounded-[50%] opacity-40 blur-3xl"
             style={{
-              background: 'radial-gradient(closest-side, var(--app-gold-deep), transparent)',
+              background: 'radial-gradient(closest-side, var(--app-glow), transparent)',
             }}
           />
           {topInset > 0 && (
@@ -490,11 +548,11 @@ export default function StudentApp({
             <button
               type="button"
               onClick={() => value.push({ name: 'session' })}
-              className="absolute inset-x-3 bottom-[84px] z-20 flex items-center gap-3 rounded-2xl bg-[var(--app-gold)] px-4 py-3 text-left text-[#0d0a21] shadow-lg"
+              className="absolute inset-x-3 bottom-[84px] z-20 flex items-center gap-3 rounded-2xl bg-[var(--app-gold)] px-4 py-3 text-left text-[var(--app-on-gold)] shadow-lg"
             >
               <span className="relative flex size-2.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#0d0a21]/50 motion-reduce:animate-none" />
-                <span className="relative inline-flex size-2.5 rounded-full bg-[#0d0a21]" />
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--app-on-gold)]/50 motion-reduce:animate-none" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-[var(--app-on-gold)]" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[11px] font-semibold tracking-wide uppercase opacity-70">

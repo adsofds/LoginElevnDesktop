@@ -73,7 +73,7 @@ export function DietTab() {
             onClick={() => setView(id)}
             className={cx(
               'h-9 rounded-full text-sm font-semibold transition-colors',
-              view === id ? 'bg-white text-[#0d0a21]' : 'text-white/55',
+              view === id ? 'bg-white text-[var(--app-on-fg)]' : 'text-white/55',
             )}
           >
             {label}
@@ -89,7 +89,7 @@ export function DietTab() {
             <div
               aria-hidden="true"
               className="pointer-events-none absolute -bottom-20 -left-16 size-52 rounded-full opacity-25 blur-2xl"
-              style={{ background: 'var(--app-gold-deep)' }}
+              style={{ background: 'var(--app-glow)' }}
             />
             <div className="relative flex items-center gap-5">
               <Ring value={consumed} max={target} size={118} stroke={10}>
@@ -132,7 +132,7 @@ export function DietTab() {
                         className={cx(
                           'grid size-9 shrink-0 place-items-center rounded-full transition-all active:scale-90',
                           eaten
-                            ? 'bg-[var(--app-green)] text-[#06210f]'
+                            ? 'bg-[var(--app-green)] text-[var(--app-on-green)]'
                             : 'text-transparent ring-2 ring-white/20 ring-inset',
                         )}
                       >
