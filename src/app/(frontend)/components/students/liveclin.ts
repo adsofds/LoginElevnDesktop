@@ -450,6 +450,37 @@ export function faceHistory(studentId: string, answers: LiveClinAnswers) {
   ) as Record<FaceThemeId, FaceScore[]>
 }
 
+/**
+ * One face for the whole check-in. Mostly happy faces give a happy face; the average is
+ * rounded, but two low themes cap it at "Regular" and three or more at "Ruim", so a few
+ * bad answers are never hidden by the good ones.
+ */
+export function overallFace(scores: FaceScore[]): FaceScore {
+  if (!scores.length) return 3
+  const average = scores.reduce((sum, score) => sum + score, 0) / scores.length
+  const low = scores.filter((score) => score <= 2).length
+  const cap = low >= 3 ? 2 : low >= 2 ? 3 : 5
+  return clampFace(Math.min(Math.round(average), cap))
+}
+
+/** How the student is doing overall, in the coach's words. */
+export const overallLabels: Record<FaceScore, string> = {
+  5: 'Muito bem',
+  4: 'Bem',
+  3: 'Regular',
+  2: 'Pede atenção',
+  1: 'Crítico',
+}
+
+/** Good (4–5), regular (3) and low (1–2) themes in one check-in. */
+export function faceTally(scores: FaceScore[]) {
+  return {
+    good: scores.filter((score) => score >= 4).length,
+    regular: scores.filter((score) => score === 3).length,
+    low: scores.filter((score) => score <= 2).length,
+  }
+}
+
 export const formatKg = (kg: number) =>
   `${kg.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg`
 

@@ -11,7 +11,14 @@ import { Segmented } from '../ui/Segmented'
 import { Sheet } from '../ui/Sheet'
 import { Face, FaceCheckin, faceLabels } from './FaceCheckin'
 import { LiveClinAnswersView } from './LiveClinAnswersView'
-import { faceThemes, formatKg, type FaceScore, type LiveClinAnswers } from './liveclin'
+import {
+  faceThemes,
+  formatKg,
+  overallFace,
+  overallLabels,
+  type FaceScore,
+  type LiveClinAnswers,
+} from './liveclin'
 
 /** Na tabela o "via LiveClin" é redundante: a aba inteira é do LiveClin. */
 const shortSent = (value: string) => value.replace(/\s+via LiveClin$/, '')
@@ -72,7 +79,8 @@ export function CheckinsBoard({
             score: theme.score(answers),
           }))
           const alerts = faces.filter((face) => face.score <= 2).length
-          return { student, answers, faces, alerts }
+          const overall = overallFace(faces.map((face) => face.score as FaceScore))
+          return { student, answers, faces, alerts, overall }
         })
         .sort((a, b) => {
           const rank = (state: string) => (state === 'Atrasado' ? 0 : state === 'Pendente' ? 1 : 2)
@@ -152,32 +160,39 @@ export function CheckinsBoard({
       </div>
 
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full min-w-[960px] border-collapse text-left text-sm text-ink">
+        <table className="w-full min-w-[1080px] border-collapse text-left text-sm text-ink">
           <caption className="sr-only">Check-ins da semana</caption>
           <thead>
             <tr className="border-b border-line bg-subtle/60 text-xs text-ink-3">
-              {['Aluno', 'Enviado', 'Peso', 'Carinhas da semana', 'Alertas', 'Situação', ''].map(
-                (label, index) => (
-                  <th
-                    key={index}
-                    scope="col"
-                    className="h-10 px-3 font-semibold whitespace-nowrap first:pl-4 last:pr-4"
-                  >
-                    {label}
-                  </th>
-                ),
-              )}
+              {[
+                'Aluno',
+                'Geral',
+                'Enviado',
+                'Peso',
+                'Avaliação por tema',
+                'Alertas',
+                'Situação',
+                '',
+              ].map((label, index) => (
+                <th
+                  key={index}
+                  scope="col"
+                  className="h-10 px-3 font-semibold whitespace-nowrap first:pl-4 last:pr-4"
+                >
+                  {label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-sm text-ink-3">
+                <td colSpan={8} className="py-10 text-center text-sm text-ink-3">
                   Nenhum check-in com esse filtro.
                 </td>
               </tr>
             )}
-            {visible.map(({ student, answers, faces, alerts }) => (
+            {visible.map(({ student, answers, faces, alerts, overall }) => (
               <tr
                 key={student.id}
                 onClick={() => onSelect(student.id)}
@@ -199,6 +214,14 @@ export function CheckinsBoard({
                     </span>
                   </span>
                 </td>
+                <td className="px-3 py-3 whitespace-nowrap">
+                  <span className="flex items-center gap-2" title="Resumo geral do check-in">
+                    <Face score={overall} className="size-7 shrink-0" />
+                    <span className="text-[13px] font-medium text-ink-2">
+                      {overallLabels[overall]}
+                    </span>
+                  </span>
+                </td>
                 <td className="px-3 py-3 whitespace-nowrap text-ink-2">
                   {shortSent(answers.submittedAt)}
                 </td>
@@ -211,7 +234,7 @@ export function CheckinsBoard({
                   )}
                 </td>
                 <td className="px-3 py-3">
-                  <span className="flex gap-0.5" aria-label="Carinhas por tema">
+                  <span className="flex gap-0.5" aria-label="Avaliação por tema">
                     {faces.map((face) => (
                       <span
                         key={face.id}
